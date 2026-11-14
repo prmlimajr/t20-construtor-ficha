@@ -28,7 +28,40 @@
 			"beneficiosOrigemDupla": {
 				"Nome": "Homebrew: benefits per origin",
 				"Dica": "How many benefits each origin grants when the dual origin option is on."
+			},
+			"suplementos": {
+				"Nome": "Suplementos de Arton: use content",
+				"Dica": "Adds content from the Suplementos de Arton module (must be installed and active). When off, only the core book is used. The supplement targets Foundry v13: check power effects on the sheet."
+			},
+			"supRacas": {
+				"Nome": "Suplementos de Arton: races",
+				"Dica": "Supplement races in the Race step."
+			},
+			"supClasses": {
+				"Nome": "Suplementos de Arton: classes",
+				"Dica": "Supplement classes. Skills and proficiencies are not in the supplement data: variants inherit from their base class, the others get free skill choices (adjustable in data/suplementos.json)."
+			},
+			"supPoderes": {
+				"Nome": "Suplementos de Arton: powers in lists",
+				"Dica": "Supplement general powers in choice lists. Race and class abilities from supplements work even when off."
+			},
+			"supMagias": {
+				"Nome": "Suplementos de Arton: spells",
+				"Dica": "Supplement spells in spell lists."
+			},
+			"supItens": {
+				"Nome": "Suplementos de Arton: items",
+				"Dica": "Supplement weapons, armor and mundane items in the shop and starting equipment (magic items and artifacts excluded)."
+			},
+			"supDivindades": {
+				"Nome": "Suplementos de Arton: deities",
+				"Dica": "New granted powers for major deities and the minor deities from Guia de Deuses Menores."
+			},
+			"supOrigensRegionais": {
+				"Nome": "Suplementos de Arton: regional origins (Atlas)",
+				"Dica": "Fills the Regional origin step with Atlas de Arton regions and powers. Requires the dual-origin homebrew."
 			}
-		}
+		},
+		"SuplementoInativo": "Character Builder: \"Use Suplementos de Arton\" is enabled, but the Suplementos de Arton module is not active. Only the core book is used."
 	}
 }

@@ -28,7 +28,40 @@
 			"beneficiosOrigemDupla": {
 				"Nome": "Homebrew: benefícios por origem",
 				"Dica": "Quantos benefícios cada origem concede quando a origem dupla está ligada."
+			},
+			"suplementos": {
+				"Nome": "Suplementos de Arton: usar conteúdo",
+				"Dica": "Inclui no construtor o conteúdo do módulo Suplementos de Arton (precisa estar instalado e ativo). Desligado, o construtor usa só o livro básico. O suplemento foi feito para Foundry v13: confira os efeitos dos poderes na ficha."
+			},
+			"supRacas": {
+				"Nome": "Suplementos de Arton: raças",
+				"Dica": "Raças dos suplementos no passo Raça."
+			},
+			"supClasses": {
+				"Nome": "Suplementos de Arton: classes",
+				"Dica": "Classes dos suplementos. Perícias e proficiências não estão nos dados do suplemento: variantes herdam da classe básica, as demais ficam com perícias livres (ajustável em data/suplementos.json)."
+			},
+			"supPoderes": {
+				"Nome": "Suplementos de Arton: poderes nas listas",
+				"Dica": "Poderes gerais dos suplementos nas listas de escolha (poder geral, grupos de Combate, Destino, Magia, Tormenta…). As habilidades de raças e classes dos suplementos funcionam mesmo desligado."
+			},
+			"supMagias": {
+				"Nome": "Suplementos de Arton: magias",
+				"Dica": "Magias dos suplementos nas listas de magias."
+			},
+			"supItens": {
+				"Nome": "Suplementos de Arton: itens",
+				"Dica": "Armas, armaduras e itens mundanos dos suplementos na loja e no equipamento inicial (itens mágicos e artefatos ficam de fora)."
+			},
+			"supDivindades": {
+				"Nome": "Suplementos de Arton: divindades",
+				"Dica": "Poderes concedidos novos para os deuses maiores e os deuses menores do Guia de Deuses Menores."
+			},
+			"supOrigensRegionais": {
+				"Nome": "Suplementos de Arton: origens regionais (Atlas)",
+				"Dica": "Preenche o passo Origem regional com as regiões e os poderes do Atlas de Arton. Requer o homebrew de origem dupla."
 			}
-		}
+		},
+		"SuplementoInativo": "Construtor de Ficha: a opção \"Usar Suplementos de Arton\" está ligada, mas o módulo Suplementos de Arton não está ativo. O construtor usa só o livro básico."
 	}
 }

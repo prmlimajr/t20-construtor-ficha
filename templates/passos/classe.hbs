@@ -6,6 +6,7 @@
 			<span class="cf-card-texto">
 				<span class="cf-card-nome">{{nome}}</span>
 				<span class="cf-card-sub">{{resumo}}</span>
+				{{#if fonte}}<span class="cf-fonte">{{fonte}}</span>{{/if}}
 			</span>
 		</button>
 		{{/each}}
@@ -13,6 +14,8 @@
 	<aside class="cf-info">
 		{{#if info}}
 		<h3><img src="{{info.img}}" alt=""> {{info.nome}}</h3>
+		{{#if info.fonte}}<p class="cf-fonte">{{info.fonte}} (Suplementos de Arton)</p>{{/if}}
+		{{#if info.aviso}}<p class="cf-aviso"><i class="fa-solid fa-triangle-exclamation"></i> {{info.aviso}}</p>{{/if}}
 		{{#if info.semRegras}}<p class="cf-aviso">Esta classe não tem regras cadastradas no construtor (data/classes.json).</p>{{/if}}
 		<dl class="cf-dados">
 			<dt>Pontos de vida</dt><dd>{{info.pv}}</dd>

@@ -883,3 +883,17 @@
 .t20-construtor .cf-poder-card:not(.selecionado) .cf-marca { opacity: 0.55; }
 .t20-construtor .cf-poder-card .cf-descricao { margin-top: 6px; }
 .t20-construtor .cf-poder-card .cf-abrir-linha { margin: 6px 0 0; }
+
+/* Conteúdo dos Suplementos de Arton */
+.t20-construtor .cf-fonte {
+	display: inline-block;
+	margin-top: 2px;
+	padding: 0 6px;
+	border-radius: 8px;
+	font-size: 10px;
+	letter-spacing: 0.03em;
+	color: var(--cf-ouro);
+	border: 1px solid var(--cf-ouro);
+	opacity: 0.85;
+}
+.t20-construtor p.cf-fonte { margin: 0 0 6px; }

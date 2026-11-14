@@ -46,6 +46,7 @@ Raças, classes, poderes, magias e equipamentos vêm dos compêndios do sistema.
 |---|---|
 | `racas.json` | escolhas das habilidades raciais e magias raciais fixas |
 | `poderes-classe.json` | escolhas das habilidades de classe de 1º nível |
+| `suplementos.json` | Suplementos de Arton: variantes de classe, regras de classes e classes ignoradas |
 | `classes.json` | perícias, proficiências, habilidades de 1º nível, magias iniciais, devoção, itens extras |
 | `origens.json` | descrição, itens e benefícios das 35 origens do livro básico |
 | `origens-regionais.json` | origens regionais (homebrew); ainda vazio |
@@ -58,10 +59,28 @@ Origens (p. 85–95), divindades (p. 96–105) e escolas de magia (p. 172) foram
 
 > ⚠️ Ainda a conferir com o livro: equipamento inicial por classe, quantidade de magias iniciais e a regra de rolar novamente o menor atributo.
 
+## Suplementos de Arton (opcional)
+
+Integração com o módulo [Suplementos de Arton](https://github.com/mobguilherme/Suplementos-de-Arton), **desligada por padrão**. O mestre liga em *Configurações → Construtor de Ficha*:
+
+- **Suplementos de Arton: usar conteúdo** — chave geral. Só tem efeito com o módulo instalado e ativo; se ele estiver desativado, o mestre recebe um aviso e o construtor usa só o livro básico.
+- Uma chave por tipo de conteúdo (todas ligadas por padrão, valem só com a chave geral ligada):
+  - **Raças** (47): atributos e habilidades raciais. Quando a raça só traz o texto do +1 flexível ("+1 em dois atributos"), a regra é deduzida do texto e o painel avisa.
+  - **Classes** (19): perícias e proficiências não existem nos dados do suplemento. As variantes de classes básicas listadas em `data/suplementos.json` herdam perícias e proficiências da classe base; as demais ficam com perícias à escolha e só proficiências básicas. Habilidades de 1º nível, magias iniciais e devoção são deduzidas dos poderes da classe; habilidades alternativas ("Tipo: Animal", "Tipo: Monstro"…) viram uma escolha. O painel da classe mostra um aviso. Regras completas podem ser cadastradas em `data/suplementos.json` → `classes`, no formato de `classes.json`.
+  - **Poderes**: poderes gerais dos suplementos nas listas de escolha (as habilidades de raças e classes dos suplementos funcionam mesmo com esta chave desligada).
+  - **Magias** (61).
+  - **Itens**: armas, armaduras e itens mundanos na loja e no equipamento inicial (itens mágicos, artefatos e itens litúrgicos ficam de fora).
+  - **Divindades**: poderes concedidos novos para os deuses maiores e os deuses menores do *Guia de Deuses Menores* (sem restrição de devotos, que não está nos dados).
+  - **Origens regionais**: o passo Origem regional (homebrew de origem dupla) passa a listar as regiões do *Atlas de Arton*, cada uma com seus poderes regionais.
+- Mudar qualquer chave vale para os construtores abertos depois. Se o mestre desligar algo no meio de uma criação, as escolhas que vinham do suplemento são descartadas e o passo volta a pedir a escolha.
+- Conteúdo de suplemento aparece com uma etiqueta do livro de origem (ex.: *Heróis de Arton*).
+
+O suplemento foi feito para Foundry v13 / Tormenta20 1.5. O Foundry converte os dados ao carregar, mas vale conferir na ficha os efeitos dos poderes vindos dele. As *Origens Mundanas* (Heróis de Arton) e as *Distinções* não entram: os compêndios não trazem os itens e benefícios das origens, e distinções não são de 1º nível.
+
 ## Limitações conhecidas
 
 - Somente nível 1.
-- Somente conteúdo do livro básico (Jogo do Ano).
+- Somente conteúdo do livro básico (Jogo do Ano), a menos que a integração com os Suplementos de Arton esteja ligada.
 - Clérigo devoto do Panteão: a escolha entre energia positiva e negativa não é registrada.
 - Foco do Bruxo e grimório do Mago não são adicionados como itens.
 - *Espólio* oferece só itens da loja do livro básico (não monta itens superiores).

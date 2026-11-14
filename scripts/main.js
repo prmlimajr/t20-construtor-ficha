@@ -10,6 +10,8 @@
  */
 import { MODULE_ID } from "./regras.js";
 import { ConstrutorFicha, TEMPLATES_PASSOS } from "./wizard.js";
+import { invalidarDados } from "./dados.js";
+import { CONTEUDOS_SUPLEMENTO, SUPLEMENTO_ID } from "./suplementos.js";
 
 const L = (k) => game.i18n.localize(`T20CF.${k}`);
 
@@ -32,6 +34,12 @@ function registrarConfiguracoes() {
 		type: Number, default: 1,
 		range: { min: 1, max: 2, step: 1 }
 	});
+
+	// Suplementos de Arton: chave geral (desligada por padrão) e uma por tipo de conteúdo.
+	// Mudar qualquer uma descarta os dados carregados; o próximo construtor aberto relê tudo.
+	const recarregar = () => invalidarDados();
+	s("suplementos", { type: Boolean, default: false, onChange: recarregar });
+	for (const chave of CONTEUDOS_SUPLEMENTO) s(`sup${chave}`, { type: Boolean, default: true, onChange: recarregar });
 }
 
 /* ---------------- Abertura ---------------- */
@@ -85,6 +93,14 @@ function envolverRacaDoSistema() {
 Hooks.once("init", () => {
 	registrarConfiguracoes();
 	foundry.applications.handlebars.loadTemplates(TEMPLATES_PASSOS);
+});
+
+// Aviso ao mestre: integração ligada, mas o módulo Suplementos de Arton não está ativo
+Hooks.once("ready", () => {
+	if (!game.user.isGM || !game.settings.get(MODULE_ID, "suplementos")) return;
+	if (!game.modules.get(SUPLEMENTO_ID)?.active) {
+		ui.notifications.warn(L("SuplementoInativo"));
+	}
 });
 
 Hooks.once("setup", () => {

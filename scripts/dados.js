@@ -3,6 +3,7 @@
  * + arquivos JSON do módulo (regras de classe, origens, divindades, equipamento).
  */
 import { MODULE_ID, normalizar } from "./regras.js";
+import { carregarSuplementos, conteudoLigado } from "./suplementos.js";
 
 const PACKS = {
 	racas: "tormenta20.racas",
@@ -13,6 +14,11 @@ const PACKS = {
 };
 
 let cache = null;
+
+/** Descarta os dados carregados (ex.: quando o mestre muda as configurações dos suplementos). */
+export function invalidarDados() {
+	cache = null;
+}
 
 /** Melhorias que exigem outra melhoria (ou material especial), impossíveis num item com uma só. */
 const MELHORIAS_COM_PRE_REQUISITO = new Set(["Pungente", "Atroz", "Material Especial"]);
@@ -91,7 +97,7 @@ function porNome(docs) {
 export async function carregarDados() {
 	if (cache) return cache;
 
-	const [racas, classes, poderes, magias, regrasClasses, origens, regionais, divindades, equipamento, escolas, regrasRacas, regrasPoderesClasse] =
+	const [racas, classes, poderes, magias, regrasClasses, origens, regionais, divindades, equipamento, escolas, regrasRacas, regrasPoderesClasse, configSuplementos] =
 		await Promise.all([
 			documentos("racas"),
 			documentos("classes"),
@@ -104,8 +110,12 @@ export async function carregarDados() {
 			lerJson("equipamento.json"),
 			lerJson("escolas.json"),
 			lerJson("racas.json"),
-			lerJson("poderes-classe.json")
+			lerJson("poderes-classe.json"),
+			lerJson("suplementos.json")
 		]);
+	const sup = await carregarSuplementos({
+		regrasClasses, divindades: divindades.divindades ?? [], origensRegionais: regionais.origens ?? []
+	}, configSuplementos);
 
 	// Melhorias de itens superiores (efeitos do compêndio tormenta20.efeitos), para o Protótipo
 	const packEfeitos = game.packs.get("tormenta20.efeitos");
@@ -118,36 +128,47 @@ export async function carregarDados() {
 	const indiceEquip = packEquip ? await packEquip.getDocuments() : [];
 
 	const ordenar = (a, b) => a.name.localeCompare(b.name, "pt-BR");
+	const comCategoria = ({ doc, categoria }) => ({
+		doc, categoria,
+		tipo: ESTRUTURA_LOJA.find((t) => t.categorias.includes(categoria))?.tipo ?? "Itens gerais"
+	});
+	const todosPoderes = [...poderes, ...sup.poderes];
+	// itens: os do sistema primeiro (em nomes repetidos, vale o do livro básico)
+	const equipPorNome = new Map([...indiceEquip].map((e) => [normalizar(e.name), e]));
+	for (const { doc } of sup.itens) if (!equipPorNome.has(normalizar(doc.name))) equipPorNome.set(normalizar(doc.name), doc);
 
 	cache = {
-		racas: [...racas].sort(ordenar),
-		classes: [...classes].sort(ordenar),
-		magias: [...magias].sort(ordenar),
-		poderes,
-		poderesPorNome: porNome(poderes),
-		equipPorNome: new Map([...indiceEquip].map((e) => [normalizar(e.name), e])),
+		racas: [...racas, ...sup.racas].sort(ordenar),
+		classes: [...classes, ...sup.classes].sort(ordenar),
+		magias: [...magias, ...sup.magias].sort(ordenar),
+		poderes: todosPoderes,
+		poderesPorNome: porNome(todosPoderes),
+		equipPorNome,
 		// só armas "de verdade": pasta Armas, com proficiência (exclui Ataque desarmado,
 		// itens de origem como Rolo de macarrão e esotéricos como Cajado Arcano)
 		armas: [...indiceEquip]
 			.filter((e) => e.type === "arma" && e.system?.proficiencia
 				&& normalizar(e.name) !== "ataque desarmado"
 				&& pastaRaiz(e, packEquip) === "Armas")
+			.concat(sup.itens.filter(({ doc }) => doc.type === "arma" && ["simples", "marcial"].includes(doc.system?.proficiencia)).map(({ doc }) => doc))
 			.sort(ordenar),
 		packEquip,
 		loja: [...indiceEquip]
 			.map((d) => ({ doc: d, pasta: pastaRaiz(d, packEquip) }))
 			.filter(({ doc, pasta }) => !FORA_DA_LOJA.has(pasta) && Number(doc.system?.preco) > 0)
-			.map(({ doc, pasta }) => {
-				const categoria = categoriaLoja(doc, pasta);
-				const tipo = ESTRUTURA_LOJA.find((t) => t.categorias.includes(categoria))?.tipo ?? "Itens gerais";
-				return { doc, categoria, tipo };
-			})
+			.map(({ doc, pasta }) => comCategoria({ doc, categoria: categoriaLoja(doc, pasta) }))
+			.concat(sup.itens.map(comCategoria))
 			.sort((a, b) => ordenar(a.doc, b.doc)),
 		estruturaLoja: ESTRUTURA_LOJA,
-		regrasClasses,
+		regrasClasses: { ...regrasClasses, ...sup.regrasClasses },
 		origens: origens.origens ?? [],
-		origensRegionais: regionais.origens ?? [],
-		divindades: divindades.divindades ?? [],
+		origensRegionais: sup.origensRegionais ?? regionais.origens ?? [],
+		divindades: sup.divindades ?? divindades.divindades ?? [],
+		/** Conteúdo vindo dos Suplementos de Arton: uuid → nome do compêndio. */
+		fonteSuplemento: sup.fonte,
+		suplementoLigado: sup.ligado,
+		/** Poderes do suplemento só aparecem nas listas de escolha com a chave "Poderes" ligada. */
+		poderesSuplementoSelecionaveis: conteudoLigado("Poderes"),
 		equipamento,
 		escolas: escolas.escolas ?? {},
 		regrasRacas: regrasRacas.poderes ?? {},
@@ -156,6 +177,16 @@ export async function carregarDados() {
 	};
 	verificarReferencias(cache);
 	return cache;
+}
+
+/** O poder pode aparecer nas listas de escolha? (do sistema, ou do suplemento com a chave "Poderes" ligada) */
+export function poderSelecionavel(dados, p) {
+	return !dados.fonteSuplemento?.has(p.uuid) || dados.poderesSuplementoSelecionaveis;
+}
+
+/** Nome do compêndio do suplemento de onde veio o documento (ou ""). */
+export function fonteDe(dados, doc) {
+	return dados.fonteSuplemento?.get(doc?.uuid) ?? "";
 }
 
 /** Busca um poder pelo nome; avisa no console quando o nome não existe no compêndio. */
@@ -167,6 +198,7 @@ export function poder(dados, nome) {
 export function poderesDoGrupo(dados, grupo) {
 	const g = normalizar(grupo);
 	return dados.poderes
+		.filter((p) => poderSelecionavel(dados, p))
 		.filter((p) => p.system.tipo === "geral" && normalizar(p.system.subtipo) === g)
 		.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 }

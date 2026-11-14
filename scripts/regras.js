@@ -60,6 +60,8 @@ export function expandirPericias(lista) {
 	const out = [];
 	for (const k of lista ?? []) {
 		if (k === "oficio") out.push(...OFICIOS);
+		// "todas": qualquer perícia (classes de suplemento sem lista cadastrada)
+		else if (k === "todas") out.push(...Object.keys(globalThis.CONFIG?.T20?.pericias ?? {}));
 		else out.push(k);
 	}
 	return [...new Set(out)];

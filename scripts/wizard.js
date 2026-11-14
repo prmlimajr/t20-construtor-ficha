@@ -6,7 +6,8 @@ import {
 	MODULE_ID, ATRIBUTOS, NOMES_ATRIBUTOS, OFICIOS, PONTOS_TOTAIS, MIN_PONTOS, MAX_PONTOS,
 	ARRANJOS_FIXOS, custoAtributo, pontosGastos, converterRolagem, expandirPericias, normalizar, sinal
 } from "./regras.js";
-import { carregarDados, poder, poderesDoGrupo, equipamento, magiaPorNome } from "./dados.js";
+import { carregarDados, poder, poderesDoGrupo, equipamento, magiaPorNome, poderSelecionavel, fonteDe } from "./dados.js";
+import { atributosDinamicosRaca } from "./suplementos.js";
 import { aplicarNaFicha } from "./aplicar.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -16,7 +17,6 @@ export const TEMPLATES_PASSOS = [
 	"raca", "atributos", "classe", "magias", "pericias", "origem", "devocao", "equipamento", "dinheiro", "revisao"
 ].map((p) => `${TPL}/passos/${p}.hbs`).concat(`${TPL}/partes/poder.hbs`, `${TPL}/partes/abrir.hbs`, `${TPL}/partes/aprimoramentos.hbs`, `${TPL}/partes/escolha-racial.hbs`, `${TPL}/partes/poder-escolha.hbs`, `${TPL}/partes/venda.hbs`, `${TPL}/partes/poder-selecionavel.hbs`);
 
-const ATRIBUTOS_DINAMICOS = 3;
 
 function estadoInicial(actor) {
 	const zeros = Object.fromEntries(ATRIBUTOS.map((k) => [k, 0]));
@@ -311,6 +311,47 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		return { pericias: v?.pericias ?? [], poderes: v?.poderes ?? [] };
 	}
 
+	/**
+	 * Descarta do rascunho o que não existe mais nos dados carregados (ex.: o mestre desligou os
+	 * Suplementos de Arton no meio da criação). O passo afetado volta a pedir a escolha.
+	 */
+	#limparReferencias() {
+		const e = this.estado;
+		const d = this.dados;
+		const existe = (lista, uuid) => !uuid || lista.some((x) => x.uuid === uuid);
+		if (!existe(d.racas, e.raca)) Object.assign(e, { raca: "", racaAtributos: [], racaEscolhas: {} });
+		if (!existe(d.classes, e.classe)) {
+			Object.assign(e, {
+				classe: "", escolhasClasse: {}, classePoderEscolhas: {}, magiasEscolas: [], magias: [],
+				periciasOu: [], periciasClasse: [], poderesConcedidos: [], divindade: "", devoto: null
+			});
+		}
+		const uuidsMagias = new Set(d.magias.map((m) => m.uuid));
+		e.magias = e.magias.filter((u) => uuidsMagias.has(u));
+		const div = d.divindades.find((x) => x.nome === e.divindade);
+		if (e.divindade && !div) Object.assign(e, { divindade: "", poderesConcedidos: [] });
+		if (div) e.poderesConcedidos = e.poderesConcedidos.filter((n) => div.poderes.includes(n) && poder(d, n));
+		for (const [sub, lista] of [["principal", d.origens], ["regional", d.origensRegionais]]) {
+			const o = e.origens[sub];
+			if (o.nome && !lista.some((x) => x.nome === o.nome)) {
+				Object.assign(o, { nome: "", beneficios: [], grupos: {}, itens: {}, amnPericia: "", amnPoder: "" });
+			}
+			for (const [g, n] of Object.entries(o.grupos ?? {})) if (!poder(d, n)) delete o.grupos[g];
+		}
+		const limparEscolhas = (mapa) => {
+			for (const [id, v] of Object.entries(mapa ?? {})) {
+				if (Array.isArray(v) && v.some((x) => String(x).startsWith("Compendium."))) mapa[id] = v.filter((u) => uuidsMagias.has(u));
+				else if (v?.poderes) v.poderes = v.poderes.filter((n) => poder(d, n));
+			}
+		};
+		limparEscolhas(e.racaEscolhas);
+		limparEscolhas(e.classePoderEscolhas);
+		const armas = new Set(d.armas.map((a) => a.name));
+		for (const campo of ["arma", "armaMarcial"]) if (e.equip?.[campo] && !armas.has(e.equip[campo])) e.equip[campo] = "";
+		const loja = new Set(d.loja.map((x) => x.doc.name));
+		for (const nome of Object.keys(e.compras ?? {})) if (!loja.has(nome)) delete e.compras[nome];
+	}
+
 	/** Garante a estrutura das escolhas da raça e da classe atuais; descarta as que deixaram de valer. */
 	#prepararEscolhasRaciais() {
 		const e = this.estado;
@@ -542,9 +583,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			case "raca": {
 				const r = this.raca;
 				if (!r) return "Escolha uma raça.";
-				const din = [...(r.system.atributosDinamicos?.value ?? [])];
-				if (din.length && e.racaAtributos.length !== ATRIBUTOS_DINAMICOS) {
-					return `Escolha ${ATRIBUTOS_DINAMICOS} atributos para receber +1.`;
+				const din = atributosDinamicosRaca(r);
+				if (din.lista.length && e.racaAtributos.length !== Math.min(din.qtd, din.lista.length)) {
+					return `Escolha ${Math.min(din.qtd, din.lista.length)} atributos para receber +1.`;
 				}
 				return this.#pendenciaEscolhas(this.escolhasRaciais());
 			}
@@ -672,6 +713,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			try { estado = JSON.parse(salvo); } catch (err) { estado = null; }
 		}
 		this.estado = foundry.utils.mergeObject(estadoInicial(this.actor), estado ?? {}, { inplace: false });
+		this.#limparReferencias();
 		this.#prepararEscolhasRaciais();
 		const modos = this.modosPermitidos();
 		if (!modos.includes(this.estado.atrModo)) this.estado.atrModo = modos.length === 1 ? modos[0] : "";
@@ -963,7 +1005,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			const f = this.#fichaEquip(nome);
 			return { valor: nome, nome: f.nome, img: f.img, sub: f.sub };
 		};
-		const poderCard = (p) => ({ valor: p.name, nome: p.name, img: p.img, sub: p.system.subtipo ?? "" });
+		const poderCard = (p) => ({ valor: p.name, nome: p.name, img: p.img, sub: [p.system.subtipo, fonteDe(this.dados, p)].filter(Boolean).join(" · ") });
 		switch (tipo) {
 			case "arma": {
 				const cats = arg.split(",");
@@ -1011,10 +1053,10 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			case "magia":
 				return this.magiasDisponiveis().map((m) => ({
 					valor: m.uuid, nome: m.name, img: m.img,
-					sub: `${rotuloEscola(m.system.escola)} · ${m.system.tipo === "uni" ? "Universal" : (m.system.tipo === "arc" ? "Arcana" : "Divina")}`
+					sub: [rotuloEscola(m.system.escola), m.system.tipo === "uni" ? "Universal" : (m.system.tipo === "arc" ? "Arcana" : "Divina"), fonteDe(this.dados, m)].filter(Boolean).join(" · ")
 				}));
 			case "poderGeral":
-				return this.dados.poderes.filter((p) => p.system.tipo === "geral")
+				return this.dados.poderes.filter((p) => p.system.tipo === "geral" && poderSelecionavel(this.dados, p))
 					.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")).map(poderCard);
 			case "pericia": {
 				const atual = foundry.utils.getProperty(this.estado, this.slideout?.campo ?? "");
@@ -1195,10 +1237,11 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	#textoAtributosRaca(r) {
 		const partes = ATRIBUTOS.filter((k) => r.system.atributos?.[k])
 			.map((k) => `${NOMES_ATRIBUTOS[k]} ${sinal(r.system.atributos[k])}`);
-		const din = [...(r.system.atributosDinamicos?.value ?? [])];
-		if (din.length) {
-			const excluidos = ATRIBUTOS.filter((k) => !din.includes(k)).map((k) => NOMES_ATRIBUTOS[k]);
-			partes.unshift(`+1 em três atributos${excluidos.length ? ` (exceto ${excluidos.join(", ")})` : ""}`);
+		const din = atributosDinamicosRaca(r);
+		if (din.lista.length) {
+			const excluidos = ATRIBUTOS.filter((k) => !din.lista.includes(k)).map((k) => NOMES_ATRIBUTOS[k]);
+			const qtd = { 1: "um", 2: "dois", 3: "três", 4: "quatro" }[din.qtd] ?? din.qtd;
+			partes.unshift(`+1 em ${qtd} atributos${excluidos.length ? ` (exceto ${excluidos.join(", ")})` : ""}`);
 		}
 		return partes.join(", ") || "—";
 	}
@@ -1208,6 +1251,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const racas = this.dados.racas.map((r) => ({
 			uuid: r.uuid, nome: r.name, img: r.img,
 			resumo: this.#textoAtributosRaca(r),
+			fonte: fonteDe(this.dados, r),
 			selecionado: r.uuid === e.raca
 		}));
 		let info = null;
@@ -1225,19 +1269,20 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				}
 				poderes.push(info);
 			}
-			const din = [...(r.system.atributosDinamicos?.value ?? [])];
+			const din = atributosDinamicosRaca(r);
 			info = {
-				nome: r.name, img: r.img,
+				nome: r.name, img: r.img, fonte: fonteDe(this.dados, r),
 				atributos: this.#textoAtributosRaca(r),
 				descricao: await this.#html(r.uuid, r.system.description?.value),
 				poderes,
-				dinamicos: din.length
-					? din.map((k) => ({
+				dinamicos: din.lista.length
+					? din.lista.map((k) => ({
 						chave: k, nome: NOMES_ATRIBUTOS[k],
 						selecionado: e.racaAtributos.includes(k)
 					}))
 					: null,
-				qtdDinamicos: ATRIBUTOS_DINAMICOS,
+				qtdDinamicos: Math.min(din.qtd, din.lista.length),
+				dinamicosDeduzidos: din.deduzido,
 				semOrigem: this.racaSemOrigem
 			};
 		}
@@ -1373,6 +1418,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const classes = this.dados.classes.map((c) => ({
 			uuid: c.uuid, nome: c.name, img: c.img,
 			resumo: `PV ${c.system.pvPorNivel * 4} · PM ${c.system.pmPorNivel}`,
+			fonte: fonteDe(this.dados, c),
 			selecionado: c.uuid === e.classe
 		}));
 		let info = null;
@@ -1431,6 +1477,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				descricao: await this.#html(c.uuid, c.system.description?.value),
 				habilidades,
 				escolhas,
+				fonte: fonteDe(this.dados, c),
+				aviso: r.aviso ?? null,
 				semRegras: !this.regrasClasse
 			};
 		}
@@ -1826,7 +1874,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const devoto = this.ehDevoto;
 		const divindades = this.dados.divindades.map((d) => {
 			const impedimento = this.impedimentoDivindade(d);
-			return { nome: d.nome, titulo: d.titulo, selecionado: d.nome === e.divindade, bloqueado: !!impedimento, impedimento };
+			return { nome: d.nome, titulo: d.menor ? `${d.titulo} · deus menor` : d.titulo, selecionado: d.nome === e.divindade, bloqueado: !!impedimento, impedimento };
 		});
 		// mostra primeiro as permitidas
 		divindades.sort((a, b) => Number(a.bloqueado) - Number(b.bloqueado));

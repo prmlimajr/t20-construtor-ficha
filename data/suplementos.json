@@ -1,0 +1,18 @@
+{
+  "_comentario": "Ajustes para o módulo Suplementos de Arton (suplementos-de-arton). 'variantes': classe do suplemento → classe básica da qual herda perícias e proficiências (identificadas por habilidades em comum e mesmo PV/PM; conferir com o livro). 'classes': regras completas no formato de classes.json, que substituem a dedução automática. 'ignorarClasses': itens de classe que não são classes jogáveis.",
+  "ignorarClasses": ["Melhor Amigo"],
+  "variantes": {
+    "Duelista": "Bucaneiro",
+    "Machado de Pedra": "Bárbaro",
+    "Vassalo": "Cavaleiro",
+    "Atleta": "Lutador",
+    "Alquimista": "Inventor",
+    "Seteiro": "Caçador",
+    "Burguês": "Nobre",
+    "Santo": "Paladino",
+    "Necromante": "Arcanista",
+    "Usurpador": "Clérigo",
+    "Ermitão": "Druida"
+  },
+  "classes": {}
+}
