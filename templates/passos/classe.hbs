@@ -31,12 +31,12 @@
 				<button type="button" class="cf-chip {{#if selecionado}}selecionado{{/if}}" data-action="definir" data-campo="{{../campo}}" data-valor="{{valor}}">{{nome}}</button>
 				{{/each}}
 			</div>
-			{{#each opcoes}}{{#if info}}{{> "modules/t20-construtor-ficha/templates/partes/poder.hbs" info aberto=true}}{{/if}}{{/each}}
+			{{#each opcoes}}{{#if info}}{{> "modules/t20-construtor-ficha/templates/partes/poder-escolha.hbs" info}}{{/if}}{{/each}}
 		</div>
 		{{/each}}
 
 		<h4>Habilidades de 1º nível</h4>
-		{{#each info.habilidades}}{{> "modules/t20-construtor-ficha/templates/partes/poder.hbs" this}}{{/each}}
+		{{#each info.habilidades}}{{> "modules/t20-construtor-ficha/templates/partes/poder-escolha.hbs" this}}{{/each}}
 		{{#if info.descricao}}
 		<details class="cf-poder"><summary><span>Descrição da classe</span></summary><div class="cf-descricao">{{{info.descricao}}}</div></details>
 		{{/if}}

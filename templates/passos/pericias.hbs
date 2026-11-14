@@ -86,6 +86,17 @@
 		{{else}}
 		<p class="cf-nota">Sua Inteligência não concede perícias adicionais.</p>
 		{{/if}}
+
+		{{#if especialista}}
+		<h4>Especialista <small>({{especialista.contagem}})</small></h4>
+		<p class="cf-nota">Escolha {{especialista.qtd}} perícia(s) treinada(s): ao testá-las, você pode gastar 1 PM para dobrar o bônus de treinamento.</p>
+		<div class="cf-chips">
+			{{#each especialista.cards}}
+			<button type="button" class="cf-chip {{#if selecionado}}selecionado{{/if}}" data-action="escolherPericia"
+				data-campo="{{../especialista.campo}}" data-valor="{{chave}}" data-limite="{{../especialista.qtd}}">{{nome}}</button>
+			{{/each}}
+		</div>
+		{{/if}}
 	</div>
 
 	<aside class="cf-info">

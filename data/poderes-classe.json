@@ -1,0 +1,54 @@
+{
+  "_comentario": "Escolhas das habilidades de classe de 1º nível (T20 Jogo do Ano, cap. 2). Mesmo formato de racas.json. Tipos extras: 'especialista' (perícias treinadas, escolhidas no passo Perícias), 'item' (um item até 'precoMax', no passo Equipamento), 'prototipo' (item superior ou itens alquímicos, no passo Equipamento). 'periciasFixas' = perícias treinadas pelo poder; 'magiasExtra' = magias iniciais a mais.",
+  "poderes": {
+    "Linhagem Dracônica Básica": {
+      "id": "linhagemDraconica",
+      "tipo": "opcao",
+      "efeito": "resistencia",
+      "valor": 5,
+      "titulo": "Tipo de dano do dragão (redução 5)",
+      "opcoes": [
+        { "valor": "acido", "nome": "Ácido" },
+        { "valor": "eletricidade", "nome": "Eletricidade" },
+        { "valor": "fogo", "nome": "Fogo" },
+        { "valor": "frio", "nome": "Frio" }
+      ]
+    },
+    "Linhagem Feérica Básica": {
+      "id": "linhagemFeerica",
+      "tipo": "magias",
+      "titulo": "Magia feérica (encantamento ou ilusão)",
+      "quantidade": 1,
+      "circulo": 1,
+      "escolas": ["enc", "ilu"],
+      "periciasFixas": ["enga"]
+    },
+    "Linhagem Rubra Básica": {
+      "id": "linhagemRubra",
+      "tipo": "beneficio",
+      "titulo": "Poder da Tormenta",
+      "quantidade": 1,
+      "poder": { "lista": "grupo:Tormenta", "nome": "poder da Tormenta", "maximo": 1 }
+    },
+    "Caminho do Arcanista: Mago": { "magiasExtra": 1 },
+    "Especialista": {
+      "id": "especialista",
+      "tipo": "especialista",
+      "titulo": "Especialista (Ladino)"
+    },
+    "Espólio": {
+      "id": "espolio",
+      "tipo": "item",
+      "titulo": "Espólio (Nobre)",
+      "precoMax": 2000
+    },
+    "Protótipo": {
+      "id": "prototipo",
+      "tipo": "prototipo",
+      "titulo": "Protótipo (Inventor)",
+      "precoMax": 500,
+      "maxAlquimicos": 10,
+      "precoMelhoria": 300
+    }
+  }
+}

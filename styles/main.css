@@ -794,3 +794,9 @@
 .t20-construtor .cf-chip.cf-chip-adicionar:hover { background: var(--cf-ouro-claro); }
 .t20-construtor .cf-chip.cf-chip-remover i { margin-left: 4px; font-size: 0.85em; opacity: 0.8; }
 .t20-construtor .cf-magias-fixas { margin: -2px 0 8px 18px; }
+
+/* Equipamento: Protótipo (itens alquímicos) */
+.t20-construtor .cf-card.cf-alquimico { display: flex; align-items: center; gap: 8px; cursor: default; }
+.t20-construtor .cf-card.cf-alquimico .cf-card-texto { flex: 1; cursor: pointer; }
+.t20-construtor .cf-qtd { display: inline-flex; gap: 4px; flex: none; }
+.t20-construtor .cf-qtd button { width: 26px; height: 26px; padding: 0; line-height: 1; flex: none; }

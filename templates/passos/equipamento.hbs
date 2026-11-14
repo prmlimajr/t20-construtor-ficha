@@ -45,6 +45,49 @@
 		</div>
 		{{/if}}
 
+		{{#each itensClasse}}
+		<h4>{{titulo}}</h4>
+		<div class="cf-escolha-racial">
+			{{#if ehItem}}
+			<p class="cf-nota">{{texto}}</p>
+			{{> "modules/t20-construtor-ficha/templates/partes/abrir.hbs" abrir}}
+			{{/if}}
+			{{#if ehPrototipo}}
+			<div class="cf-chips">
+				{{#each modos}}
+				<button type="button" class="cf-chip {{#if selecionado}}selecionado{{/if}}" data-action="definir"
+					data-campo="{{../campoModo}}" data-valor="{{valor}}">{{nome}}</button>
+				{{/each}}
+			</div>
+			{{#if superior}}
+			<p class="cf-nota">{{superior.texto}}</p>
+			<div class="cf-campo"><span class="cf-rotulo-abrir">Item:</span> {{> "modules/t20-construtor-ficha/templates/partes/abrir.hbs" superior.item}}</div>
+			{{#if superior.melhoria}}
+			<div class="cf-campo"><span class="cf-rotulo-abrir">Melhoria:</span> {{> "modules/t20-construtor-ficha/templates/partes/abrir.hbs" superior.melhoria}}</div>
+			{{/if}}
+			{{/if}}
+			{{#if alquimicos}}
+			<p class="cf-nota">{{alquimicos.total}}</p>
+			<div class="cf-cards">
+				{{#each alquimicos.itens}}
+				<div class="cf-card cf-alquimico {{#if qtd}}selecionado{{/if}}">
+					<img src="{{img}}" alt="">
+					<span class="cf-card-texto" data-action="focarEquip" data-nome="{{nome}}">
+						<span class="cf-card-nome">{{nome}}{{#if qtd}} <small>×{{qtd}}</small>{{/if}}</span>
+						<span class="cf-card-sub">{{preco}}</span>
+					</span>
+					<span class="cf-qtd">
+						<button type="button" data-action="ajustarAlquimico" data-nome="{{nome}}" data-delta="-1" {{#unless podeMenos}}disabled{{/unless}} title="Remover"><i class="fa-solid fa-minus"></i></button>
+						<button type="button" data-action="ajustarAlquimico" data-nome="{{nome}}" data-delta="1" {{#unless podeMais}}disabled{{/unless}} title="Adicionar"><i class="fa-solid fa-plus"></i></button>
+					</span>
+				</div>
+				{{/each}}
+			</div>
+			{{/if}}
+			{{/if}}
+		</div>
+		{{/each}}
+
 		<h4>Itens que você já recebe</h4>
 		{{#each recebidos}}
 		<p class="cf-subtitulo">{{titulo}}</p>

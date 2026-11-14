@@ -23,7 +23,13 @@ Jogadores precisam da permissão **"Criar novos atores"** (Configurações → P
 
    Trocar de raça descarta essas escolhas. Na ficha, a escolha vira efeito no próprio poder (imunidade, redução 10, +2 nas perícias, redutor de –1 PM nas magias escolhidas); magias raciais (inclusive as fixas de Aggelus, Sulfure e Dahllan) entram com o atributo-chave da raça.
 2. **Atributos**: compra de pontos (10 pontos, com placar), rolagem (4d6 descarta o menor, enviada ao chat, uma vez só) ou valores fixos. O mestre escolhe quais modalidades são permitidas.
-3. **Classe**: PV, PM, perícias, proficiências e habilidades de 1º nível; escolhas como Caminho do Arcanista e Linhagem do Feiticeiro.
+3. **Classe**: PV, PM, perícias, proficiências e habilidades de 1º nível; escolhas como Caminho do Arcanista e Linhagem do Feiticeiro, e o que cada uma pede:
+   - *Linhagem Dracônica*: tipo de dano (ácido, eletricidade, fogo ou frio) da redução 5;
+   - *Linhagem Feérica*: Enganação treinada e 1 magia de 1º círculo de encantamento ou ilusão;
+   - *Linhagem Rubra*: 1 poder da Tormenta;
+   - *Mago*: 4 magias iniciais em vez de 3.
+
+   Trocar classe, Caminho ou Linhagem descarta as escolhas que deixaram de valer. Outras escolhas de classe ficam nos passos delas: *Especialista* (Ladino) no passo Perícias; *Espólio* (Nobre, item de até T$ 2.000) e *Protótipo* (Inventor, item superior com uma melhoria ou até 10 itens alquímicos, total até T$ 500) no passo Equipamento.
 4. **Magias** (classes conjuradoras): magias de 1º círculo do tipo da classe; Bardo e Druida escolhem 3 escolas antes.
 5. **Perícias**: obrigatórias da classe, escolhas da classe e perícias extras pelo valor de Inteligência.
 6. **Origem**: itens e 2 benefícios (perícias, poderes ou um poder de um grupo). Com o homebrew ligado: origem profissional + regional.
@@ -39,6 +45,7 @@ Raças, classes, poderes, magias e equipamentos vêm dos compêndios do sistema.
 | Arquivo | Conteúdo |
 |---|---|
 | `racas.json` | escolhas das habilidades raciais e magias raciais fixas |
+| `poderes-classe.json` | escolhas das habilidades de classe de 1º nível |
 | `classes.json` | perícias, proficiências, habilidades de 1º nível, magias iniciais, devoção, itens extras |
 | `origens.json` | descrição, itens e benefícios das 35 origens do livro básico |
 | `origens-regionais.json` | origens regionais (homebrew); ainda vazio |
@@ -55,6 +62,8 @@ Origens (p. 85–95), divindades (p. 96–105) e escolas de magia (p. 172) foram
 
 - Somente nível 1.
 - Somente conteúdo do livro básico (Jogo do Ano).
-- Escolhas internas de alguns poderes de classe (ex.: *Especialista* do Ladino, *Protótipo* do Inventor) ficam a cargo do sistema e da ficha.
+- Clérigo devoto do Panteão: a escolha entre energia positiva e negativa não é registrada.
+- Foco do Bruxo e grimório do Mago não são adicionados como itens.
+- *Espólio* oferece só itens da loja do livro básico (não monta itens superiores).
 - *Memória Póstuma*: a alternativa "osteon de outra raça" (ganhar uma habilidade dessa raça) não é oferecida.
 - Para não abrir o diálogo de atributos raciais do sistema, o módulo substitui `_onCreateOwnedRace` apenas para raças criadas pelo construtor.

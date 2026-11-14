@@ -14,7 +14,7 @@ const TPL = `modules/${MODULE_ID}/templates`;
 
 export const TEMPLATES_PASSOS = [
 	"raca", "atributos", "classe", "magias", "pericias", "origem", "devocao", "equipamento", "dinheiro", "revisao"
-].map((p) => `${TPL}/passos/${p}.hbs`).concat(`${TPL}/partes/poder.hbs`, `${TPL}/partes/abrir.hbs`, `${TPL}/partes/aprimoramentos.hbs`, `${TPL}/partes/escolha-racial.hbs`);
+].map((p) => `${TPL}/passos/${p}.hbs`).concat(`${TPL}/partes/poder.hbs`, `${TPL}/partes/abrir.hbs`, `${TPL}/partes/aprimoramentos.hbs`, `${TPL}/partes/escolha-racial.hbs`, `${TPL}/partes/poder-escolha.hbs`);
 
 const ATRIBUTOS_DINAMICOS = 3;
 
@@ -30,6 +30,8 @@ function estadoInicial(actor) {
 		racaAtributos: [],
 		/** Escolhas das habilidades raciais (data/racas.json), por id. Zeradas ao trocar de raça. */
 		racaEscolhas: {},
+		/** Escolhas das habilidades de classe (data/poderes-classe.json), por id. Zeradas ao trocar de classe. */
+		classePoderEscolhas: {},
 		atrModo: "",
 		atrPontos: { ...zeros },
 		atrPontosTotal: PONTOS_TOTAIS,
@@ -72,6 +74,13 @@ async function enriquecer(html) {
 	const limpo = limparReferenciasIndisponiveis(html);
 	if (!limpo) return "";
 	return foundry.applications.ux.TextEditor.implementation.enrichHTML(limpo, { async: true });
+}
+
+/** Categoria de melhoria (system.upgrade.itemType) de um item do compêndio de equipamentos. */
+function tipoMelhoria(doc) {
+	if (doc?.type === "arma") return "weapon";
+	if (doc?.type !== "equipamento") return null;
+	return { leve: "armor", pesada: "armor", escudo: "shield", esoterico: "esoteric", ferramenta: "tool", traje: "clothing" }[doc.system?.tipo] ?? null;
 }
 
 function rotuloPericia(k) {
@@ -134,6 +143,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			lojaCategoria: ConstrutorFicha.#lojaCategoria,
 			focarLoja: ConstrutorFicha.#focarLoja,
 			comprar: ConstrutorFicha.#comprar,
+			ajustarAlquimico: ConstrutorFicha.#ajustarAlquimico,
 			colocarDado: ConstrutorFicha.#colocarDado,
 			fecharSlideout: ConstrutorFicha.#fecharSlideout,
 			focarSlideout: ConstrutorFicha.#focarSlideout,
@@ -175,7 +185,10 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	}
 
 	get conjurador() {
-		return this.regrasClasse?.conjurador ?? null;
+		const c = this.regrasClasse?.conjurador;
+		if (!c) return null;
+		const extra = this.poderesDaClasse().reduce((n, x) => n + (x.regra?.magiasExtra ?? 0), 0);
+		return extra ? { ...c, quantidade: c.quantidade + extra } : c;
 	}
 
 	get origemDupla() {
@@ -221,24 +234,115 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		return out;
 	}
 
+	/** Habilidades de 1º nível da classe + poderes escolhidos (Caminho, Linhagem), com as regras de data/poderes-classe.json. */
+	poderesDaClasse() {
+		const r = this.regrasClasse;
+		if (!r || !this.dados) return [];
+		const nomes = [...(r.habilidades ?? [])];
+		for (const esc of this.escolhasAtivas()) if (this.estado.escolhasClasse[esc.id]) nomes.push(this.estado.escolhasClasse[esc.id]);
+		const out = [];
+		for (const n of nomes) {
+			const p = poder(this.dados, n);
+			if (p) out.push({ poder: p, regra: this.#comFonte(this.dados.regrasPoderesClasse[p.name], "classe") });
+		}
+		return out;
+	}
+
+	#comFonte(regra, fonte) {
+		return regra ? { ...regra, fonte } : null;
+	}
+
 	/** Só as habilidades raciais que pedem escolha do jogador. */
 	escolhasRaciais() {
 		return this.poderesDaRaca().filter((x) => x.regra?.tipo);
 	}
 
-	/** Estado de uma escolha racial, sempre no formato do tipo (string, lista ou {pericias, poderes}). */
+	/** Habilidades de classe com escolha. `tipos` restringe (ex.: só as mostradas no passo Classe). */
+	escolhasDeClasse(tipos = null) {
+		return this.poderesDaClasse().filter((x) => x.regra?.tipo && (!tipos || tipos.includes(x.regra.tipo)));
+	}
+
+	/** Onde fica no estado a escolha de uma regra. */
+	campoEscolha(regra) {
+		return `${regra.fonte === "classe" ? "classePoderEscolhas" : "racaEscolhas"}.${regra.id}`;
+	}
+
+	/** Estado de uma escolha de poder, sempre no formato do tipo. */
 	escolhaRacial(regra) {
-		const v = this.estado.racaEscolhas?.[regra.id];
-		if (regra.tipo === "opcao") return typeof v === "string" ? v : "";
-		if (regra.tipo === "magias") return Array.isArray(v) ? v : [];
+		const v = foundry.utils.getProperty(this.estado, this.campoEscolha(regra));
+		switch (regra.tipo) {
+			case "opcao":
+			case "item": return typeof v === "string" ? v : "";
+			case "magias":
+			case "especialista": return Array.isArray(v) ? v : [];
+			case "prototipo": return {
+				modo: v?.modo ?? "", item: v?.item ?? "", melhoria: v?.melhoria ?? "",
+				alquimicos: v?.alquimicos && typeof v.alquimicos === "object" ? v.alquimicos : {}
+			};
+		}
 		return { pericias: v?.pericias ?? [], poderes: v?.poderes ?? [] };
 	}
 
-	/** Garante a estrutura das escolhas da raça atual (os slideouts adicionam em listas). */
+	/** Garante a estrutura das escolhas da raça e da classe atuais; descarta as que deixaram de valer. */
 	#prepararEscolhasRaciais() {
 		const e = this.estado;
 		e.racaEscolhas ??= {};
 		for (const { regra } of this.escolhasRaciais()) e.racaEscolhas[regra.id] = this.escolhaRacial(regra);
+		const ativas = {};
+		for (const { regra } of this.escolhasDeClasse()) ativas[regra.id] = this.escolhaRacial(regra);
+		e.classePoderEscolhas = ativas;
+	}
+
+	/** Perícias treinadas automaticamente por poderes de classe (ex.: Linhagem Feérica → Enganação). */
+	periciasDePoderesClasse() {
+		const set = new Set();
+		for (const { regra } of this.poderesDaClasse()) (regra?.periciasFixas ?? []).forEach((k) => set.add(k));
+		return set;
+	}
+
+	/** Quantas perícias o Especialista escolhe: Inteligência, mínimo 1. */
+	get qtdEspecialista() {
+		return Math.max(1, this.atributoFinal("int"));
+	}
+
+	/** Pendência de uma lista de escolhas de poder (null = completas). */
+	#pendenciaEscolhas(lista) {
+		for (const { poder: p, regra } of lista) {
+			const v = this.escolhaRacial(regra);
+			if (regra.tipo === "opcao" && !v) return `${p.name}: escolha ${regra.titulo.toLowerCase()}.`;
+			if (regra.tipo === "magias" && v.length !== regra.quantidade) {
+				return `${p.name}: escolha ${regra.quantidade} magia(s) (${v.length}/${regra.quantidade}).`;
+			}
+			if (regra.tipo === "beneficio") {
+				const n = v.pericias.length + v.poderes.length;
+				if (n !== regra.quantidade) return `${p.name}: faça ${regra.quantidade} escolha(s) (${n}/${regra.quantidade}).`;
+			}
+			if (regra.tipo === "especialista") {
+				const n = Math.min(this.qtdEspecialista, this.periciasTreinadas().size);
+				if (v.length !== n) return `Especialista: escolha ${n} perícia(s) treinada(s) (${v.length}/${n}).`;
+			}
+			if (regra.tipo === "item" && !v) return `${p.name}: escolha um item de até T$ ${regra.precoMax}.`;
+			if (regra.tipo === "prototipo") {
+				if (!v.modo) return "Protótipo: escolha entre item superior e itens alquímicos.";
+				if (v.modo === "superior" && (!v.item || !v.melhoria)) return "Protótipo: escolha o item e a melhoria.";
+				if (v.modo === "alquimicos") {
+					const { qtd } = this.totaisAlquimicos(v);
+					if (!qtd) return "Protótipo: escolha seus itens alquímicos.";
+				}
+			}
+		}
+		return null;
+	}
+
+	/** Quantidade e preço total dos itens alquímicos do Protótipo. */
+	totaisAlquimicos(v) {
+		let qtd = 0, preco = 0;
+		for (const [nome, n] of Object.entries(v.alquimicos ?? {})) {
+			const it = this.itemLoja(nome);
+			qtd += n;
+			preco += Number(it?.doc.system.preco ?? 0) * n;
+		}
+		return { qtd, preco: Math.round(preco * 100) / 100 };
 	}
 
 	/** A raça não escolhe origem (Golem: Propósito de Criação). */
@@ -259,7 +363,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	/** Remove das escolhas seguintes as perícias que passaram a ser treinadas pela raça. */
 	#removerConflitosRaciais() {
 		const e = this.estado;
-		const raciais = this.periciasRaciais();
+		const raciais = new Set([...this.periciasRaciais(), ...this.periciasDePoderesClasse()]);
 		if (!raciais.size) return;
 		e.periciasOu = e.periciasOu.map((k) => (raciais.has(k) ? "" : k));
 		e.periciasClasse = e.periciasClasse.filter((k) => !raciais.has(k));
@@ -298,6 +402,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const set = this.periciasRaciais();
 		if (r) {
 			r.fixas.forEach((k) => set.add(k));
+			this.periciasDePoderesClasse().forEach((k) => set.add(k));
 			e.periciasOu.forEach((k) => k && set.add(k));
 		}
 		if (ate === "classe") return set;
@@ -413,18 +518,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				if (din.length && e.racaAtributos.length !== ATRIBUTOS_DINAMICOS) {
 					return `Escolha ${ATRIBUTOS_DINAMICOS} atributos para receber +1.`;
 				}
-				for (const { poder: p, regra } of this.escolhasRaciais()) {
-					const v = this.escolhaRacial(regra);
-					if (regra.tipo === "opcao" && !v) return `${p.name}: escolha ${regra.titulo.toLowerCase()}.`;
-					if (regra.tipo === "magias" && v.length !== regra.quantidade) {
-						return `${p.name}: escolha ${regra.quantidade} magia(s) (${v.length}/${regra.quantidade}).`;
-					}
-					if (regra.tipo === "beneficio") {
-						const n = v.pericias.length + v.poderes.length;
-						if (n !== regra.quantidade) return `${p.name}: faça ${regra.quantidade} escolha(s) (${n}/${regra.quantidade}).`;
-					}
-				}
-				return null;
+				return this.#pendenciaEscolhas(this.escolhasRaciais());
 			}
 			case "atributos": {
 				if (!e.atrModo) return "Escolha a modalidade de atributos.";
@@ -445,7 +539,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				for (const esc of this.escolhasAtivas()) {
 					if (!e.escolhasClasse[esc.id]) return `Escolha: ${esc.titulo}.`;
 				}
-				return null;
+				return this.#pendenciaEscolhas(this.escolhasDeClasse(["opcao", "magias", "beneficio"]));
 			}
 			case "magias": {
 				const c = this.conjurador;
@@ -465,7 +559,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				if (e.periciasInt.length !== nInt) {
 					return `Escolha ${nInt} perícias por Inteligência (${e.periciasInt.length} escolhidas).`;
 				}
-				return null;
+				return this.#pendenciaEscolhas(this.escolhasDeClasse(["especialista"]));
 			}
 			case "origem": {
 				const o = e.origens[passo.sub];
@@ -502,7 +596,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			}
 			case "equipamento":
 				if (!e.equip.arma) return "Escolha sua arma inicial.";
-				return null;
+				return this.#pendenciaEscolhas(this.escolhasDeClasse(["item", "prototipo"]));
 			case "dinheiro":
 				return e.dinheiro === null ? "Role seus tibares iniciais." : null;
 			case "revisao": {
@@ -801,7 +895,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				if (!regra) return [];
 				const lista = regra.nomes
 					? regra.nomes.map((n) => magiaPorNome(this.dados, n)).filter(Boolean)
-					: this.dados.magias.filter((m) => m.system.circulo === regra.circulo);
+					: this.dados.magias.filter((m) => m.system.circulo === regra.circulo
+						&& (!regra.escolas || regra.escolas.includes(m.system.escola)));
 				return lista.map((m) => ({
 					valor: m.uuid, nome: m.name, img: m.img,
 					sub: `${rotuloEscola(m.system.escola)} · ${m.system.tipo === "uni" ? "Universal" : (m.system.tipo === "arc" ? "Arcana" : "Divina")}`
@@ -809,7 +904,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			}
 			case "periciaRacial": {
 				const regra = this.#regraRacial(arg);
-				const outras = regra?.pericia === "treinada" ? this.periciasRaciais({ exceto: arg }) : new Set();
+				const outras = regra?.pericia === "treinada" ? this.periciasRaciais({ exceto: regra.fonte === "raca" ? regra.id : null }) : new Set();
 				return ordenarPericias(Object.keys(CONFIG.T20?.pericias ?? {}))
 					.filter((k) => !outras.has(k))
 					.map((k) => {
@@ -817,6 +912,19 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 						return { valor: k, nome: c.nome, sigla: c.atributo, sub: c.tags };
 					});
 			}
+			case "lojaAte": {
+				const max = Number(arg);
+				return this.dados.loja.filter(({ doc }) => Number(doc.system.preco) <= max)
+					.map(({ doc, categoria }) => ({ ...equip(doc.name), sub: `${ConstrutorFicha.formatarTibares(doc.system.preco)} · ${categoria}` }));
+			}
+			case "itemSuperior": {
+				const max = Number(arg);
+				return this.dados.loja.filter(({ doc }) => tipoMelhoria(doc) && Number(doc.system.preco) <= max)
+					.map(({ doc, categoria }) => ({ ...equip(doc.name), sub: `${ConstrutorFicha.formatarTibares(doc.system.preco)} · ${categoria}` }));
+			}
+			case "melhoria":
+				return this.dados.melhorias.filter((m) => [...(m.system.upgrade.itemType ?? [])].includes(arg))
+					.map((m) => ({ valor: m.uuid, nome: m.name, img: m.img, sub: "Melhoria" }));
 			case "magia":
 				return this.magiasDisponiveis().map((m) => ({
 					valor: m.uuid, nome: m.name, img: m.img,
@@ -853,7 +961,12 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				aprimoramentos: i.aprimoramentos
 			};
 		}
-		if (tipo === "arma" || tipo === "nomes") {
+		if (tipo === "melhoria") {
+			const m = this.dados.melhorias.find((x) => x.uuid === valor);
+			if (!m) return null;
+			return { nome: m.name, img: m.img, stats: [{ rotulo: "Custo", valor: "+T$ 300 (1 melhoria)" }], descricao: await this.#html(m.uuid, m.description) };
+		}
+		if (tipo === "arma" || tipo === "nomes" || tipo === "lojaAte" || tipo === "itemSuperior") {
 			const f = this.#fichaEquip(valor);
 			return {
 				nome: f.nome, img: f.img,
@@ -1001,7 +1114,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	/** Controles de uma escolha racial no painel da raça. */
 	#ctxEscolhaRacial(p, regra) {
 		const v = this.escolhaRacial(regra);
-		const campo = `racaEscolhas.${regra.id}`;
+		const campo = this.campoEscolha(regra);
 		const base = { titulo: regra.titulo, poder: p.name, campo };
 		if (regra.tipo === "opcao") {
 			return {
@@ -1016,11 +1129,11 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				...base, ehMagias: true,
 				pendente: v.length !== regra.quantidade,
 				escolhidas,
-				lista: `magiaRacial:${regra.id}`,
+				lista: `magiaRacial:${regra.fonte}.${regra.id}`,
 				limite: regra.quantidade,
 				contagem: `${v.length}/${regra.quantidade}`,
 				podeAdicionar: v.length < regra.quantidade,
-				atributo: NOMES_ATRIBUTOS[regra.atributo]
+				atributo: regra.atributo ? NOMES_ATRIBUTOS[regra.atributo] : ""
 			};
 		}
 		const total = v.pericias.length + v.poderes.length;
@@ -1034,7 +1147,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			poderes: v.poderes.map((n) => ({ valor: n, nome: n })),
 			campoPericias: `${campo}.pericias`,
 			campoPoderes: `${campo}.poderes`,
-			listaPericia: `periciaRacial:${regra.id}`,
+			listaPericia: `periciaRacial:${regra.fonte}.${regra.id}`,
 			listaPoder: regra.poder?.lista ?? "",
 			limitePericias: resta + v.pericias.length,
 			limitePoderes: Math.min(regra.poder?.maximo ?? 0, resta + v.poderes.length),
@@ -1045,9 +1158,11 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		};
 	}
 
-	/** Regra racial pelo id. */
-	#regraRacial(id) {
-		return this.escolhasRaciais().find((x) => x.regra.id === id)?.regra ?? null;
+	/** Regra pelo identificador "fonte.id" usado nas listas do slideout. */
+	#regraRacial(chave) {
+		const [fonte, id] = chave.split(".");
+		const lista = fonte === "classe" ? this.escolhasDeClasse() : this.escolhasRaciais();
+		return lista.find((x) => x.regra.id === id)?.regra ?? null;
 	}
 
 	#ctxAtributos() {
@@ -1133,10 +1248,25 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			const r = this.regrasClasse ?? {};
 			const nomesProf = { marcial: "Armas marciais", pesada: "Armaduras pesadas", escudo: "Escudos" };
 			const prof = ["Armas simples", "Armaduras leves", ...(r.proficiencias ?? []).map((p) => nomesProf[p] ?? p)];
+			// Escolhas dos poderes de classe mostradas aqui (as de perícia e equipamento ficam nos passos delas)
+			const regras = new Map(this.poderesDaClasse().map((x) => [x.poder.name, x.regra]));
+			const comEscolha = async (p) => {
+				const info = await this.#infoPoder(p);
+				const regra = regras.get(p.name);
+				if (["opcao", "magias", "beneficio"].includes(regra?.tipo)) {
+					info.escolha = this.#ctxEscolhaRacial(p, regra);
+					info.aberto = true;
+				} else if (regra?.tipo) {
+					info.nota = { especialista: "Escolha as perícias no passo Perícias.", item: "Escolha o item no passo Equipamento.", prototipo: "Monte o protótipo no passo Equipamento." }[regra.tipo];
+				}
+				if (regra?.periciasFixas) info.nota = `Treinado em ${regra.periciasFixas.map(rotuloPericia).join(", ")} (já marcado na ficha).`;
+				if (regra?.magiasExtra) info.nota = `+${regra.magiasExtra} magia inicial (total ${this.conjurador?.quantidade}).`;
+				return info;
+			};
 			const habilidades = [];
 			for (const nome of r.habilidades ?? []) {
 				const p = poder(this.dados, nome);
-				if (p) habilidades.push(await this.#infoPoder(p));
+				if (p) habilidades.push(await comEscolha(p));
 			}
 			const escolhas = [];
 			for (const esc of this.escolhasAtivas()) {
@@ -1147,12 +1277,12 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 						valor: o.poder,
 						nome: o.poder.replace(/^.*?: /, ""),
 						selecionado: e.escolhasClasse[esc.id] === o.poder,
-						info: e.escolhasClasse[esc.id] === o.poder ? await this.#infoPoder(p) : null
+						info: e.escolhasClasse[esc.id] === o.poder && p ? await comEscolha(p) : null
 					});
 				}
 				escolhas.push({ id: esc.id, titulo: esc.titulo, campo: `escolhasClasse.${esc.id}`, opcoes });
 			}
-			const conj = r.conjurador;
+			const conj = this.conjurador;
 			info = {
 				nome: c.name, img: c.img,
 				pv: `${c.system.pvPorNivel * 4} + Con no 1º nível (+${c.system.pvPorNivel} + Con por nível)`,
@@ -1341,7 +1471,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		if (!r) return {};
 		const card = (k, extra) => this.#cardPericia(k, extra);
 
-		const fixas = ordenarPericias(r.fixas).map((k) => card(k, { fixa: true }));
+		const fixas = ordenarPericias([...new Set([...r.fixas, ...this.periciasDePoderesClasse()])]).map((k) => card(k, { fixa: true }));
 		const raciais = this.periciasRaciais();
 		const daRaca = ordenarPericias([...raciais]).map((k) => card(k, { fixa: true }));
 		const repetidas = r.fixas.filter((k) => raciais.has(k)).map(rotuloPericia);
@@ -1382,6 +1512,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			fixas,
 			daRaca,
 			repetidas: repetidas.join(", "),
+			especialista: this.#ctxEspecialista(),
 			grupos,
 			opcoesClasse,
 			numeroClasse: r.numero,
@@ -1391,6 +1522,21 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			opcoesInt,
 			intTotal: sinal(this.atributoFinal("int")),
 			info
+		};
+	}
+
+	/** Especialista (Ladino): escolhe perícias treinadas em número igual à Inteligência (mínimo 1). */
+	#ctxEspecialista() {
+		const [x] = this.escolhasDeClasse(["especialista"]);
+		if (!x) return null;
+		const v = this.escolhaRacial(x.regra);
+		const treinadas = ordenarPericias([...this.periciasTreinadas()]);
+		const qtd = Math.min(this.qtdEspecialista, treinadas.length);
+		return {
+			campo: this.campoEscolha(x.regra),
+			qtd,
+			contagem: `${v.length}/${qtd}`,
+			cards: treinadas.map((k) => ({ chave: k, nome: rotuloPericia(k), selecionado: v.includes(k) }))
 		};
 	}
 
@@ -1672,7 +1818,61 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				descricao: f.doc ? await this.#html(f.doc.uuid, f.doc.system?.description?.value) : ""
 			};
 		}
-		return { armas, armaduras, escudo, recebidos, info };
+		return { armas, armaduras, escudo, recebidos, info, itensClasse: this.#ctxItensClasse() };
+	}
+
+	/** Espólio (Nobre) e Protótipo (Inventor). */
+	#ctxItensClasse() {
+		const out = [];
+		const fmt = ConstrutorFicha.formatarTibares;
+		for (const { poder: p, regra } of this.escolhasDeClasse(["item", "prototipo"])) {
+			const campo = this.campoEscolha(regra);
+			const v = this.escolhaRacial(regra);
+			if (regra.tipo === "item") {
+				out.push({
+					titulo: regra.titulo, ehItem: true,
+					texto: `Um item à sua escolha com preço de até ${fmt(regra.precoMax)}.`,
+					abrir: { campo, lista: `lojaAte:${regra.precoMax}`, titulo: `${p.name} — até ${fmt(regra.precoMax)}`, escolhido: v }
+				});
+				continue;
+			}
+			const baseMax = regra.precoMax - regra.precoMelhoria;
+			const itemDoc = v.item ? this.itemLoja(v.item)?.doc : null;
+			const mel = this.dados.melhorias.find((x) => x.uuid === v.melhoria);
+			const { qtd, preco } = this.totaisAlquimicos(v);
+			const alquimicos = this.dados.loja
+				.filter(({ doc }) => doc.type === "consumivel" && doc.system.tipo === "alchemy" && Number(doc.system.preco) <= regra.precoMax)
+				.map(({ doc }) => {
+					const n = v.alquimicos[doc.name] ?? 0;
+					const pr = Number(doc.system.preco);
+					return {
+						nome: doc.name, img: doc.img, preco: fmt(pr), qtd: n,
+						podeMais: qtd < regra.maxAlquimicos && preco + pr <= regra.precoMax,
+						podeMenos: n > 0
+					};
+				});
+			out.push({
+				titulo: regra.titulo, ehPrototipo: true,
+				campoModo: `${campo}.modo`,
+				modos: [
+					{ valor: "superior", nome: "Item superior", selecionado: v.modo === "superior" },
+					{ valor: "alquimicos", nome: `Até ${regra.maxAlquimicos} itens alquímicos`, selecionado: v.modo === "alquimicos" }
+				],
+				superior: v.modo === "superior" ? {
+					texto: `Item de até ${fmt(baseMax)} com uma melhoria (+${fmt(regra.precoMelhoria)}), total até ${fmt(regra.precoMax)}.`,
+					item: { campo: `${campo}.item`, lista: `itemSuperior:${baseMax}`, titulo: "Protótipo — item base", escolhido: v.item },
+					melhoria: itemDoc ? {
+						campo: `${campo}.melhoria`, lista: `melhoria:${tipoMelhoria(itemDoc)}`,
+						titulo: `Protótipo — melhoria (${v.item})`, escolhido: mel?.name ?? ""
+					} : null
+				} : null,
+				alquimicos: v.modo === "alquimicos" ? {
+					total: `${qtd}/${regra.maxAlquimicos} itens · ${fmt(preco)} de ${fmt(regra.precoMax)}`,
+					itens: alquimicos
+				} : null
+			});
+		}
+		return out;
 	}
 
 	/** Lista final de itens de uma origem: [{nome, qtd, texto?}] */
@@ -1702,9 +1902,17 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				nome: g.nome,
 				lista: g.poderes.map((p) => `${g.prefixo} - ${p.name}`).join(", ")
 			})),
-			listaMagias: [...plano.magias.map((m) => m.name), ...plano.magiasRaciais.map((m) => `${m.doc.name} (raça)`)].join(", "),
+			listaMagias: [
+				...plano.magias.map((m) => m.name),
+				...plano.magiasPoderesClasse.map((m) => m.doc.name),
+				...plano.magiasRaciais.map((m) => `${m.doc.name} (raça)`)
+			].join(", "),
 			escolhasRaciais: plano.escolhasRaciais.join(" · "),
-			listaItens: plano.itens.map((x) => (x.qtd > 1 ? `${x.nome} (×${x.qtd})` : x.nome)).join(", "),
+			escolhasClasse: plano.escolhasClasse.join(" · "),
+			listaItens: plano.itens.map((x) => {
+				const nome = x.melhoriaNome ? `${x.nome} (${x.melhoriaNome})` : x.nome;
+				return x.qtd > 1 ? `${nome} (×${x.qtd})` : nome;
+			}).join(", "),
 			atributos: ATRIBUTOS.map((k) => ({ nome: NOMES_ATRIBUTOS[k], valor: sinal(this.atributoFinal(k)) }))
 		};
 	}
@@ -1719,51 +1927,13 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 		const poderesRaciais = this.poderesDaRaca().map((x) => x.poder);
 
-		// Escolhas das habilidades raciais: ajustes nos efeitos dos poderes, magias e poderes extras
-		const ajustesRaciais = {};
-		const magiasRaciais = [];
-		const poderesExtrasRaca = [];
-		const escolhasTexto = [];
-		for (const { poder: p, regra } of this.poderesDaRaca()) {
-			if (!regra) continue;
-			const nomesMagias = [];
-			if (regra.magiasFixas) {
-				for (const n of regra.magiasFixas) {
-					const m = magiaPorNome(this.dados, n);
-					if (m) magiasRaciais.push({ doc: m, atributo: regra.atributo });
-				}
-			}
-			if (!regra.tipo) continue;
-			const v = this.escolhaRacial(regra);
-			if (regra.tipo === "opcao") {
-				const o = regra.opcoes.find((x) => x.valor === v);
-				if (!o) continue;
-				ajustesRaciais[p.uuid] = regra.efeito === "imunidade"
-					? { imunidade: o.valor }
-					: { resistencia: o.valor, valor: regra.valor };
-				escolhasTexto.push(`${p.name}: ${o.nome}`);
-			} else if (regra.tipo === "magias") {
-				for (const u of v) {
-					const m = this.dados.magias.find((x) => x.uuid === u);
-					if (!m) continue;
-					magiasRaciais.push({ doc: m, atributo: regra.atributo });
-					nomesMagias.push(m.name);
-				}
-				ajustesRaciais[p.uuid] = { nomesMagias };
-				escolhasTexto.push(`${p.name}: ${nomesMagias.join(", ")}`);
-			} else {
-				if (regra.pericia === "bonus" && v.pericias.length) {
-					ajustesRaciais[p.uuid] = { bonusPericias: v.pericias, bonus: regra.bonus };
-				}
-				for (const n of v.poderes) {
-					const extra = poder(this.dados, n);
-					if (extra) poderesExtrasRaca.push(extra);
-				}
-				const sufixo = regra.pericia === "bonus" ? ` +${regra.bonus}` : "";
-				const partes = [...v.pericias.map((k) => `${rotuloPericia(k)}${sufixo}`), ...v.poderes];
-				if (partes.length) escolhasTexto.push(`${p.name}: ${partes.join(", ")}`);
-			}
-		}
+		// Escolhas das habilidades raciais e de classe: ajustes nos efeitos, magias, poderes e itens extras
+		const daRaca = this.#processarEscolhas(this.poderesDaRaca());
+		const daClasse = this.#processarEscolhas(this.poderesDaClasse());
+		const ajustesRaciais = { ...daRaca.ajustes, ...daClasse.ajustes };
+		const magiasRaciais = daRaca.magias;
+		const poderesExtrasRaca = daRaca.poderes;
+		const escolhasTexto = daRaca.texto;
 
 		// Poderes separados pela fonte (ordem e prefixo usados na ficha)
 		const vistos = new Set(poderesRaciais);
@@ -1803,6 +1973,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const addClasse = adicionar(poderesClasse);
 		(r.habilidades ?? []).forEach(addClasse);
 		for (const esc of this.escolhasAtivas()) if (e.escolhasClasse[esc.id]) addClasse(e.escolhasClasse[esc.id]);
+		daClasse.poderes.forEach((p) => addClasse(p.name));
 
 		const gruposPoderes = [
 			{ prefixo: "R", nome: "Raciais", poderes: poderesRaciais, raciais: true },
@@ -1821,6 +1992,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		if (e.equip.escudo && (r.proficiencias ?? []).includes("escudo") && this.dados.equipamento.escudo) {
 			itens.push({ nome: this.dados.equipamento.escudo, qtd: 1 });
 		}
+		itens.push(...daClasse.itens);
 
 		for (const [nome, n] of Object.entries(e.compras ?? {})) {
 			const it = this.itemLoja(nome);
@@ -1833,11 +2005,13 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		// Magias raciais: uma vez só (se a classe também der a magia, fica a da classe;
 		// o redutor de –1 PM vem do efeito do poder racial)
 		const jaTem = new Set(magias.map((m) => m.uuid));
-		const magiasDaRaca = magiasRaciais.filter(({ doc }) => {
+		const unicas = (lista) => lista.filter(({ doc }) => {
 			if (jaTem.has(doc.uuid)) return false;
 			jaTem.add(doc.uuid);
 			return true;
 		});
+		const magiasDaRaca = unicas(magiasRaciais);
+		const magiasDePoderesClasse = unicas(daClasse.magias);
 
 		let conjuracao = this.conjurador?.atributo ?? null;
 		for (const esc of this.escolhasAtivas()) {
@@ -1847,7 +2021,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 		return {
 			raca, classe, poderesRaciais, poderes, gruposPoderes, magias, itens,
-			magiasRaciais: magiasDaRaca, ajustesRaciais, escolhasRaciais: escolhasTexto,
+			magiasRaciais: magiasDaRaca, magiasPoderesClasse: magiasDePoderesClasse,
+			ajustesRaciais, escolhasRaciais: escolhasTexto, escolhasClasse: daClasse.texto,
 			pericias: ordenarPericias([...this.periciasTreinadas()]),
 			atributos: Object.fromEntries(ATRIBUTOS.map((k) => [k, { base: this.base(k) ?? 0, racial: this.racial(k) }])),
 			origem: this.origensAtivas().map((o) => o.def.nome).join(" / "),
@@ -1858,6 +2033,88 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			conjuracao,
 			nome: e.nome?.trim() || this.actor.name
 		};
+	}
+
+	/**
+	 * Converte as escolhas de uma lista de poderes [{poder, regra}] no que vai para a ficha:
+	 * ajustes nos efeitos do poder (por uuid), magias, poderes extras, itens e um resumo em texto.
+	 */
+	#processarEscolhas(lista) {
+		const out = { ajustes: {}, magias: [], poderes: [], itens: [], texto: [] };
+		for (const { poder: p, regra } of lista) {
+			if (!regra) continue;
+			for (const n of regra.magiasFixas ?? []) {
+				const m = magiaPorNome(this.dados, n);
+				if (m) out.magias.push({ doc: m, atributo: regra.atributo });
+			}
+			if (!regra.tipo) continue;
+			const v = this.escolhaRacial(regra);
+			const ajuste = (dados) => { out.ajustes[p.uuid] = { ...(out.ajustes[p.uuid] ?? {}), ...dados }; };
+			let resumo = "";
+			switch (regra.tipo) {
+				case "opcao": {
+					const o = regra.opcoes.find((x) => x.valor === v);
+					if (!o) break;
+					ajuste(regra.efeito === "imunidade" ? { imunidade: o.valor } : { resistencia: o.valor, valor: regra.valor });
+					resumo = o.nome;
+					break;
+				}
+				case "magias": {
+					const nomes = [];
+					for (const u of v) {
+						const m = this.dados.magias.find((x) => x.uuid === u);
+						if (!m) continue;
+						out.magias.push({ doc: m, atributo: regra.atributo });
+						nomes.push(m.name);
+					}
+					ajuste({ nomesMagias: nomes });
+					resumo = nomes.join(", ");
+					break;
+				}
+				case "beneficio": {
+					if (regra.pericia === "bonus" && v.pericias.length) ajuste({ bonusPericias: v.pericias, bonus: regra.bonus });
+					for (const n of v.poderes) {
+						const extra = poder(this.dados, n);
+						if (extra) out.poderes.push(extra);
+					}
+					const sufixo = regra.pericia === "bonus" ? ` +${regra.bonus}` : "";
+					resumo = [...v.pericias.map((k) => `${rotuloPericia(k)}${sufixo}`), ...v.poderes].join(", ");
+					break;
+				}
+				case "especialista": {
+					const nomes = v.map(rotuloPericia);
+					if (nomes.length) ajuste({ nomesPericias: nomes });
+					resumo = nomes.join(", ");
+					break;
+				}
+				case "item": {
+					if (v) out.itens.push({ nome: v, qtd: 1 });
+					resumo = v;
+					break;
+				}
+				case "prototipo": {
+					if (v.modo === "superior" && v.item && v.melhoria) {
+						const mel = this.dados.melhorias.find((x) => x.uuid === v.melhoria);
+						out.itens.push({ nome: v.item, qtd: 1, melhoria: v.melhoria, melhoriaNome: mel?.name ?? "" });
+						resumo = `${v.item} (${mel?.name ?? "melhoria"})`;
+					} else if (v.modo === "alquimicos") {
+						const partes = [];
+						for (const [nome, n] of Object.entries(v.alquimicos)) {
+							if (n <= 0) continue;
+							out.itens.push({ nome, qtd: n });
+							partes.push(n > 1 ? `${nome} ×${n}` : nome);
+						}
+						resumo = partes.join(", ");
+					}
+					break;
+				}
+			}
+			if (resumo) {
+				out.texto.push(`${p.name}: ${resumo}`);
+				ajuste({ anotacao: resumo });
+			}
+		}
+		return out;
 	}
 
 	/* ---------------- Alteração de estado ---------------- */
@@ -1899,6 +2156,14 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				const validas = new Set(this.escolhasAtivas().map((x) => x.id));
 				for (const k of Object.keys(e.escolhasClasse)) if (!validas.has(k)) delete e.escolhasClasse[k];
 			}
+			if (campo === "classe" || campo.startsWith("escolhasClasse.")) {
+				// trocar classe, Caminho ou Linhagem revoga as escolhas dos poderes que saíram
+				if (campo === "classe") e.classePoderEscolhas = {};
+				this.#prepararEscolhasRaciais();
+				this.#removerConflitosRaciais();
+				const c = this.conjurador;
+				if (c && e.magias.length > c.quantidade) e.magias = e.magias.slice(0, c.quantidade);
+			}
 			if (campo === "magiasEscolas") {
 				const validas = new Set(this.magiasDisponiveis().map((m) => m.uuid));
 				e.magias = e.magias.filter((u) => validas.has(u));
@@ -1912,6 +2177,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				Object.assign(e.origens[sub], { beneficios: [], grupos: {}, itens: {}, amnPericia: "", amnPoder: "" });
 			}
 			if (campo === "divindade") e.poderesConcedidos = [];
+			// Protótipo: trocar o item base invalida a melhoria
+			if (campo === "classePoderEscolhas.prototipo.item") e.classePoderEscolhas.prototipo.melhoria = "";
 			if (campo === "devoto" && valor === false) {
 				e.divindade = "";
 				e.poderesConcedidos = [];
@@ -1924,6 +2191,12 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		// perícias por Inteligência acima do permitido são descartadas
 		const nInt = Math.max(0, this.atributoFinal("int"));
 		if (e.periciasInt.length > nInt) e.periciasInt = e.periciasInt.slice(0, nInt);
+		// Especialista: só perícias treinadas, até o limite pela Inteligência
+		if (Array.isArray(e.classePoderEscolhas?.especialista)) {
+			const treinadas = this.periciasTreinadas();
+			e.classePoderEscolhas.especialista = e.classePoderEscolhas.especialista
+				.filter((k) => treinadas.has(k)).slice(0, this.qtdEspecialista);
+		}
 		this.#mudou();
 	}
 
@@ -1956,6 +2229,25 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		this.focoLoja = nome;
 		this.estado.compras = compras;
 		this.#mudou();
+	}
+
+	/** Protótipo: +1/−1 num item alquímico, respeitando 10 itens e T$ 500. */
+	static #ajustarAlquimico(event, target) {
+		const [x] = this.escolhasDeClasse(["prototipo"]);
+		if (!x) return;
+		const { nome } = target.dataset;
+		const delta = Number(target.dataset.delta);
+		const v = this.escolhaRacial(x.regra);
+		const alq = { ...v.alquimicos };
+		const novo = Math.max(0, (alq[nome] ?? 0) + delta);
+		if (novo) alq[nome] = novo;
+		else delete alq[nome];
+		const { qtd, preco } = this.totaisAlquimicos({ alquimicos: alq });
+		if (delta > 0 && (qtd > x.regra.maxAlquimicos || preco > x.regra.precoMax)) {
+			return ui.notifications.warn(`O protótipo permite até ${x.regra.maxAlquimicos} itens e T$ ${x.regra.precoMax}.`);
+		}
+		this.focoEquip = nome;
+		this.#definirCampo(`${this.campoEscolha(x.regra)}.alquimicos`, alq);
 	}
 
 	/** Clique num dado: seleciona (ou desseleciona) para depois clicar no atributo. */

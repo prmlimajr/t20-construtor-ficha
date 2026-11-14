@@ -58,6 +58,18 @@ function ajustarPoderRacial(data, ajuste) {
 		data.effects = data.effects.filter((e) => !(e.system?.onuse && e.system?.abilityUse?.types?.includes("skill")));
 		data.effects.push(novoEfeito(data, changes));
 	}
+	if (ajuste.nomesPericias?.length) {
+		// Especialista: os efeitos "ao usar" passam a valer só para as perícias escolhidas
+		for (const ef of data.effects) {
+			if (ef.system?.onuse && ef.system.abilityUse?.types?.includes("skill")) ef.system.abilityUse.names = [...ajuste.nomesPericias];
+		}
+	}
+	if (ajuste.anotacao) {
+		// registra a escolha no topo da descrição do poder
+		const desc = foundry.utils.getProperty(data, "system.description.value") ?? "";
+		const nota = `<p><strong>Escolha (construtor):</strong> ${foundry.utils.escapeHTML?.(ajuste.anotacao) ?? ajuste.anotacao}</p>`;
+		foundry.utils.setProperty(data, "system.description.value", nota + desc);
+	}
 	if (ajuste.nomesMagias?.length) {
 		for (const ef of data.effects) {
 			if (ef.system?.onuse && ef.system.abilityUse?.types?.includes("spell")) ef.system.abilityUse.names = [...ajuste.nomesMagias];
@@ -109,15 +121,14 @@ export async function aplicarNaFicha(actor, plano, dados) {
 			const data = doCompendio(p);
 			data.name = `${grupo.prefixo} - ${p.name}`;
 			data.sort = (g + 1) * 100000 + i * 100;
-			if (grupo.raciais) {
-				const ajuste = plano.ajustesRaciais?.[p.uuid];
-				if (ajuste) ajustarPoderRacial(data, ajuste);
-				daRaca.push(itens.length);
-			}
+			const ajuste = plano.ajustesRaciais?.[p.uuid];
+			if (ajuste) ajustarPoderRacial(data, ajuste);
+			if (grupo.raciais) daRaca.push(itens.length);
 			itens.push(data);
 		});
 	});
 	for (const m of plano.magias) itens.push(doCompendio(m));
+	for (const { doc } of plano.magiasPoderesClasse ?? []) itens.push(doCompendio(doc));
 	for (const { doc, atributo } of plano.magiasRaciais ?? []) {
 		const data = doCompendio(doc);
 		// atributo-chave da habilidade racial (usado na CD da magia)
@@ -125,7 +136,16 @@ export async function aplicarNaFicha(actor, plano, dados) {
 		daRaca.push(itens.length);
 		itens.push(data);
 	}
-	for (const it of plano.itens) itens.push(await itemPorNome(dados, it));
+	// Itens superiores (Protótipo): a melhoria é aplicada pelo sistema ao atualizar system.upgrades
+	const superiores = [];
+	for (const it of plano.itens) {
+		const data = await itemPorNome(dados, it);
+		if (it.melhoria) {
+			data.name = `${data.name} (${it.melhoriaNome})`;
+			superiores.push({ indice: itens.length, uuid: it.melhoria });
+		}
+		itens.push(data);
+	}
 
 	const criados = await actor.createEmbeddedDocuments("Item", itens);
 
@@ -134,6 +154,10 @@ export async function aplicarNaFicha(actor, plano, dados) {
 	const raciais = daRaca.map((i) => criados[i]?.id).filter(Boolean);
 	if (racaCriada && raciais.length) {
 		await racaCriada.update({ "flags.tormenta20.grantedItems": raciais });
+	}
+
+	for (const { indice, uuid } of superiores) {
+		await criados[indice]?.update({ "system.upgrades.improvement": [uuid] });
 	}
 
 	await actor.unsetFlag(MODULE_ID, "rascunho");

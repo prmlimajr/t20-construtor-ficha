@@ -6,6 +6,7 @@
 	<dt>Raça</dt><dd>{{racaNome}}</dd>
 	{{#if escolhasRaciais}}<dt>Escolhas raciais</dt><dd>{{escolhasRaciais}}</dd>{{/if}}
 	<dt>Classe</dt><dd>{{classeNome}}</dd>
+	{{#if escolhasClasse}}<dt>Escolhas de classe</dt><dd>{{escolhasClasse}}</dd>{{/if}}
 	<dt>Origem</dt><dd>{{#if plano.origem}}{{plano.origem}}{{else}}—{{/if}}</dd>
 	<dt>Divindade</dt><dd>{{#if plano.divindade}}{{plano.divindade}}{{else}}—{{/if}}</dd>
 	<dt>Atributos</dt><dd>{{#each atributos}}{{nome}} {{valor}}{{#unless @last}} · {{/unless}}{{/each}}</dd>

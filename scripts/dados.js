@@ -14,6 +14,9 @@ const PACKS = {
 
 let cache = null;
 
+/** Melhorias que exigem outra melhoria (ou material especial), impossíveis num item com uma só. */
+const MELHORIAS_COM_PRE_REQUISITO = new Set(["Pungente", "Atroz", "Material Especial"]);
+
 /** Pastas do compêndio de equipamentos que não entram na loja. */
 const FORA_DA_LOJA = new Set(["Tesouro", "Itens de Origem"]);
 const ORDEM_LOJA = ["Armas", "Armaduras & Escudos", "Equipamento de Aventura", "Ferramentas", "Vestuários", "Consumíveis", "Animais", "Esotérico", "Veículos"];
@@ -53,7 +56,7 @@ function porNome(docs) {
 export async function carregarDados() {
 	if (cache) return cache;
 
-	const [racas, classes, poderes, magias, regrasClasses, origens, regionais, divindades, equipamento, escolas, regrasRacas] =
+	const [racas, classes, poderes, magias, regrasClasses, origens, regionais, divindades, equipamento, escolas, regrasRacas, regrasPoderesClasse] =
 		await Promise.all([
 			documentos("racas"),
 			documentos("classes"),
@@ -65,8 +68,16 @@ export async function carregarDados() {
 			lerJson("divindades.json"),
 			lerJson("equipamento.json"),
 			lerJson("escolas.json"),
-			lerJson("racas.json")
+			lerJson("racas.json"),
+			lerJson("poderes-classe.json")
 		]);
+
+	// Melhorias de itens superiores (efeitos do compêndio tormenta20.efeitos), para o Protótipo
+	const packEfeitos = game.packs.get("tormenta20.efeitos");
+	const efeitos = packEfeitos ? await packEfeitos.getDocuments() : [];
+	const melhorias = [...efeitos]
+		.filter((e) => e.system?.upgrade?.type === "improvement" && !MELHORIAS_COM_PRE_REQUISITO.has(e.name))
+		.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 
 	const packEquip = game.packs.get(PACKS.equipamentos);
 	const indiceEquip = packEquip ? await packEquip.getDocuments() : [];
@@ -99,7 +110,9 @@ export async function carregarDados() {
 		divindades: divindades.divindades ?? [],
 		equipamento,
 		escolas: escolas.escolas ?? {},
-		regrasRacas: regrasRacas.poderes ?? {}
+		regrasRacas: regrasRacas.poderes ?? {},
+		regrasPoderesClasse: regrasPoderesClasse.poderes ?? {},
+		melhorias
 	};
 	verificarReferencias(cache);
 	return cache;
@@ -152,7 +165,7 @@ function verificarReferencias(d) {
 	d.equipamento.kitBase?.forEach(checarEquip);
 	Object.values(d.equipamento.armaduras ?? {}).flat().forEach(checarEquip);
 	if (d.equipamento.escudo) checarEquip(d.equipamento.escudo);
-	for (const [nome, r] of Object.entries(d.regrasRacas)) {
+	for (const [nome, r] of [...Object.entries(d.regrasRacas), ...Object.entries(d.regrasPoderesClasse)]) {
 		checarPoder(nome);
 		for (const m of [...(r.nomes ?? []), ...(r.magiasFixas ?? [])]) {
 			if (!magiaPorNome(d, m)) faltando.add(`magia "${m}"`);
