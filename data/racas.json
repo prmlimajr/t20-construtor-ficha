@@ -1,0 +1,99 @@
+{
+  "_comentario": "Escolhas das habilidades raciais (T20 Jogo do Ano, cap. 1). Chave = nome do poder racial no compêndio tormenta20.poderes. Tipos: 'opcao' (escolha única: resistência/imunidade), 'magias' (N magias de uma lista ou de um círculo), 'beneficio' (perícias treinadas ou com bônus; até 'poder.maximo' delas podem virar um poder). 'magiasFixas' = magias concedidas sem escolha. 'semOrigem' = a raça não escolhe origem.",
+  "poderes": {
+    "Fonte Elemental": {
+      "id": "fonteElemental",
+      "tipo": "opcao",
+      "efeito": "imunidade",
+      "titulo": "Espírito elemental",
+      "opcoes": [
+        { "valor": "frio", "nome": "Água (frio)" },
+        { "valor": "eletricidade", "nome": "Ar (eletricidade)" },
+        { "valor": "fogo", "nome": "Fogo (fogo)" },
+        { "valor": "acido", "nome": "Terra (ácido)" }
+      ]
+    },
+    "Resistência Elemental": {
+      "id": "resistenciaElemental",
+      "tipo": "opcao",
+      "efeito": "resistencia",
+      "valor": 10,
+      "titulo": "Ascendência (redução 10)",
+      "opcoes": [
+        { "valor": "frio", "nome": "Água (frio)" },
+        { "valor": "eletricidade", "nome": "Ar (eletricidade)" },
+        { "valor": "fogo", "nome": "Fogo (fogo)" },
+        { "valor": "acido", "nome": "Terra (ácido)" },
+        { "valor": "luz", "nome": "Luz (luz)" },
+        { "valor": "trevas", "nome": "Trevas (trevas)" }
+      ]
+    },
+    "Magia das Fadas": {
+      "id": "magiaFadas",
+      "tipo": "magias",
+      "titulo": "Magias das fadas",
+      "quantidade": 2,
+      "atributo": "car",
+      "nomes": ["Criar Ilusão", "Enfeitiçar", "Luz", "Sono"]
+    },
+    "Canção dos Mares": {
+      "id": "cancaoMares",
+      "tipo": "magias",
+      "titulo": "Canções dos mares",
+      "quantidade": 2,
+      "atributo": "car",
+      "nomes": ["Amedrontar", "Comando", "Despedaçar", "Enfeitiçar", "Hipnotismo", "Sono"]
+    },
+    "Tatuagem Mística": {
+      "id": "tatuagemMistica",
+      "tipo": "magias",
+      "titulo": "Magia da tatuagem",
+      "quantidade": 1,
+      "atributo": "car",
+      "circulo": 1
+    },
+    "Versátil": {
+      "id": "versatil",
+      "tipo": "beneficio",
+      "titulo": "Perícias treinadas",
+      "quantidade": 2,
+      "pericia": "treinada",
+      "poder": { "lista": "poderGeral", "nome": "poder geral", "maximo": 1 }
+    },
+    "Híbrido": {
+      "id": "hibrido",
+      "tipo": "beneficio",
+      "titulo": "Perícia treinada",
+      "quantidade": 1,
+      "pericia": "treinada"
+    },
+    "Memória Póstuma": {
+      "id": "memoriaPostuma",
+      "tipo": "beneficio",
+      "titulo": "Perícia treinada ou poder geral",
+      "quantidade": 1,
+      "pericia": "treinada",
+      "poder": { "lista": "poderGeral", "nome": "poder geral", "maximo": 1 }
+    },
+    "Deformidade": {
+      "id": "deformidade",
+      "tipo": "beneficio",
+      "titulo": "Perícias com +2",
+      "quantidade": 2,
+      "pericia": "bonus",
+      "bonus": 2,
+      "poder": { "lista": "grupo:Tormenta", "nome": "poder da Tormenta", "maximo": 1 }
+    },
+    "Propósito de Criação": {
+      "id": "propositoCriacao",
+      "tipo": "beneficio",
+      "titulo": "Poder geral",
+      "quantidade": 1,
+      "poder": { "lista": "poderGeral", "nome": "poder geral", "maximo": 1 },
+      "semOrigem": true
+    },
+    "Amiga das Plantas": { "magiasFixas": ["Controlar Plantas"], "atributo": "sab" },
+    "Luz Sagrada": { "magiasFixas": ["Luz"], "atributo": "car" },
+    "Sombras Profanas": { "magiasFixas": ["Escuridão"], "atributo": "int" }
+  }
+}

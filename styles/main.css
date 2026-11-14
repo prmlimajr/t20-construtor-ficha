@@ -770,3 +770,27 @@
 .t20-construtor .cf-card.cf-vaga { border-style: dashed; border-color: var(--cf-ouro); background: transparent; }
 .t20-construtor .cf-card.cf-vaga:hover { background: var(--cf-ouro-claro); }
 .t20-construtor .cf-info h3 small { font-size: 14px; -webkit-text-stroke: 0; font-family: var(--font-primary); }
+
+/* Raça: escolhas das habilidades raciais (resistência, magias, perícias) */
+.t20-construtor .cf-escolha-racial {
+	margin: -2px 0 8px 18px;
+	padding: 6px 10px 8px;
+	border-left: 3px solid var(--cf-ouro);
+	background: rgba(0, 0, 0, 0.15);
+	border-radius: 0 6px 6px 0;
+}
+.t20-construtor .cf-escolha-racial.pendente { border-left-style: dashed; }
+.t20-construtor .cf-escolha-titulo {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-bottom: 6px;
+	font-weight: bold;
+	color: var(--cf-ouro);
+}
+.t20-construtor .cf-escolha-titulo small { font-weight: normal; opacity: 0.85; }
+.t20-construtor .cf-escolha-racial .cf-nota { margin: 0 0 6px; }
+.t20-construtor .cf-chip.cf-chip-adicionar { border-style: dashed; border-color: var(--cf-ouro); background: transparent; color: var(--cf-ouro); }
+.t20-construtor .cf-chip.cf-chip-adicionar:hover { background: var(--cf-ouro-claro); }
+.t20-construtor .cf-chip.cf-chip-remover i { margin-left: 4px; font-size: 0.85em; opacity: 0.8; }
+.t20-construtor .cf-magias-fixas { margin: -2px 0 8px 18px; }

@@ -1,0 +1,54 @@
+{{!-- Escolha de uma habilidade racial (data/racas.json). Contexto: escolha --}}
+<div class="cf-escolha-racial {{#if pendente}}pendente{{/if}}">
+	<div class="cf-escolha-titulo">
+		{{#if pendente}}<i class="fa-solid fa-circle-exclamation"></i>{{else}}<i class="fa-solid fa-circle-check"></i>{{/if}}
+		<span>{{titulo}}{{#if contagem}} <small>({{contagem}})</small>{{/if}}</span>
+	</div>
+
+	{{#if ehOpcao}}
+	<div class="cf-chips">
+		{{#each opcoes}}
+		<button type="button" class="cf-chip {{#if selecionado}}selecionado{{/if}}" data-action="definir"
+			data-campo="{{../campo}}" data-valor="{{valor}}">{{nome}}</button>
+		{{/each}}
+	</div>
+	{{/if}}
+
+	{{#if ehMagias}}
+	<p class="cf-nota">Atributo-chave: {{atributo}}.</p>
+	<div class="cf-chips">
+		{{#each escolhidas}}
+		<button type="button" class="cf-chip selecionado cf-chip-remover" data-action="alternar" data-campo="{{../campo}}"
+			data-valor="{{valor}}" title="Remover">{{nome}} <i class="fa-solid fa-xmark"></i></button>
+		{{/each}}
+		{{#if podeAdicionar}}
+		<button type="button" class="cf-chip cf-chip-adicionar" data-action="abrirSlideout" data-campo="{{campo}}"
+			data-lista="{{lista}}" data-limite="{{limite}}" data-titulo="{{poder}} — escolha uma magia">
+			<i class="fa-solid fa-plus"></i> Escolher magia</button>
+		{{/if}}
+	</div>
+	{{/if}}
+
+	{{#if ehBeneficio}}
+	<div class="cf-chips">
+		{{#each pericias}}
+		<button type="button" class="cf-chip selecionado cf-chip-remover" data-action="alternar" data-campo="{{../campoPericias}}"
+			data-valor="{{valor}}" title="Remover">{{nome}} <i class="fa-solid fa-xmark"></i></button>
+		{{/each}}
+		{{#each poderes}}
+		<button type="button" class="cf-chip selecionado cf-chip-remover" data-action="alternar" data-campo="{{../campoPoderes}}"
+			data-valor="{{valor}}" title="Remover">{{nome}} <i class="fa-solid fa-xmark"></i></button>
+		{{/each}}
+		{{#if podePericia}}
+		<button type="button" class="cf-chip cf-chip-adicionar" data-action="abrirSlideout" data-campo="{{campoPericias}}"
+			data-lista="{{listaPericia}}" data-limite="{{limitePericias}}" data-titulo="{{poder}} — escolha uma {{textoPericia}}">
+			<i class="fa-solid fa-plus"></i> {{textoPericia}}</button>
+		{{/if}}
+		{{#if podePoder}}
+		<button type="button" class="cf-chip cf-chip-adicionar" data-action="abrirSlideout" data-campo="{{campoPoderes}}"
+			data-lista="{{listaPoder}}" data-limite="{{limitePoderes}}" data-titulo="{{poder}} — escolha um {{nomePoder}}">
+			<i class="fa-solid fa-plus"></i> {{nomePoder}}</button>
+		{{/if}}
+	</div>
+	{{/if}}
+</div>

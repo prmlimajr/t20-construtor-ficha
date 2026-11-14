@@ -21,6 +21,50 @@ async function itemPorNome(dados, { nome, qtd = 1 }) {
 	return data;
 }
 
+function mudanca(key, value, type = "add") {
+	return { key, value, type, phase: "initial", priority: null };
+}
+
+/** Efeito novo, no mesmo formato dos efeitos dos poderes do sistema. */
+function novoEfeito(data, changes) {
+	return {
+		name: data.name, img: data.img, type: "base", transfer: true, disabled: false,
+		system: { changes, onuse: false }
+	};
+}
+
+/**
+ * Aplica no poder racial a escolha feita no construtor:
+ * imunidade (Fonte Elemental), redução de dano (Resistência Elemental), +2 em perícias
+ * (Deformidade) e nomes das magias que recebem o redutor de –1 PM (Magia das Fadas etc.).
+ */
+function ajustarPoderRacial(data, ajuste) {
+	data.effects ??= [];
+	if (ajuste.imunidade) {
+		data.effects.push(novoEfeito(data, [mudanca(`system.tracos.resistencias.${ajuste.imunidade}.imunidade`, true, "override")]));
+	}
+	if (ajuste.resistencia) {
+		const chave = `system.tracos.resistencias.${ajuste.resistencia}.bonus`;
+		const ef = data.effects.find((e) => e.system?.changes?.some((c) => c.key.includes("resistencias.???")));
+		if (ef) {
+			ef.system.changes = ef.system.changes.map((c) => (c.key.includes("resistencias.???") ? mudanca(chave, ajuste.valor) : c));
+		} else {
+			data.effects.push(novoEfeito(data, [mudanca(chave, ajuste.valor)]));
+		}
+	}
+	if (ajuste.bonusPericias) {
+		const changes = ajuste.bonusPericias.map((k) => mudanca(`system.pericias.${k}.bonus`, ajuste.bonus));
+		// o efeito do sistema é genérico ("+2 em um teste de perícia", ao usar); vira bônus fixo
+		data.effects = data.effects.filter((e) => !(e.system?.onuse && e.system?.abilityUse?.types?.includes("skill")));
+		data.effects.push(novoEfeito(data, changes));
+	}
+	if (ajuste.nomesMagias?.length) {
+		for (const ef of data.effects) {
+			if (ef.system?.onuse && ef.system.abilityUse?.types?.includes("spell")) ef.system.abilityUse.names = [...ajuste.nomesMagias];
+		}
+	}
+}
+
 export async function aplicarNaFicha(actor, plano, dados) {
 	const { raca, classe } = plano;
 
@@ -58,26 +102,36 @@ export async function aplicarNaFicha(actor, plano, dados) {
 
 	// Poderes em grupos (raciais, origem, concedidos, classe): prefixo no nome e "sort" crescente,
 	// que é a ordem usada pela lista de poderes da ficha do sistema.
-	let inicioRaciais = itens.length;
-	let fimRaciais = itens.length;
+	// Índices dos itens concedidos pela raça (poderes, poderes escolhidos e magias raciais)
+	const daRaca = [];
 	plano.gruposPoderes.forEach((grupo, g) => {
-		if (grupo.raciais) inicioRaciais = itens.length;
 		grupo.poderes.forEach((p, i) => {
 			const data = doCompendio(p);
 			data.name = `${grupo.prefixo} - ${p.name}`;
 			data.sort = (g + 1) * 100000 + i * 100;
+			if (grupo.raciais) {
+				const ajuste = plano.ajustesRaciais?.[p.uuid];
+				if (ajuste) ajustarPoderRacial(data, ajuste);
+				daRaca.push(itens.length);
+			}
 			itens.push(data);
 		});
-		if (grupo.raciais) fimRaciais = itens.length;
 	});
 	for (const m of plano.magias) itens.push(doCompendio(m));
+	for (const { doc, atributo } of plano.magiasRaciais ?? []) {
+		const data = doCompendio(doc);
+		// atributo-chave da habilidade racial (usado na CD da magia)
+		if (atributo) foundry.utils.setProperty(data, "system.resistencia.atributo", atributo);
+		daRaca.push(itens.length);
+		itens.push(data);
+	}
 	for (const it of plano.itens) itens.push(await itemPorNome(dados, it));
 
 	const criados = await actor.createEmbeddedDocuments("Item", itens);
 
 	// Mesmo vínculo que o sistema registra ao adicionar uma raça (para remover os poderes junto)
 	const racaCriada = criados[0];
-	const raciais = criados.slice(inicioRaciais, fimRaciais).map((i) => i.id);
+	const raciais = daRaca.map((i) => criados[i]?.id).filter(Boolean);
 	if (racaCriada && raciais.length) {
 		await racaCriada.update({ "flags.tormenta20.grantedItems": raciais });
 	}

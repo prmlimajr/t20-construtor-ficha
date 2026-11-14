@@ -6,7 +6,7 @@ import {
 	MODULE_ID, ATRIBUTOS, NOMES_ATRIBUTOS, OFICIOS, PONTOS_TOTAIS, MIN_PONTOS, MAX_PONTOS,
 	ARRANJOS_FIXOS, custoAtributo, pontosGastos, converterRolagem, expandirPericias, normalizar, sinal
 } from "./regras.js";
-import { carregarDados, poder, poderesDoGrupo, equipamento } from "./dados.js";
+import { carregarDados, poder, poderesDoGrupo, equipamento, magiaPorNome } from "./dados.js";
 import { aplicarNaFicha } from "./aplicar.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -14,7 +14,7 @@ const TPL = `modules/${MODULE_ID}/templates`;
 
 export const TEMPLATES_PASSOS = [
 	"raca", "atributos", "classe", "magias", "pericias", "origem", "devocao", "equipamento", "dinheiro", "revisao"
-].map((p) => `${TPL}/passos/${p}.hbs`).concat(`${TPL}/partes/poder.hbs`, `${TPL}/partes/abrir.hbs`, `${TPL}/partes/aprimoramentos.hbs`);
+].map((p) => `${TPL}/passos/${p}.hbs`).concat(`${TPL}/partes/poder.hbs`, `${TPL}/partes/abrir.hbs`, `${TPL}/partes/aprimoramentos.hbs`, `${TPL}/partes/escolha-racial.hbs`);
 
 const ATRIBUTOS_DINAMICOS = 3;
 
@@ -28,6 +28,8 @@ function estadoInicial(actor) {
 		nome: actor.name,
 		raca: "",
 		racaAtributos: [],
+		/** Escolhas das habilidades raciais (data/racas.json), por id. Zeradas ao trocar de raça. */
+		racaEscolhas: {},
 		atrModo: "",
 		atrPontos: { ...zeros },
 		atrPontosTotal: PONTOS_TOTAIS,
@@ -205,6 +207,69 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		return (r.system.atributos?.[k] ?? 0) + (this.estado.racaAtributos.includes(k) ? 1 : 0);
 	}
 
+	/** Habilidades da raça atual com as regras de escolha de data/racas.json: [{poder, regra}]. */
+	poderesDaRaca() {
+		const r = this.raca;
+		if (!r) return [];
+		const out = [];
+		for (const g of r.system.grants ?? []) {
+			for (const c of g.choices ?? []) {
+				const p = this.dados.poderes.find((x) => x.uuid === c.uuid);
+				if (p) out.push({ poder: p, regra: this.dados.regrasRacas[p.name] ?? null });
+			}
+		}
+		return out;
+	}
+
+	/** Só as habilidades raciais que pedem escolha do jogador. */
+	escolhasRaciais() {
+		return this.poderesDaRaca().filter((x) => x.regra?.tipo);
+	}
+
+	/** Estado de uma escolha racial, sempre no formato do tipo (string, lista ou {pericias, poderes}). */
+	escolhaRacial(regra) {
+		const v = this.estado.racaEscolhas?.[regra.id];
+		if (regra.tipo === "opcao") return typeof v === "string" ? v : "";
+		if (regra.tipo === "magias") return Array.isArray(v) ? v : [];
+		return { pericias: v?.pericias ?? [], poderes: v?.poderes ?? [] };
+	}
+
+	/** Garante a estrutura das escolhas da raça atual (os slideouts adicionam em listas). */
+	#prepararEscolhasRaciais() {
+		const e = this.estado;
+		e.racaEscolhas ??= {};
+		for (const { regra } of this.escolhasRaciais()) e.racaEscolhas[regra.id] = this.escolhaRacial(regra);
+	}
+
+	/** A raça não escolhe origem (Golem: Propósito de Criação). */
+	get racaSemOrigem() {
+		return this.poderesDaRaca().some((x) => x.regra?.semOrigem);
+	}
+
+	/** Perícias treinadas por habilidades raciais (Versátil, Híbrido, Memória Póstuma). */
+	periciasRaciais({ exceto = null } = {}) {
+		const set = new Set();
+		for (const { regra } of this.escolhasRaciais()) {
+			if (regra.tipo !== "beneficio" || regra.pericia !== "treinada" || regra.id === exceto) continue;
+			this.escolhaRacial(regra).pericias.forEach((k) => set.add(k));
+		}
+		return set;
+	}
+
+	/** Remove das escolhas seguintes as perícias que passaram a ser treinadas pela raça. */
+	#removerConflitosRaciais() {
+		const e = this.estado;
+		const raciais = this.periciasRaciais();
+		if (!raciais.size) return;
+		e.periciasOu = e.periciasOu.map((k) => (raciais.has(k) ? "" : k));
+		e.periciasClasse = e.periciasClasse.filter((k) => !raciais.has(k));
+		e.periciasInt = e.periciasInt.filter((k) => !raciais.has(k));
+		for (const o of Object.values(e.origens)) {
+			o.beneficios = o.beneficios.filter((b) => !(b.startsWith("pericia:") && raciais.has(b.slice(8))));
+			if (raciais.has(o.amnPericia)) o.amnPericia = "";
+		}
+	}
+
 	/** Valor base do atributo segundo a modalidade escolhida (null = ainda não definido). */
 	base(k) {
 		const e = this.estado;
@@ -230,7 +295,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	periciasTreinadas({ ate = "fim" } = {}) {
 		const e = this.estado;
 		const r = this.regrasClasse;
-		const set = new Set();
+		const set = this.periciasRaciais();
 		if (r) {
 			r.fixas.forEach((k) => set.add(k));
 			e.periciasOu.forEach((k) => k && set.add(k));
@@ -249,6 +314,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	origensAtivas() {
 		const out = [];
+		if (this.racaSemOrigem) return out;
 		const p = this.estado.origens.principal;
 		const def = this.dados.origens.find((o) => o.nome === p.nome);
 		if (def) out.push({ chave: "principal", def, estado: p });
@@ -319,12 +385,12 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		];
 		if (this.conjurador) lista.push({ id: "magias", titulo: "Magias", dica: "Escolha as magias que você conhece." });
 		lista.push({ id: "pericias", titulo: "Perícias", dica: "Escolha suas perícias treinadas." });
-		lista.push({
+		if (!this.racaSemOrigem) lista.push({
 			id: "origem", sub: "principal",
 			titulo: this.origemDupla ? "Origem profissional" : "Origem",
 			dica: "Escolha sua origem e os benefícios que ela fornece."
 		});
-		if (this.origemDupla) {
+		if (this.origemDupla && !this.racaSemOrigem) {
 			lista.push({ id: "origem", sub: "regional", titulo: "Origem regional", dica: "Escolha sua origem regional." });
 		}
 		lista.push(
@@ -346,6 +412,17 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				const din = [...(r.system.atributosDinamicos?.value ?? [])];
 				if (din.length && e.racaAtributos.length !== ATRIBUTOS_DINAMICOS) {
 					return `Escolha ${ATRIBUTOS_DINAMICOS} atributos para receber +1.`;
+				}
+				for (const { poder: p, regra } of this.escolhasRaciais()) {
+					const v = this.escolhaRacial(regra);
+					if (regra.tipo === "opcao" && !v) return `${p.name}: escolha ${regra.titulo.toLowerCase()}.`;
+					if (regra.tipo === "magias" && v.length !== regra.quantidade) {
+						return `${p.name}: escolha ${regra.quantidade} magia(s) (${v.length}/${regra.quantidade}).`;
+					}
+					if (regra.tipo === "beneficio") {
+						const n = v.pericias.length + v.poderes.length;
+						if (n !== regra.quantidade) return `${p.name}: faça ${regra.quantidade} escolha(s) (${n}/${regra.quantidade}).`;
+					}
 				}
 				return null;
 			}
@@ -470,6 +547,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			try { estado = JSON.parse(salvo); } catch (err) { estado = null; }
 		}
 		this.estado = foundry.utils.mergeObject(estadoInicial(this.actor), estado ?? {}, { inplace: false });
+		this.#prepararEscolhasRaciais();
 		const modos = this.modosPermitidos();
 		if (!modos.includes(this.estado.atrModo)) this.estado.atrModo = modos.length === 1 ? modos[0] : "";
 		this.indice = Math.min(this.estado.alcancado ?? 0, this.passos().length - 1);
@@ -718,6 +796,27 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				return arg.split("|").map(equip);
 			case "grupo":
 				return poderesDoGrupo(this.dados, arg).map(poderCard);
+			case "magiaRacial": {
+				const regra = this.#regraRacial(arg);
+				if (!regra) return [];
+				const lista = regra.nomes
+					? regra.nomes.map((n) => magiaPorNome(this.dados, n)).filter(Boolean)
+					: this.dados.magias.filter((m) => m.system.circulo === regra.circulo);
+				return lista.map((m) => ({
+					valor: m.uuid, nome: m.name, img: m.img,
+					sub: `${rotuloEscola(m.system.escola)} · ${m.system.tipo === "uni" ? "Universal" : (m.system.tipo === "arc" ? "Arcana" : "Divina")}`
+				}));
+			}
+			case "periciaRacial": {
+				const regra = this.#regraRacial(arg);
+				const outras = regra?.pericia === "treinada" ? this.periciasRaciais({ exceto: arg }) : new Set();
+				return ordenarPericias(Object.keys(CONFIG.T20?.pericias ?? {}))
+					.filter((k) => !outras.has(k))
+					.map((k) => {
+						const c = this.#cardPericia(k);
+						return { valor: k, nome: c.nome, sigla: c.atributo, sub: c.tags };
+					});
+			}
 			case "magia":
 				return this.magiasDisponiveis().map((m) => ({
 					valor: m.uuid, nome: m.name, img: m.img,
@@ -743,7 +842,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	/** Detalhes do item em foco no slideout. */
 	async #infoSlideout(lista, valor) {
 		const tipo = lista.split(":")[0];
-		if (tipo === "magia") {
+		if (tipo === "magia" || tipo === "magiaRacial") {
 			const m = this.dados.magias.find((x) => x.uuid === valor);
 			if (!m) return null;
 			const i = await this.#infoMagia(m);
@@ -768,7 +867,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			const i = await this.#infoPoder(p);
 			return { ...i, stats: [{ rotulo: "Tipo", valor: p.system.subtipo }] };
 		}
-		if (tipo === "pericia") {
+		if (tipo === "pericia" || tipo === "periciaRacial") {
 			const cfg = CONFIG.T20?.pericias?.[valor];
 			if (!cfg) return null;
 			return {
@@ -869,11 +968,16 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const r = this.raca;
 		if (r) {
 			const poderes = [];
-			for (const g of r.system.grants ?? []) {
-				for (const c of g.choices ?? []) {
-					const p = this.dados.poderes.find((x) => x.uuid === c.uuid) ?? (await fromUuid(c.uuid));
-					if (p) poderes.push(await this.#infoPoder(p));
+			for (const { poder: p, regra } of this.poderesDaRaca()) {
+				const info = await this.#infoPoder(p);
+				if (regra?.tipo) {
+					info.escolha = this.#ctxEscolhaRacial(p, regra);
+					info.aberto = !!info.escolha.pendente;
 				}
+				if (regra?.magiasFixas) {
+					info.magiasFixas = `${regra.magiasFixas.join(", ")} (atributo-chave ${NOMES_ATRIBUTOS[regra.atributo]})`;
+				}
+				poderes.push(info);
 			}
 			const din = [...(r.system.atributosDinamicos?.value ?? [])];
 			info = {
@@ -887,10 +991,63 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 						selecionado: e.racaAtributos.includes(k)
 					}))
 					: null,
-				qtdDinamicos: ATRIBUTOS_DINAMICOS
+				qtdDinamicos: ATRIBUTOS_DINAMICOS,
+				semOrigem: this.racaSemOrigem
 			};
 		}
 		return { racas, info };
+	}
+
+	/** Controles de uma escolha racial no painel da raça. */
+	#ctxEscolhaRacial(p, regra) {
+		const v = this.escolhaRacial(regra);
+		const campo = `racaEscolhas.${regra.id}`;
+		const base = { titulo: regra.titulo, poder: p.name, campo };
+		if (regra.tipo === "opcao") {
+			return {
+				...base, ehOpcao: true, pendente: !v,
+				opcoes: regra.opcoes.map((o) => ({ ...o, selecionado: o.valor === v }))
+			};
+		}
+		if (regra.tipo === "magias") {
+			const escolhidas = v.map((u) => this.dados.magias.find((m) => m.uuid === u)).filter(Boolean)
+				.map((m) => ({ valor: m.uuid, nome: m.name, img: m.img }));
+			return {
+				...base, ehMagias: true,
+				pendente: v.length !== regra.quantidade,
+				escolhidas,
+				lista: `magiaRacial:${regra.id}`,
+				limite: regra.quantidade,
+				contagem: `${v.length}/${regra.quantidade}`,
+				podeAdicionar: v.length < regra.quantidade,
+				atributo: NOMES_ATRIBUTOS[regra.atributo]
+			};
+		}
+		const total = v.pericias.length + v.poderes.length;
+		const resta = regra.quantidade - total;
+		const sufixo = regra.pericia === "bonus" ? ` +${regra.bonus}` : "";
+		return {
+			...base, ehBeneficio: true,
+			pendente: resta !== 0,
+			contagem: `${total}/${regra.quantidade}`,
+			pericias: v.pericias.map((k) => ({ valor: k, nome: `${rotuloPericia(k)}${sufixo}` })),
+			poderes: v.poderes.map((n) => ({ valor: n, nome: n })),
+			campoPericias: `${campo}.pericias`,
+			campoPoderes: `${campo}.poderes`,
+			listaPericia: `periciaRacial:${regra.id}`,
+			listaPoder: regra.poder?.lista ?? "",
+			limitePericias: resta + v.pericias.length,
+			limitePoderes: Math.min(regra.poder?.maximo ?? 0, resta + v.poderes.length),
+			podePericia: !!regra.pericia && resta > 0,
+			podePoder: !!regra.poder && resta > 0 && v.poderes.length < regra.poder.maximo,
+			textoPericia: regra.pericia === "bonus" ? `perícia (+${regra.bonus})` : "perícia treinada",
+			nomePoder: regra.poder?.nome ?? ""
+		};
+	}
+
+	/** Regra racial pelo id. */
+	#regraRacial(id) {
+		return this.escolhasRaciais().find((x) => x.regra.id === id)?.regra ?? null;
 	}
 
 	#ctxAtributos() {
@@ -1185,6 +1342,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const card = (k, extra) => this.#cardPericia(k, extra);
 
 		const fixas = ordenarPericias(r.fixas).map((k) => card(k, { fixa: true }));
+		const raciais = this.periciasRaciais();
+		const daRaca = ordenarPericias([...raciais]).map((k) => card(k, { fixa: true }));
+		const repetidas = r.fixas.filter((k) => raciais.has(k)).map(rotuloPericia);
 		const grupos = r.ou.map((g, i) => ({
 			campo: `periciasOu.${i}`,
 			cards: ordenarPericias(expandirPericias(g)).map((k) => card(k, { selecionado: e.periciasOu[i] === k }))
@@ -1220,6 +1380,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 		return {
 			fixas,
+			daRaca,
+			repetidas: repetidas.join(", "),
 			grupos,
 			opcoesClasse,
 			numeroClasse: r.numero,
@@ -1540,7 +1702,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				nome: g.nome,
 				lista: g.poderes.map((p) => `${g.prefixo} - ${p.name}`).join(", ")
 			})),
-			listaMagias: plano.magias.map((m) => m.name).join(", "),
+			listaMagias: [...plano.magias.map((m) => m.name), ...plano.magiasRaciais.map((m) => `${m.doc.name} (raça)`)].join(", "),
+			escolhasRaciais: plano.escolhasRaciais.join(" · "),
 			listaItens: plano.itens.map((x) => (x.qtd > 1 ? `${x.nome} (×${x.qtd})` : x.nome)).join(", "),
 			atributos: ATRIBUTOS.map((k) => ({ nome: NOMES_ATRIBUTOS[k], valor: sinal(this.atributoFinal(k)) }))
 		};
@@ -1554,16 +1717,61 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const raca = this.raca;
 		const classe = this.classe;
 
-		const poderesRaciais = [];
-		for (const g of raca?.system.grants ?? []) {
-			for (const c of g.choices ?? []) {
-				const p = this.dados.poderes.find((x) => x.uuid === c.uuid);
-				if (p) poderesRaciais.push(p);
+		const poderesRaciais = this.poderesDaRaca().map((x) => x.poder);
+
+		// Escolhas das habilidades raciais: ajustes nos efeitos dos poderes, magias e poderes extras
+		const ajustesRaciais = {};
+		const magiasRaciais = [];
+		const poderesExtrasRaca = [];
+		const escolhasTexto = [];
+		for (const { poder: p, regra } of this.poderesDaRaca()) {
+			if (!regra) continue;
+			const nomesMagias = [];
+			if (regra.magiasFixas) {
+				for (const n of regra.magiasFixas) {
+					const m = magiaPorNome(this.dados, n);
+					if (m) magiasRaciais.push({ doc: m, atributo: regra.atributo });
+				}
+			}
+			if (!regra.tipo) continue;
+			const v = this.escolhaRacial(regra);
+			if (regra.tipo === "opcao") {
+				const o = regra.opcoes.find((x) => x.valor === v);
+				if (!o) continue;
+				ajustesRaciais[p.uuid] = regra.efeito === "imunidade"
+					? { imunidade: o.valor }
+					: { resistencia: o.valor, valor: regra.valor };
+				escolhasTexto.push(`${p.name}: ${o.nome}`);
+			} else if (regra.tipo === "magias") {
+				for (const u of v) {
+					const m = this.dados.magias.find((x) => x.uuid === u);
+					if (!m) continue;
+					magiasRaciais.push({ doc: m, atributo: regra.atributo });
+					nomesMagias.push(m.name);
+				}
+				ajustesRaciais[p.uuid] = { nomesMagias };
+				escolhasTexto.push(`${p.name}: ${nomesMagias.join(", ")}`);
+			} else {
+				if (regra.pericia === "bonus" && v.pericias.length) {
+					ajustesRaciais[p.uuid] = { bonusPericias: v.pericias, bonus: regra.bonus };
+				}
+				for (const n of v.poderes) {
+					const extra = poder(this.dados, n);
+					if (extra) poderesExtrasRaca.push(extra);
+				}
+				const sufixo = regra.pericia === "bonus" ? ` +${regra.bonus}` : "";
+				const partes = [...v.pericias.map((k) => `${rotuloPericia(k)}${sufixo}`), ...v.poderes];
+				if (partes.length) escolhasTexto.push(`${p.name}: ${partes.join(", ")}`);
 			}
 		}
 
 		// Poderes separados pela fonte (ordem e prefixo usados na ficha)
 		const vistos = new Set(poderesRaciais);
+		for (const extra of poderesExtrasRaca) {
+			if (vistos.has(extra)) continue;
+			vistos.add(extra);
+			poderesRaciais.push(extra);
+		}
 		const adicionar = (lista) => (nome) => {
 			const p = poder(this.dados, nome);
 			if (p && !vistos.has(p)) {
@@ -1622,6 +1830,14 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		}
 
 		const magias = this.conjurador ? this.dados.magias.filter((m) => e.magias.includes(m.uuid)) : [];
+		// Magias raciais: uma vez só (se a classe também der a magia, fica a da classe;
+		// o redutor de –1 PM vem do efeito do poder racial)
+		const jaTem = new Set(magias.map((m) => m.uuid));
+		const magiasDaRaca = magiasRaciais.filter(({ doc }) => {
+			if (jaTem.has(doc.uuid)) return false;
+			jaTem.add(doc.uuid);
+			return true;
+		});
 
 		let conjuracao = this.conjurador?.atributo ?? null;
 		for (const esc of this.escolhasAtivas()) {
@@ -1631,6 +1847,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 		return {
 			raca, classe, poderesRaciais, poderes, gruposPoderes, magias, itens,
+			magiasRaciais: magiasDaRaca, ajustesRaciais, escolhasRaciais: escolhasTexto,
 			pericias: ordenarPericias([...this.periciasTreinadas()]),
 			atributos: Object.fromEntries(ATRIBUTOS.map((k) => [k, { base: this.base(k) ?? 0, racial: this.racial(k) }])),
 			origem: this.origensAtivas().map((o) => o.def.nome).join(" / "),
@@ -1659,7 +1876,13 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const anterior = foundry.utils.getProperty(e, campo);
 		foundry.utils.setProperty(e, campo, valor);
 		if (anterior !== valor) {
-			if (campo === "raca") e.racaAtributos = [];
+			if (campo === "raca") {
+				// trocar de raça revoga tudo o que a raça anterior concedia
+				e.racaAtributos = [];
+				e.racaEscolhas = {};
+				this.#prepararEscolhasRaciais();
+			}
+			if (campo.startsWith("racaEscolhas.")) this.#removerConflitosRaciais();
 			if (campo === "classe") {
 				e.escolhasClasse = {};
 				e.magiasEscolas = [];

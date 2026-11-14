@@ -27,7 +27,12 @@
 		{{/if}}
 		{{#if info.descricao}}<div class="cf-descricao">{{{info.descricao}}}</div>{{/if}}
 		<h4>Habilidades raciais</h4>
-		{{#each info.poderes}}{{> "modules/t20-construtor-ficha/templates/partes/poder.hbs" this}}{{/each}}
+		{{#each info.poderes}}
+		{{> "modules/t20-construtor-ficha/templates/partes/poder.hbs" this}}
+		{{#if magiasFixas}}<p class="cf-nota cf-magias-fixas"><i class="fa-solid fa-wand-sparkles"></i> Magia na ficha: {{magiasFixas}}</p>{{/if}}
+		{{#if escolha}}{{> "modules/t20-construtor-ficha/templates/partes/escolha-racial.hbs" escolha}}{{/if}}
+		{{/each}}
+		{{#if info.semOrigem}}<p class="cf-nota"><i class="fa-solid fa-circle-info"></i> Esta raça não escolhe origem: o passo Origem é pulado.</p>{{/if}}
 		{{else}}
 		<p class="cf-vazio">Selecione uma raça para ver o que ela fornece.</p>
 		{{/if}}

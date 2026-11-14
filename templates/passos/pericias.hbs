@@ -1,5 +1,22 @@
 <div class="cf-duas">
 	<div class="cf-lista">
+		{{#if daRaca.length}}
+		<h4>Treinadas pela raça</h4>
+		<div class="cf-cards">
+			{{#each daRaca}}
+			<button type="button" class="cf-card selecionado cf-card-fixo {{#if foco}}foco{{/if}}" data-action="focarPericia" data-valor="{{chave}}">
+				<span class="cf-sigla">{{atributo}}</span>
+				<span class="cf-card-texto">
+					<span class="cf-card-nome">{{nome}}</span>
+					{{#if tags}}<span class="cf-card-sub">{{tags}}</span>{{/if}}
+				</span>
+			</button>
+			{{/each}}
+		</div>
+		{{#if repetidas}}
+		<p class="cf-nota"><i class="fa-solid fa-triangle-exclamation"></i> {{repetidas}} já é treinada pela classe. Volte ao passo Raça se quiser trocar por outra perícia.</p>
+		{{/if}}
+		{{/if}}
 		<h4>Treinadas pela classe</h4>
 		<div class="cf-cards">
 			{{#each fixas}}

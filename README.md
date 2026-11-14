@@ -16,7 +16,12 @@ Jogadores precisam da permissão **"Criar novos atores"** (Configurações → P
 
 ## Passos
 
-1. **Raça**: painel com as raças do compêndio, modificadores e habilidades raciais; escolha dos +1 flexíveis (Humano, Lefou, Osteon, Sereia/Tritão).
+1. **Raça**: painel com as raças do compêndio, modificadores e habilidades raciais; escolha dos +1 flexíveis (Humano, Lefou, Osteon, Sereia/Tritão) e das escolhas das habilidades raciais:
+   - resistência/imunidade: *Fonte Elemental* (Golem), *Resistência Elemental* (Qareen);
+   - magias: *Magia das Fadas* (Sílfide), *Canção dos Mares* (Sereia/Tritão), *Tatuagem Mística* (Qareen);
+   - perícias ou poder: *Versátil* (Humano), *Híbrido* (Kliren), *Memória Póstuma* (Osteon), *Deformidade* (Lefou, +2 em perícias ou poder da Tormenta), *Propósito de Criação* (Golem, poder geral; o Golem não escolhe origem).
+
+   Trocar de raça descarta essas escolhas. Na ficha, a escolha vira efeito no próprio poder (imunidade, redução 10, +2 nas perícias, redutor de –1 PM nas magias escolhidas); magias raciais (inclusive as fixas de Aggelus, Sulfure e Dahllan) entram com o atributo-chave da raça.
 2. **Atributos**: compra de pontos (10 pontos, com placar), rolagem (4d6 descarta o menor, enviada ao chat, uma vez só) ou valores fixos. O mestre escolhe quais modalidades são permitidas.
 3. **Classe**: PV, PM, perícias, proficiências e habilidades de 1º nível; escolhas como Caminho do Arcanista e Linhagem do Feiticeiro.
 4. **Magias** (classes conjuradoras): magias de 1º círculo do tipo da classe; Bardo e Druida escolhem 3 escolas antes.
@@ -33,6 +38,7 @@ Raças, classes, poderes, magias e equipamentos vêm dos compêndios do sistema.
 
 | Arquivo | Conteúdo |
 |---|---|
+| `racas.json` | escolhas das habilidades raciais e magias raciais fixas |
 | `classes.json` | perícias, proficiências, habilidades de 1º nível, magias iniciais, devoção, itens extras |
 | `origens.json` | descrição, itens e benefícios das 35 origens do livro básico |
 | `origens-regionais.json` | origens regionais (homebrew); ainda vazio |
@@ -49,5 +55,6 @@ Origens (p. 85–95), divindades (p. 96–105) e escolas de magia (p. 172) foram
 
 - Somente nível 1.
 - Somente conteúdo do livro básico (Jogo do Ano).
-- Escolhas internas de alguns poderes (ex.: *Versátil* do Humano, *Especialista* do Ladino, *Protótipo* do Inventor) ficam a cargo do sistema e da ficha.
+- Escolhas internas de alguns poderes de classe (ex.: *Especialista* do Ladino, *Protótipo* do Inventor) ficam a cargo do sistema e da ficha.
+- *Memória Póstuma*: a alternativa "osteon de outra raça" (ganhar uma habilidade dessa raça) não é oferecida.
 - Para não abrir o diálogo de atributos raciais do sistema, o módulo substitui `_onCreateOwnedRace` apenas para raças criadas pelo construtor.

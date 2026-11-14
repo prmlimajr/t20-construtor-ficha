@@ -53,7 +53,7 @@ function porNome(docs) {
 export async function carregarDados() {
 	if (cache) return cache;
 
-	const [racas, classes, poderes, magias, regrasClasses, origens, regionais, divindades, equipamento, escolas] =
+	const [racas, classes, poderes, magias, regrasClasses, origens, regionais, divindades, equipamento, escolas, regrasRacas] =
 		await Promise.all([
 			documentos("racas"),
 			documentos("classes"),
@@ -64,7 +64,8 @@ export async function carregarDados() {
 			lerJson("origens-regionais.json"),
 			lerJson("divindades.json"),
 			lerJson("equipamento.json"),
-			lerJson("escolas.json")
+			lerJson("escolas.json"),
+			lerJson("racas.json")
 		]);
 
 	const packEquip = game.packs.get(PACKS.equipamentos);
@@ -97,7 +98,8 @@ export async function carregarDados() {
 		origensRegionais: regionais.origens ?? [],
 		divindades: divindades.divindades ?? [],
 		equipamento,
-		escolas: escolas.escolas ?? {}
+		escolas: escolas.escolas ?? {},
+		regrasRacas: regrasRacas.poderes ?? {}
 	};
 	verificarReferencias(cache);
 	return cache;
@@ -114,6 +116,11 @@ export function poderesDoGrupo(dados, grupo) {
 	return dados.poderes
 		.filter((p) => p.system.tipo === "geral" && normalizar(p.system.subtipo) === g)
 		.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+}
+
+export function magiaPorNome(dados, nome) {
+	const n = normalizar(nome);
+	return dados.magias.find((m) => normalizar(m.name) === n) ?? null;
 }
 
 export function equipamento(dados, nome) {
@@ -145,6 +152,12 @@ function verificarReferencias(d) {
 	d.equipamento.kitBase?.forEach(checarEquip);
 	Object.values(d.equipamento.armaduras ?? {}).flat().forEach(checarEquip);
 	if (d.equipamento.escudo) checarEquip(d.equipamento.escudo);
+	for (const [nome, r] of Object.entries(d.regrasRacas)) {
+		checarPoder(nome);
+		for (const m of [...(r.nomes ?? []), ...(r.magiasFixas ?? [])]) {
+			if (!magiaPorNome(d, m)) faltando.add(`magia "${m}"`);
+		}
+	}
 
 	if (faltando.size) {
 		console.warn(`${MODULE_ID} | referências não encontradas nos compêndios (serão criadas como itens simples ou ignoradas):`, [...faltando]);
