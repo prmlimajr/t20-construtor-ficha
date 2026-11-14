@@ -97,6 +97,8 @@ export async function aplicarNaFicha(actor, plano, dados) {
 	for (const k of plano.pericias) update[`system.pericias.${k}.treinado`] = true;
 	if (plano.conjuracao) update["system.attributes.conjuracao"] = plano.conjuracao;
 	if (actor.prototypeToken?.name === actor.name) update["prototypeToken.name"] = plano.nome;
+	if (plano.img) update.img = plano.img;
+	if (plano.tokenImg) update["prototypeToken.texture.src"] = plano.tokenImg;
 	await actor.update(update);
 
 	/* ---------- Itens ---------- */

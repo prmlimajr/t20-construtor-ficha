@@ -2,6 +2,28 @@
 	<input type="text" data-campo="nome" value="{{nome}}" placeholder="Nome">
 </label>
 
+<div class="cf-imagens">
+	<div class="cf-imagem">
+		<span class="cf-rotulo-abrir">Retrato</span>
+		<button type="button" class="cf-imagem-preview" data-action="escolherImagem" data-campo="img" title="Escolher retrato">
+			<img src="{{imagens.img}}" alt="Retrato">
+		</button>
+		<input type="text" data-campo="img" value="{{imagens.img}}" placeholder="caminho/da/imagem.webp">
+	</div>
+	<div class="cf-imagem">
+		<span class="cf-rotulo-abrir">Token</span>
+		{{#if tokenIgual}}
+		<div class="cf-imagem-preview cf-token"><img src="{{imagens.token}}" alt="Token"></div>
+		{{else}}
+		<button type="button" class="cf-imagem-preview cf-token" data-action="escolherImagem" data-campo="tokenImg" title="Escolher token">
+			<img src="{{imagens.token}}" alt="Token">
+		</button>
+		<input type="text" data-campo="tokenImg" value="{{imagens.token}}" placeholder="caminho/do/token.webp">
+		{{/if}}
+		<label class="cf-check-linha"><input type="checkbox" data-campo="tokenIgual" {{#if tokenIgual}}checked{{/if}}> Usar o retrato no token</label>
+	</div>
+</div>
+
 <dl class="cf-dados cf-revisao">
 	<dt>Raça</dt><dd>{{racaNome}}</dd>
 	{{#if escolhasRaciais}}<dt>Escolhas raciais</dt><dd>{{escolhasRaciais}}</dd>{{/if}}
@@ -14,6 +36,7 @@
 	{{#each gruposPoderes}}<dt>Poderes — {{nome}}</dt><dd>{{lista}}</dd>{{/each}}
 	{{#if listaMagias}}<dt>Magias</dt><dd>{{listaMagias}}</dd>{{/if}}
 	<dt>Itens</dt><dd>{{listaItens}}</dd>
+	{{#if listaVendidos}}<dt>Vendidos</dt><dd>{{listaVendidos}}</dd>{{/if}}
 	<dt>Dinheiro</dt><dd>{{dinheiroTexto}}</dd>
 </dl>
 <p class="cf-nota">Ao criar, alguns poderes do sistema podem abrir janelas pedindo escolhas adicionais (ex.: perícias de um poder).</p>

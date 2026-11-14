@@ -50,7 +50,13 @@ function estadoInicial(actor) {
 		poderesConcedidos: [],
 		equip: { arma: "", armadura: "", escudo: false },
 		dinheiro: null,
-		compras: {}
+		compras: {},
+		/** Nomes dos itens iniciais vendidos (um por entrada; metade do preço vira tibares). */
+		vendas: [],
+		/** Retrato e token ("" = manter os do ator). tokenIgual: o token usa o retrato. */
+		img: "",
+		tokenImg: "",
+		tokenIgual: true
 	};
 }
 
@@ -154,6 +160,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			focarLoja: ConstrutorFicha.#focarLoja,
 			comprar: ConstrutorFicha.#comprar,
 			ajustarAlquimico: ConstrutorFicha.#ajustarAlquimico,
+			desfazerVenda: ConstrutorFicha.#desfazerVenda,
+			escolherImagem: ConstrutorFicha.#escolherImagem,
 			colocarDado: ConstrutorFicha.#colocarDado,
 			fecharSlideout: ConstrutorFicha.#fecharSlideout,
 			focarSlideout: ConstrutorFicha.#focarSlideout,
@@ -608,7 +616,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				if (!e.equip.arma) return "Escolha sua arma inicial.";
 				return this.#pendenciaEscolhas(this.escolhasDeClasse(["item", "prototipo"]));
 			case "dinheiro":
-				return e.dinheiro === null ? "Role seus tibares iniciais." : null;
+				if (e.dinheiro === null) return "Role seus tibares iniciais.";
+				if (this.saldo < 0) return "Saldo negativo: devolva algumas compras.";
+				return null;
 			case "revisao": {
 				if (!e.nome?.trim()) return "Dê um nome ao personagem.";
 				for (const p of this.passos()) {
@@ -750,7 +760,40 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	}
 
 	get saldo() {
-		return Math.round(((this.estado.dinheiro ?? 0) - this.gastoCompras) * 100) / 100;
+		return Math.round(((this.estado.dinheiro ?? 0) + this.valorVendas - this.gastoCompras) * 100) / 100;
+	}
+
+	/** Total recebido pela venda de itens iniciais (T$). */
+	get valorVendas() {
+		return this.#vendas(this.plano({ semVendas: true }).itens).total;
+	}
+
+	/** Preço de venda de uma entrada de item inicial: metade do preço (0 = não vende). */
+	precoVenda(it) {
+		if (it.texto) return 0;
+		const doc = equipamento(this.dados, it.nome);
+		const preco = Number(doc?.system?.preco ?? 0) + (it.melhoria ? (this.dados.regrasPoderesClasse["Protótipo"]?.precoMelhoria ?? 300) : 0);
+		if (!doc || preco <= 0) return 0;
+		const pacote = Number(doc.system.qtd) > 1 ? Number(doc.system.qtd) : 1;
+		return Math.round((preco * ((it.qtd ?? 1) / pacote) / 2) * 100) / 100;
+	}
+
+	/**
+	 * Casa as vendas do estado com os itens iniciais disponíveis (cada nome vende uma entrada).
+	 * Retorna os índices vendidos e o total, ignorando vendas de itens que não existem mais.
+	 */
+	#vendas(iniciais) {
+		const usados = new Set();
+		const indices = [];
+		let total = 0;
+		for (const nome of this.estado.vendas ?? []) {
+			const i = iniciais.findIndex((it, j) => !usados.has(j) && it.nome === nome && this.precoVenda(it) > 0);
+			if (i < 0) continue;
+			usados.add(i);
+			indices.push(i);
+			total += this.precoVenda(iniciais[i]);
+		}
+		return { indices, total: Math.round(total * 100) / 100 };
 	}
 
 	static formatarTibares(v) {
@@ -809,6 +852,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			...ctx,
 			fmtRolado: fmt(e.dinheiro),
 			fmtGasto: fmt(this.gastoCompras),
+			fmtVendas: this.valorVendas ? fmt(this.valorVendas) : "",
 			fmtSaldo: fmt(saldo),
 			categorias: ordem.map((c) => ({ nome: c, selecionado: c === this.lojaCategoria })),
 			cards,
@@ -922,6 +966,20 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 						return { valor: k, nome: c.nome, sigla: c.atributo, sub: c.tags };
 					});
 			}
+			case "venda": {
+				const iniciais = this.plano({ semVendas: true }).itens;
+				const vendidos = new Set(this.#vendas(iniciais).indices);
+				const vistos = new Set();
+				const out = [];
+				iniciais.forEach((it, i) => {
+					const pv = this.precoVenda(it);
+					if (!pv || vendidos.has(i) || vistos.has(it.nome)) return;
+					vistos.add(it.nome);
+					const f = equip(it.nome);
+					out.push({ ...f, nome: it.qtd > 1 ? `${f.nome} ×${it.qtd}` : f.nome, sub: `Vende por ${ConstrutorFicha.formatarTibares(pv)}${f.sub ? ` · ${f.sub}` : ""}` });
+				});
+				return out;
+			}
 			case "lojaAte": {
 				const max = Number(arg);
 				return this.dados.loja.filter(({ doc }) => Number(doc.system.preco) <= max)
@@ -976,6 +1034,17 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			if (!m) return null;
 			return { nome: m.name, img: m.img, stats: [{ rotulo: "Custo", valor: "+T$ 300 (1 melhoria)" }], descricao: await this.#html(m.uuid, m.description) };
 		}
+		if (tipo === "venda") {
+			const f = this.#fichaEquip(valor);
+			const it = this.plano({ semVendas: true }).itens.find((x) => x.nome === valor);
+			return {
+				nome: f.nome, img: f.img,
+				stats: [{ rotulo: "Venda", valor: `${ConstrutorFicha.formatarTibares(it ? this.precoVenda(it) : 0)} (metade do preço)` },
+					...f.stats.map(([rotulo, v]) => ({ rotulo, valor: v }))],
+				descricao: f.doc ? await this.#html(f.doc.uuid, f.doc.system?.description?.value) : "",
+				rotuloEscolher: "Vender"
+			};
+		}
 		if (tipo === "arma" || tipo === "nomes" || tipo === "lojaAte" || tipo === "itemSuperior") {
 			const f = this.#fichaEquip(valor);
 			return {
@@ -1010,7 +1079,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const so = this.slideout;
 		if (!so) return null;
 		const atual = foundry.utils.getProperty(this.estado, so.campo) ?? "";
-		const ehLista = Array.isArray(atual);
+		// vendas: o mesmo item pode ser vendido mais de uma vez (entradas repetidas), nada fica "selecionado"
+		const ehLista = Array.isArray(atual) && so.campo !== "vendas";
 		const cards = this.#opcoesSlideout(so.lista).map((c) => ({
 			...c,
 			selecionado: ehLista ? atual.includes(c.valor) : c.valor === atual,
@@ -1019,7 +1089,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const info = so.foco ? await this.#infoSlideout(so.lista, so.foco) : null;
 		if (info) {
 			info.valor = so.foco;
-			info.jaEscolhido = ehLista ? atual.includes(so.foco) : so.foco === atual;
+			info.jaEscolhido = so.campo === "vendas" ? false : (ehLista ? atual.includes(so.foco) : so.foco === atual);
 		}
 		const animar = so.animar;
 		so.animar = false;
@@ -1828,7 +1898,19 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				descricao: f.doc ? await this.#html(f.doc.uuid, f.doc.system?.description?.value) : ""
 			};
 		}
-		return { armas, armaduras, escudo, recebidos, info, itensClasse: this.#ctxItensClasse() };
+		return { armas, armaduras, escudo, recebidos, info, itensClasse: this.#ctxItensClasse(), venda: this.#ctxVenda() };
+	}
+
+	/** Venda de itens iniciais: botão para o slideout e lista do que já foi vendido. */
+	#ctxVenda() {
+		const iniciais = this.plano({ semVendas: true }).itens;
+		const vendas = this.#vendas(iniciais);
+		const vendidos = vendas.indices.map((i) => {
+			const it = iniciais[i];
+			return { nome: it.nome, rotulo: it.qtd > 1 ? `${it.nome} ×${it.qtd}` : it.nome, valor: ConstrutorFicha.formatarTibares(this.precoVenda(it)) };
+		});
+		const restam = iniciais.some((it, i) => this.precoVenda(it) > 0 && !vendas.indices.includes(i));
+		return { vendidos, total: ConstrutorFicha.formatarTibares(vendas.total), temVendas: vendidos.length > 0, podeVender: restam };
 	}
 
 	/** Espólio (Nobre) e Protótipo (Inventor). */
@@ -1897,15 +1979,32 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		return out;
 	}
 
+	/** Retrato e token escolhidos (com os do ator como padrão). */
+	get imagens() {
+		const e = this.estado;
+		const img = e.img || this.actor.img || "icons/svg/mystery-man.svg";
+		const token = e.tokenIgual ? img : (e.tokenImg || this.actor.prototypeToken?.texture?.src || img);
+		return { img, token };
+	}
+
 	#ctxRevisao() {
 		const plano = this.plano();
+		const imagens = this.imagens;
 		return {
 			nome: this.estado.nome,
+			imagens,
+			tokenIgual: this.estado.tokenIgual,
 			plano,
 			racaNome: plano.raca?.name ?? "—",
-			dinheiroTexto: plano.gasto
-				? `${ConstrutorFicha.formatarTibares(plano.dinheiroRolado)} rolados − ${ConstrutorFicha.formatarTibares(plano.gasto)} em compras = ${ConstrutorFicha.formatarTibares(plano.dinheiro)}`
+			dinheiroTexto: (plano.gasto || plano.valorVendas)
+				? [
+					`${ConstrutorFicha.formatarTibares(plano.dinheiroRolado)} rolados`,
+					plano.valorVendas ? ` + ${ConstrutorFicha.formatarTibares(plano.valorVendas)} em vendas` : "",
+					plano.gasto ? ` − ${ConstrutorFicha.formatarTibares(plano.gasto)} em compras` : "",
+					` = ${ConstrutorFicha.formatarTibares(plano.dinheiro)}`
+				].join("")
 				: ConstrutorFicha.formatarTibares(plano.dinheiro),
+			listaVendidos: plano.vendidos.map((x) => (x.qtd > 1 ? `${x.nome} (×${x.qtd})` : x.nome)).join(", "),
 			classeNome: plano.classe?.name ?? "—",
 			listaPericias: plano.pericias.map(rotuloPericia).join(", "),
 			gruposPoderes: plano.gruposPoderes.filter((g) => g.poderes.length).map((g) => ({
@@ -1929,7 +2028,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	/* ---------------- Plano final (usado na revisão e no aplicar) ---------------- */
 
-	plano() {
+	plano({ semVendas = false } = {}) {
 		const e = this.estado;
 		const r = this.regrasClasse ?? {};
 		const raca = this.raca;
@@ -2003,6 +2102,15 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			itens.push({ nome: this.dados.equipamento.escudo, qtd: 1 });
 		}
 		itens.push(...daClasse.itens);
+		if (semVendas) return { itens };
+
+		// Vendas: remove os itens vendidos (metade do preço vai para o dinheiro)
+		const vendas = this.#vendas(itens);
+		const vendidos = vendas.indices.map((i) => itens[i]);
+		const vendidosSet = new Set(vendas.indices);
+		const restantes = itens.filter((_, i) => !vendidosSet.has(i));
+		itens.length = 0;
+		itens.push(...restantes);
 
 		for (const [nome, n] of Object.entries(e.compras ?? {})) {
 			const it = this.itemLoja(nome);
@@ -2037,11 +2145,15 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			atributos: Object.fromEntries(ATRIBUTOS.map((k) => [k, { base: this.base(k) ?? 0, racial: this.racial(k) }])),
 			origem: this.origensAtivas().map((o) => o.def.nome).join(" / "),
 			divindade: this.textoDivindade,
-			dinheiro: this.saldo,
+			dinheiro: Math.round(((e.dinheiro ?? 0) + vendas.total - this.gastoCompras) * 100) / 100,
+			vendidos,
+			valorVendas: vendas.total,
 			dinheiroRolado: e.dinheiro ?? 0,
 			gasto: this.gastoCompras,
 			conjuracao,
-			nome: e.nome?.trim() || this.actor.name
+			nome: e.nome?.trim() || this.actor.name,
+			img: e.img ? this.imagens.img : null,
+			tokenImg: (e.img || e.tokenImg || !e.tokenIgual) ? this.imagens.token : null
 		};
 	}
 
@@ -2201,6 +2313,11 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		// perícias por Inteligência acima do permitido são descartadas
 		const nInt = Math.max(0, this.atributoFinal("int"));
 		if (e.periciasInt.length > nInt) e.periciasInt = e.periciasInt.slice(0, nInt);
+		// Vendas: descarta as de itens que deixaram de existir (ex.: trocou a arma vendida)
+		if (e.vendas?.length) {
+			const iniciais = this.plano({ semVendas: true }).itens;
+			e.vendas = this.#vendas(iniciais).indices.map((i) => iniciais[i].nome);
+		}
 		// Especialista: só perícias treinadas, até o limite pela Inteligência
 		if (Array.isArray(e.classePoderEscolhas?.especialista)) {
 			const treinadas = this.periciasTreinadas();
@@ -2239,6 +2356,34 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		this.focoLoja = nome;
 		this.estado.compras = compras;
 		this.#mudou();
+	}
+
+	/** Abre o navegador de arquivos do Foundry para o retrato ("img") ou o token ("tokenImg"). */
+	static async #escolherImagem(event, target) {
+		const campo = target.dataset.campo;
+		const FP = foundry.applications.apps?.FilePicker?.implementation ?? globalThis.FilePicker;
+		if (!FP) return ui.notifications.warn("Navegador de arquivos indisponível; cole o caminho da imagem no campo.");
+		const atual = campo === "img" ? this.imagens.img : this.imagens.token;
+		const fp = new FP({
+			type: "image",
+			current: atual,
+			callback: (caminho) => this.#definirCampo(campo, caminho)
+		});
+		try {
+			await fp.browse(atual);
+		} catch (err) {
+			// jogadores sem a permissão "Navegar por arquivos" não abrem o navegador
+			return ui.notifications.warn("Você não tem permissão para navegar pelos arquivos. Cole o caminho da imagem no campo.");
+		}
+	}
+
+	/** Desfaz a venda de um item inicial (remove uma ocorrência do nome). */
+	static #desfazerVenda(event, target) {
+		const vendas = [...(this.estado.vendas ?? [])];
+		const i = vendas.lastIndexOf(target.dataset.nome);
+		if (i < 0) return;
+		vendas.splice(i, 1);
+		this.#definirCampo("vendas", vendas);
 	}
 
 	/** Protótipo: +1/−1 num item alquímico, respeitando 10 itens e T$ 500. */
@@ -2305,6 +2450,10 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const atual = foundry.utils.getProperty(this.estado, campo);
 		// campo de lista (ex.: magias): adiciona o item em vez de substituir
 		if (Array.isArray(atual)) {
+			if (campo === "vendas") {
+				this.slideout = null;
+				return this.#definirCampo(campo, [...atual, valor]);
+			}
 			if (atual.includes(valor)) {
 				this.slideout = null;
 				return this.render();

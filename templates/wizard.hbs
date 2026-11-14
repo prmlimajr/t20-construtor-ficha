@@ -88,7 +88,7 @@
 					{{#with slideout.info}}
 					<h3>{{#if img}}<img src="{{img}}" alt="">{{/if}} {{nome}}</h3>
 					<button type="button" class="cf-primario cf-escolher" data-action="confirmarSlideout" data-valor="{{valor}}">
-						<i class="fa-solid fa-check"></i> {{#if jaEscolhido}}Manter{{else}}Escolher{{/if}} {{nome}}
+						<i class="fa-solid fa-check"></i> {{#if rotuloEscolher}}{{rotuloEscolher}}{{else}}{{#if jaEscolhido}}Manter{{else}}Escolher{{/if}}{{/if}} {{nome}}
 					</button>
 					{{#if stats.length}}
 					<dl class="cf-dados">{{#each stats}}<dt>{{rotulo}}</dt><dd>{{valor}}</dd>{{/each}}</dl>

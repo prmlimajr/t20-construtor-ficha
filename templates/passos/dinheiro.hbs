@@ -7,6 +7,7 @@
 <div class="cf-loja">
 	<div class="cf-bolsa">
 		<div class="cf-bolsa-valor"><small>Rolados</small><strong>{{fmtRolado}}</strong></div>
+		{{#if fmtVendas}}<div class="cf-bolsa-valor"><small>Vendas</small><strong>+{{fmtVendas}}</strong></div>{{/if}}
 		<div class="cf-bolsa-valor"><small>Em compras</small><strong>{{fmtGasto}}</strong></div>
 		<div class="cf-bolsa-valor cf-saldo"><small>Restante</small><strong><i class="fa-solid fa-coins"></i> {{fmtSaldo}}</strong></div>
 		{{#if carrinho.length}}
