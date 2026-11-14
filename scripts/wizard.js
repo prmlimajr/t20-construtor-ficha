@@ -370,8 +370,12 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	/* ---------------- Ciclo de vida ---------------- */
 
-	async _preFirstRender(context, options) {
-		await super._preFirstRender(context, options);
+	/**
+	 * Carrega dados e rascunho uma única vez. Chamado no início de _prepareContext, porque o
+	 * ApplicationV2 prepara o contexto antes de _preFirstRender.
+	 */
+	async #inicializar() {
+		if (this.dados && this.estado) return;
 		this.dados = await carregarDados();
 		const salvo = this.actor.getFlag(MODULE_ID, "rascunho");
 		let estado = null;
@@ -385,6 +389,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	}
 
 	async _prepareContext(options) {
+		await this.#inicializar();
 		const passos = this.passos();
 		this.indice = Math.min(this.indice, passos.length - 1);
 		const atual = passos[this.indice];
