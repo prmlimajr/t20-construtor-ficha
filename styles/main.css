@@ -12,20 +12,22 @@
 
 .t20-construtor {
 	/* Paleta */
+	--cf-fundo: #b52d35;
 	--cf-marrom: #6f3c27;
-	--cf-ouro: #f0dc82;
-	--cf-vermelho: #b02b2e;
+	--cf-ouro: #f6d57a;
+	--cf-vermelho: #3f0f12; /* destaque (seleções, botões principais): bordô escuro sobre o fundo vermelho */
 	--cf-titulo-cor: #ffffff;
 	--cf-titulo-borda: #3f0f12;
 	--cf-fonte-titulo: "T20CF Tormenta", "Tormenta 20", "Tormenta20", "Modesto Condensed", serif;
 
 	/* Derivadas */
-	--cf-vermelho-claro: rgba(176, 43, 46, 0.18);
-	--cf-ouro-claro: rgba(240, 220, 130, 0.12);
-	--cf-borda: rgba(111, 60, 39, 0.75);
-	--cf-fundo-card: rgba(111, 60, 39, 0.22);
-	--cf-texto-suave: rgba(240, 220, 130, 0.7);
-	--cf-ok: #f0dc82;
+	--cf-vermelho-claro: rgba(63, 15, 18, 0.55);
+	--cf-ouro-claro: rgba(246, 213, 122, 0.14);
+	--cf-borda: rgba(63, 15, 18, 0.7);
+	--cf-fundo-card: rgba(63, 15, 18, 0.35);
+	--cf-texto-suave: rgba(255, 236, 190, 0.85);
+	--cf-ok: #f6d57a;
+	--cf-painel: rgba(40, 8, 10, 0.45);
 }
 
 /* ---------- Títulos ---------- */
@@ -477,8 +479,8 @@
 	flex-direction: column;
 	gap: 10px;
 	padding: 12px 16px;
-	background: #16120f;
-	border-left: 2px solid var(--cf-marrom);
+	background: #8e1f27;
+	border-left: 2px solid var(--cf-ouro);
 	box-shadow: -8px 0 24px rgba(0, 0, 0, 0.6);
 }
 .t20-construtor .cf-slideout.animar { animation: cf-slide-in 220ms ease-out; }
@@ -713,3 +715,53 @@
 }
 .t20-construtor .cf-dados dd { line-height: 1.35; }
 .t20-construtor .cf-alternativa { max-width: 640px; }
+
+/* ==================== Tema: fundo vermelho (sobrepõe as regras acima) ==================== */
+/* ---------- Fundo vermelho ---------- */
+.application.t20-construtor,
+.t20-construtor .window-content {
+	background: var(--cf-fundo);
+	color: #fff;
+}
+.t20-construtor .cf-lateral { background: rgba(40, 8, 10, 0.35); border-right-color: var(--cf-borda); }
+.t20-construtor .cf-info { background: var(--cf-painel) !important; }
+.t20-construtor .cf-pendencia { color: #fff; }
+.t20-construtor .cf-pendencia i { color: var(--cf-ouro); }
+.t20-construtor .cf-pendencia.ok { color: var(--cf-ouro); }
+.t20-construtor .cf-cabecalho p,
+.t20-construtor .cf-nota,
+.t20-construtor .cf-vazio { color: var(--cf-texto-suave); }
+
+/* Botões principais e seleções: bordô com borda dourada */
+.t20-construtor button.cf-primario {
+	background: var(--cf-vermelho);
+	border: 1px solid var(--cf-ouro);
+	color: var(--cf-ouro);
+}
+.t20-construtor button.cf-primario:hover:not(:disabled) { background: #5a1a1f; }
+.t20-construtor .cf-card.selecionado,
+.t20-construtor .cf-linha.selecionado,
+.t20-construtor .cf-beneficio.selecionado,
+.t20-construtor button.cf-escola.selecionado {
+	border-color: var(--cf-ouro);
+	background: var(--cf-vermelho-claro);
+}
+.t20-construtor .cf-chip.selecionado {
+	background: var(--cf-vermelho);
+	border-color: var(--cf-ouro);
+	color: var(--cf-ouro);
+}
+.t20-construtor .cf-passo.atual { border-color: var(--cf-ouro); }
+.t20-construtor .cf-obrigacoes { border-left-color: var(--cf-ouro); }
+
+/* Logo no canto superior esquerdo (assets/logo.webp ou assets/logo.png) */
+.t20-construtor .cf-logo {
+	display: block;
+	width: 100%;
+	max-height: 90px;
+	object-fit: contain;
+	border: none;
+	margin: 0 0 4px;
+	filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
+}
+
