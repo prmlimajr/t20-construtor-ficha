@@ -38,6 +38,10 @@ Jogadores precisam da permissão **"Criar novos atores"** (Configurações → P
 9. **Dinheiro**: 4d6 T$, rolado no chat, uma vez só.
 10. **Revisão**: nome, retrato e token (pelo navegador de arquivos do Foundry ou colando o caminho; o token pode usar o retrato) e resumo de tudo.
 
+## Regras opcionais do sistema
+
+- **Raças Abertas** (configuração do sistema Tormenta20): quando ligada, cada modificador de atributo da raça pode ir para qualquer atributo, no máximo um modificador por atributo (um anão distribui +2, +1 e −1; um aggelus, +2 e +1). Raças com +1 flexível entram com seus +1 nessa mesma distribuição (o lefou distribui +1, +1, +1 e −1). O construtor lê a configuração do sistema; nada a ligar no módulo.
+
 ## Dados
 
 Raças, classes, poderes, magias e equipamentos vêm dos compêndios do sistema. O que o sistema não traz fica em `data/`:

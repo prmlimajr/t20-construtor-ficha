@@ -965,3 +965,19 @@
 	.t20-construtor .cf-carregando-icone,
 	.t20-construtor .cf-carregando-barra span { animation: none; }
 }
+
+/* Raças abertas: uma linha por modificador */
+.t20-construtor .cf-aberto-linha { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+.t20-construtor .cf-aberto-valor {
+	flex: none;
+	width: 38px;
+	text-align: center;
+	font-weight: bold;
+	font-size: 15px;
+	padding: 3px 0;
+	border-radius: 6px;
+	background: var(--cf-ouro);
+	color: var(--cf-vermelho, #3f0f12);
+}
+.t20-construtor .cf-aberto-valor.negativo { background: rgba(0, 0, 0, 0.35); color: #fff; }
+.t20-construtor .cf-aberto-linha .cf-chips { flex: 1; }

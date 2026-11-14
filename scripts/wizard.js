@@ -28,6 +28,8 @@ function estadoInicial(actor) {
 		nome: actor.name,
 		raca: "",
 		racaAtributos: [],
+		/** Raças abertas (regra opcional do sistema): atributo escolhido para cada modificador da raça, na ordem de modificadoresRaca(). */
+		racaAbertos: [],
 		/** Escolhas das habilidades raciais (data/racas.json), por id. Zeradas ao trocar de raça. */
 		racaEscolhas: {},
 		/** Escolhas das habilidades de classe (data/poderes-classe.json), por id. Zeradas ao trocar de classe. */
@@ -188,7 +190,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			rolarDinheiro: ConstrutorFicha.#rolarDinheiro,
 			finalizar: ConstrutorFicha.#finalizar,
 			recomecar: ConstrutorFicha.#recomecar,
-			tentarDeNovo: ConstrutorFicha.#tentarDeNovo
+			tentarDeNovo: ConstrutorFicha.#tentarDeNovo,
+			atribuirAberto: ConstrutorFicha.#atribuirAberto
 		}
 	};
 
@@ -272,7 +275,35 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	racial(k) {
 		const r = this.raca;
 		if (!r) return 0;
+		if (this.racasAbertas) {
+			const mods = this.modificadoresRaca(r);
+			return (this.estado.racaAbertos ?? []).reduce((soma, atr, i) => soma + (atr === k ? mods[i] ?? 0 : 0), 0);
+		}
 		return (r.system.atributos?.[k] ?? 0) + (this.estado.racaAtributos.includes(k) ? 1 : 0);
+	}
+
+	/**
+	 * Regra opcional "Raças Abertas" do sistema Tormenta20 (configuração do mundo): cada modificador
+	 * de atributo da raça pode ir para qualquer atributo, no máximo um modificador por atributo.
+	 */
+	get racasAbertas() {
+		try {
+			return !!game.settings.get("tormenta20", "openRaces");
+		} catch (err) {
+			return false;
+		}
+	}
+
+	/**
+	 * Modificadores de atributo da raça como valores soltos, do maior para o menor: os fixos
+	 * (ex.: anão +2, +1, −1) e um +1 para cada atributo flexível (ex.: humano +1, +1, +1).
+	 */
+	modificadoresRaca(r = this.raca) {
+		if (!r) return [];
+		const fixos = ATRIBUTOS.map((k) => Number(r.system.atributos?.[k] ?? 0)).filter((v) => v);
+		const din = atributosDinamicosRaca(r);
+		const flex = din.lista.length ? Array(Math.min(din.qtd, din.lista.length)).fill(1) : [];
+		return [...fixos, ...flex].sort((a, b) => b - a);
 	}
 
 	/** Habilidades da raça atual com as regras de escolha de data/racas.json: [{poder, regra}]. */
@@ -627,6 +658,12 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			case "raca": {
 				const r = this.raca;
 				if (!r) return "Escolha uma raça.";
+				if (this.racasAbertas) {
+					const mods = this.modificadoresRaca(r);
+					const feitos = mods.filter((_, i) => e.racaAbertos?.[i]).length;
+					if (feitos < mods.length) return `Distribua os modificadores da raça (${feitos}/${mods.length}).`;
+					return this.#pendenciaEscolhas(this.escolhasRaciais());
+				}
 				const din = atributosDinamicosRaca(r);
 				if (din.lista.length && e.racaAtributos.length !== Math.min(din.qtd, din.lista.length)) {
 					return `Escolha ${Math.min(din.qtd, din.lista.length)} atributos para receber +1.`;
@@ -1347,6 +1384,10 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	}
 
 	#textoAtributosRaca(r) {
+		if (this.racasAbertas) {
+			const mods = this.modificadoresRaca(r);
+			return mods.length ? `Modificadores livres: ${mods.map(sinal).join(", ")}` : "—";
+		}
 		const partes = ATRIBUTOS.filter((k) => r.system.atributos?.[k])
 			.map((k) => `${NOMES_ATRIBUTOS[k]} ${sinal(r.system.atributos[k])}`);
 		const din = atributosDinamicosRaca(r);
@@ -1400,7 +1441,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				atributos: this.#textoAtributosRaca(r),
 				descricao: await this.#html(r.uuid, r.system.description?.value),
 				poderes,
-				dinamicos: din.lista.length
+				abertos: this.racasAbertas ? this.#ctxRacaAberta(r) : null,
+				dinamicos: din.lista.length && !this.racasAbertas
 					? din.lista.map((k) => ({
 						chave: k, nome: NOMES_ATRIBUTOS[k],
 						selecionado: e.racaAtributos.includes(k)
@@ -1412,6 +1454,27 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			};
 		}
 		return { racas, grupos, variosGrupos: grupos.length > 1, filtro: this.filtros?.raca ?? "", info };
+	}
+
+	/** Raças abertas: uma linha por modificador, com os seis atributos para escolher. */
+	#ctxRacaAberta(r) {
+		const usados = this.estado.racaAbertos ?? [];
+		const mods = this.modificadoresRaca(r);
+		return {
+			linhas: mods.map((v, i) => ({
+				indice: i,
+				valor: sinal(v),
+				negativo: v < 0,
+				atributos: ATRIBUTOS.map((k) => ({
+					chave: k, nome: NOMES_ATRIBUTOS[k],
+					selecionado: usados[i] === k,
+					// um modificador por atributo: os já usados por outra linha ficam bloqueados
+					bloqueado: usados.some((x, j) => j !== i && x === k)
+				}))
+			})),
+			feitos: mods.filter((_, i) => usados[i]).length,
+			total: mods.length
+		};
 	}
 
 	/** Controles de uma escolha racial no painel da raça. */
@@ -2585,6 +2648,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			if (campo === "raca") {
 				// trocar de raça revoga tudo o que a raça anterior concedia
 				e.racaAtributos = [];
+				e.racaAbertos = [];
 				e.racaEscolhas = {};
 				this.#prepararEscolhasRaciais();
 			}
@@ -2987,6 +3051,15 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		});
 		this.estado.dinheiro = roll.total;
 		this.#mudou();
+	}
+
+	/** Raças abertas: põe o modificador `indice` no atributo clicado (clicar de novo tira). */
+	static #atribuirAberto(event, target) {
+		const i = Number(target.dataset.indice);
+		const k = target.dataset.valor;
+		const lista = [...(this.estado.racaAbertos ?? [])];
+		lista[i] = lista[i] === k ? "" : k;
+		this.#definirCampo("racaAbertos", lista);
 	}
 
 	/** Tela de carregamento com erro: limpa o erro e tenta carregar de novo. */

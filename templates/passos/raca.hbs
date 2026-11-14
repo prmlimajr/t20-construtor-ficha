@@ -24,6 +24,23 @@
 		<h3><img src="{{info.img}}" alt=""> {{info.nome}}</h3>
 		{{#if info.fonte}}<p class="cf-fonte">{{info.fonte}} (Suplementos de Arton)</p>{{/if}}
 		<p class="cf-destaque"><strong>Atributos:</strong> {{info.atributos}}</p>
+		{{#if info.abertos}}
+		<div class="cf-bloco cf-racas-abertas">
+			<h4>Distribua os modificadores da raça <small>({{info.abertos.feitos}}/{{info.abertos.total}})</small></h4>
+			<p class="cf-nota"><i class="fa-solid fa-circle-info"></i> Raças abertas (regra opcional do sistema): cada modificador vai para o atributo que você quiser, no máximo um por atributo.</p>
+			{{#each info.abertos.linhas}}
+			<div class="cf-aberto-linha">
+				<span class="cf-aberto-valor {{#if negativo}}negativo{{/if}}">{{valor}}</span>
+				<div class="cf-chips">
+					{{#each atributos}}
+					<button type="button" class="cf-chip {{#if selecionado}}selecionado{{/if}}" data-action="atribuirAberto"
+						data-indice="{{../indice}}" data-valor="{{chave}}" {{#if bloqueado}}disabled title="Já recebeu outro modificador"{{/if}}>{{nome}}</button>
+					{{/each}}
+				</div>
+			</div>
+			{{/each}}
+		</div>
+		{{/if}}
 		{{#if info.dinamicos}}
 		<div class="cf-bloco">
 			<h4>Escolha {{info.qtdDinamicos}} atributos para receber +1</h4>
