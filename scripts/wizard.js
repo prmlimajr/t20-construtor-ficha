@@ -42,6 +42,8 @@ function estadoInicial(actor) {
 		magiasEscolas: [],
 		magias: [],
 		periciasOu: [],
+		/** Classes de suplemento sem perícias cadastradas: perícias treinadas da classe indicadas pelo jogador. */
+		periciasFixasManuais: [],
 		periciasClasse: [],
 		periciasInt: [],
 		origens: { principal: origem(), regional: origem() },
@@ -204,12 +206,22 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	get regrasClasse() {
 		const c = this.classe;
-		return c ? this.dados.regrasClasses[c.name] ?? null : null;
+		const r = c ? this.dados.regrasClasses[c.name] ?? null : null;
+		// classe sem perícias cadastradas: as treinadas da classe são as que o jogador indicou
+		if (r?.periciasManuais) return { ...r, fixas: [...(this.estado.periciasFixasManuais ?? [])] };
+		return r;
 	}
 
 	/** A classe tem a proficiência (marcial, pesada, escudo)? */
 	temProficiencia(p) {
-		return (this.regrasClasse?.proficiencias ?? []).includes(p);
+		return this.proficiencias.includes(p);
+	}
+
+	/** Proficiências da classe somadas às de habilidades raciais (ex.: Arte da Guerra do hobgoblin). */
+	get proficiencias() {
+		const set = new Set(this.regrasClasse?.proficiencias ?? []);
+		for (const { regra } of this.poderesDaRaca()) (regra?.proficiencias ?? []).forEach((x) => set.add(x));
+		return [...set];
 	}
 
 	get conjurador() {
@@ -223,9 +235,15 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		return game.settings.get(MODULE_ID, "origemDupla");
 	}
 
-	get beneficiosPorOrigem() {
+	/**
+	 * Benefícios a escolher em cada origem. A origem regional sempre concede um só; a profissional
+	 * concede 2 (regra do livro) ou, com a origem dupla ligada, o valor configurado pelo mestre.
+	 */
+	beneficiosPorOrigem(sub = "principal") {
+		if (sub === "regional") return 1;
 		return this.origemDupla ? game.settings.get(MODULE_ID, "beneficiosOrigemDupla") : 2;
 	}
+
 
 	/** Total de pontos da compra de pontos (editável pelo jogador; padrão 10). */
 	get pontosTotais() {
@@ -253,11 +271,26 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const r = this.raca;
 		if (!r) return [];
 		const out = [];
+		const doSuplemento = !!fonteDe(this.dados, r);
+		const regraDe = (p) => {
+			const regra = this.dados.regrasRacas[p.name];
+			// regras marcadas "somenteSuplemento" valem só para o poder homônimo do suplemento (ex.: Chassi do Golem)
+			if (!regra || (regra.somenteSuplemento && !fonteDe(this.dados, p))) return null;
+			return regra;
+		};
 		for (const g of r.system.grants ?? []) {
 			for (const c of g.choices ?? []) {
-				const p = this.dados.poderes.find((x) => x.uuid === c.uuid);
-				if (p) out.push({ poder: p, regra: this.dados.regrasRacas[p.name] ?? null });
+				// alguns poderes do suplemento apontam para "Compendium.world..." (compêndio do autor): busca pelo id
+				const id = String(c.uuid).split(".").pop();
+				const p = this.dados.poderes.find((x) => x.uuid === c.uuid)
+					?? (doSuplemento ? this.dados.poderes.find((x) => x._id === id || x.id === id) : null);
+				if (p) out.push({ poder: p, regra: regraDe(p) });
 			}
+		}
+		// escolhas da raça que não pertencem a uma habilidade (ex.: natureza e tamanho do duende)
+		for (const regra of this.dados.regrasRacas[`raca:${r.name}`]?.escolhas ?? []) {
+			if (regra.somenteSuplemento && !doSuplemento) continue;
+			out.push({ poder: r, regra, daRaca: true });
 		}
 		return out;
 	}
@@ -323,7 +356,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		if (!existe(d.classes, e.classe)) {
 			Object.assign(e, {
 				classe: "", escolhasClasse: {}, classePoderEscolhas: {}, magiasEscolas: [], magias: [],
-				periciasOu: [], periciasClasse: [], poderesConcedidos: [], divindade: "", devoto: null
+				periciasOu: [], periciasFixasManuais: [], periciasClasse: [], poderesConcedidos: [], divindade: "", devoto: null
 			});
 		}
 		const uuidsMagias = new Set(d.magias.map((m) => m.uuid));
@@ -346,6 +379,12 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		};
 		limparEscolhas(e.racaEscolhas);
 		limparEscolhas(e.classePoderEscolhas);
+		// a origem regional concede um só benefício (rascunhos antigos podiam ter mais)
+		const reg = e.origens.regional;
+		if (reg.beneficios.length > 1) {
+			for (const b of reg.beneficios.slice(1)) if (b.startsWith("grupo:")) delete reg.grupos[b.slice(6)];
+			reg.beneficios = reg.beneficios.slice(0, 1);
+		}
 		const armas = new Set(d.armas.map((a) => a.name));
 		for (const campo of ["arma", "armaMarcial"]) if (e.equip?.[campo] && !armas.has(e.equip[campo])) e.equip[campo] = "";
 		const loja = new Set(d.loja.map((x) => x.doc.name));
@@ -376,7 +415,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	/** Pendência de uma lista de escolhas de poder (null = completas). */
 	#pendenciaEscolhas(lista) {
-		for (const { poder: p, regra } of lista) {
+		for (const { poder: p0, regra, daRaca } of lista) {
+			const p = daRaca ? { name: regra.titulo } : p0;
 			const v = this.escolhaRacial(regra);
 			if (regra.tipo === "opcao" && !v) return `${p.name}: escolha ${regra.titulo.toLowerCase()}.`;
 			if (regra.tipo === "magias" && v.length !== regra.quantidade) {
@@ -422,6 +462,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	/** Perícias treinadas por habilidades raciais (Versátil, Híbrido, Memória Póstuma). */
 	periciasRaciais({ exceto = null } = {}) {
 		const set = new Set();
+		for (const { regra } of this.poderesDaRaca()) (regra?.periciasFixas ?? []).forEach((k) => set.add(k));
 		for (const { regra } of this.escolhasRaciais()) {
 			if (regra.tipo !== "beneficio" || regra.pericia !== "treinada" || regra.id === exceto) continue;
 			this.escolhaRacial(regra).pericias.forEach((k) => set.add(k));
@@ -481,6 +522,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		if (ate === "origem") return set;
 		for (const o of this.origensAtivas()) {
 			for (const b of o.estado.beneficios) if (b.startsWith("pericia:")) set.add(b.slice(8));
+			if (o.def.especial === "mundana") (o.def.periciasMundanas ?? []).forEach((k) => set.add(k));
 			if (o.estado.amnPericia) set.add(o.estado.amnPericia);
 		}
 		return set;
@@ -620,6 +662,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			case "pericias": {
 				const r = this.regrasClasse;
 				if (!r) return "Escolha uma classe primeiro.";
+				if (r.periciasManuais && !r.fixas.length) return "Indique as perícias treinadas da classe (consulte o livro).";
 				if (r.ou.some((_, i) => !e.periciasOu[i])) return "Escolha as perícias obrigatórias da classe.";
 				if (e.periciasClasse.length !== r.numero) {
 					return `Escolha ${r.numero} perícias da classe (${e.periciasClasse.length} escolhidas).`;
@@ -638,9 +681,13 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				if (!def) return "Escolha uma origem.";
 				if (def.especial === "amnesico") {
 					if (!o.amnPericia || !o.amnPoder) return "Escolha a perícia e o poder (definidos pelo mestre).";
+				} else if (def.especial === "mundana") {
+					// origem mundana: benefício fixo; só pede o que o texto manda escolher
+					if (def.escolhaPericia && !o.amnPericia) return `Escolha: ${def.escolhaPericia.titulo}.`;
+					if (def.escolhaPoder && !o.amnPoder) return `Escolha: ${def.escolhaPoder.titulo}.`;
 				} else {
-					const n = this.beneficiosPorOrigem;
-					if (o.beneficios.length !== n) return `Escolha ${n} benefícios (${o.beneficios.length} escolhidos).`;
+					const n = this.beneficiosPorOrigem(passo.sub);
+					if (o.beneficios.length !== n) return `Escolha ${n === 1 ? "1 benefício" : `${n} benefícios`} (${o.beneficios.length} escolhidos).`;
 					for (const b of o.beneficios) {
 						if (b.startsWith("grupo:") && !o.grupos[b.slice(6)]) return `Escolha o poder de ${b.slice(6)}.`;
 					}
@@ -760,6 +807,29 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			filtro.addEventListener("input", aplicar);
 			aplicar();
 			if (context.slideout?.animar) filtro.focus();
+		}
+		// busca em listas agrupadas (ex.: raças): esconde cards e grupos sem resultado
+		const filtroLista = this.element.querySelector(".cf-lista-filtravel .cf-filtro-lista");
+		if (filtroLista) {
+			const lista = filtroLista.closest(".cf-lista-filtravel");
+			const aplicar = () => {
+				const termo = normalizar(filtroLista.value);
+				this.filtros ??= {};
+				this.filtros[filtroLista.dataset.filtro ?? "raca"] = filtroLista.value;
+				let total = 0;
+				for (const grupo of lista.querySelectorAll(".cf-grupo")) {
+					let visiveis = 0;
+					for (const card of grupo.querySelectorAll(".cf-card")) {
+						card.hidden = !!termo && !normalizar(card.dataset.busca ?? card.textContent).includes(termo);
+						if (!card.hidden) visiveis++;
+					}
+					grupo.hidden = !visiveis;
+					total += visiveis;
+				}
+				lista.querySelector(".cf-sem-resultado").hidden = total > 0;
+			};
+			filtroLista.addEventListener("input", aplicar);
+			aplicar();
 		}
 		const filtroLoja = this.element.querySelector(".cf-loja .cf-filtro");
 		if (filtroLoja) {
@@ -1027,11 +1097,21 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 					sub: `${rotuloEscola(m.system.escola)} · ${m.system.tipo === "uni" ? "Universal" : (m.system.tipo === "arc" ? "Arcana" : "Divina")}`
 				}));
 			}
+			case "pericias":
+				return ordenarPericias(arg.split("|")).map((k) => {
+					const c = this.#cardPericia(k);
+					return { valor: k, nome: c.nome, sigla: c.atributo, sub: c.tags };
+				});
 			case "periciaRacial": {
 				const regra = this.#regraRacial(arg);
-				const outras = regra?.pericia === "treinada" ? this.periciasRaciais({ exceto: regra.fonte === "raca" ? regra.id : null }) : new Set();
+				const outras = regra?.pericia === "treinada" ? this.periciasRaciais({ exceto: regra.fonte === "classe" ? null : regra.id }) : new Set();
+				// lista restrita (ex.: Papel Tribal) ou só perícias de certos atributos (ex.: Esperteza Vulpina)
+				const permitidas = regra?.opcoesPericias ? new Set(expandirPericias(regra.opcoesPericias)) : null;
+				const atributos = regra?.atributosPericias ?? null;
 				return ordenarPericias(Object.keys(CONFIG.T20?.pericias ?? {}))
 					.filter((k) => !outras.has(k))
+					.filter((k) => !permitidas || permitidas.has(k))
+					.filter((k) => !atributos || atributos.includes(CONFIG.T20.pericias[k]?.abl))
 					.map((k) => {
 						const c = this.#cardPericia(k);
 						return { valor: k, nome: c.nome, sigla: c.atributo, sub: c.tags };
@@ -1055,6 +1135,13 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 					valor: m.uuid, nome: m.name, img: m.img,
 					sub: [rotuloEscola(m.system.escola), m.system.tipo === "uni" ? "Universal" : (m.system.tipo === "arc" ? "Arcana" : "Divina"), fonteDe(this.dados, m)].filter(Boolean).join(" · ")
 				}));
+			case "poderes":
+				return arg.split("|").map((n) => poder(this.dados, n)).filter(Boolean).map(poderCard);
+			case "poderGeralOrigem":
+				// poder geral ou poder único de origem do livro básico (Ambição Herdada do meio-elfo)
+				return this.dados.poderes
+					.filter((p) => (p.system.tipo === "geral" && poderSelecionavel(this.dados, p)) || (p.system.tipo === "origem" && !fonteDe(this.dados, p)))
+					.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")).map(poderCard);
 			case "poderGeral":
 				return this.dados.poderes.filter((p) => p.system.tipo === "geral" && poderSelecionavel(this.dados, p))
 					.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")).map(poderCard);
@@ -1099,13 +1186,13 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				descricao: f.doc ? await this.#html(f.doc.uuid, f.doc.system?.description?.value) : ""
 			};
 		}
-		if (tipo === "grupo" || tipo === "poderGeral") {
+		if (["grupo", "poderGeral", "poderes", "poderGeralOrigem"].includes(tipo)) {
 			const p = poder(this.dados, valor);
 			if (!p) return null;
 			const i = await this.#infoPoder(p);
 			return { ...i, stats: [{ rotulo: "Tipo", valor: p.system.subtipo }] };
 		}
-		if (tipo === "pericia" || tipo === "periciaRacial") {
+		if (tipo === "pericia" || tipo === "periciaRacial" || tipo === "pericias") {
 			const cfg = CONFIG.T20?.pericias?.[valor];
 			if (!cfg) return null;
 			return {
@@ -1254,12 +1341,25 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			fonte: fonteDe(this.dados, r),
 			selecionado: r.uuid === e.raca
 		}));
+		// agrupadas por livro: o básico primeiro, depois Heróis de Arton, Ameaças de Arton e os demais
+		const ORDEM = ["", "Heróis de Arton", "Ameaças de Arton"];
+		const porLivro = new Map();
+		for (const card of racas) (porLivro.get(card.fonte) ?? porLivro.set(card.fonte, []).get(card.fonte)).push(card);
+		const grupos = [...porLivro.entries()]
+			.sort(([a], [b]) => {
+				const ia = ORDEM.indexOf(a), ib = ORDEM.indexOf(b);
+				if (ia >= 0 || ib >= 0) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+				return a.localeCompare(b, "pt-BR");
+			})
+			.map(([fonte, lista]) => ({ titulo: fonte || "Tormenta20 — Jogo do Ano", racas: lista }));
+
 		let info = null;
 		const r = this.raca;
 		if (r) {
 			const poderes = [];
-			for (const { poder: p, regra } of this.poderesDaRaca()) {
-				const info = await this.#infoPoder(p);
+			for (const { poder: p, regra, daRaca } of this.poderesDaRaca()) {
+				// escolha da própria raça (sem habilidade associada): só o título e os controles
+				const info = daRaca ? { nome: regra.titulo, escolhaDaRaca: true } : await this.#infoPoder(p);
 				if (regra?.tipo) {
 					info.escolha = this.#ctxEscolhaRacial(p, regra);
 					info.aberto = !!info.escolha.pendente;
@@ -1286,7 +1386,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				semOrigem: this.racaSemOrigem
 			};
 		}
-		return { racas, info };
+		return { racas, grupos, variosGrupos: grupos.length > 1, filtro: this.filtros?.raca ?? "", info };
 	}
 
 	/** Controles de uma escolha racial no painel da raça. */
@@ -1694,6 +1794,13 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			daRaca,
 			repetidas: repetidas.join(", "),
 			especialista: this.#ctxEspecialista(),
+			manuais: r.periciasManuais ? {
+				cards: ordenarPericias(Object.keys(CONFIG.T20?.pericias ?? {})).map((k) => card(k, {
+					selecionado: r.fixas.includes(k),
+					bloqueado: raciais.has(k) && !r.fixas.includes(k)
+				})),
+				qtd: r.fixas.length
+			} : null,
 			grupos,
 			opcoesClasse,
 			numeroClasse: r.numero,
@@ -1729,8 +1836,15 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const origens = lista.map((o) => ({
 			nome: o.nome,
 			resumo: this.#resumoOrigem(o),
+			fonte: o.fonte ?? "",
 			selecionado: o.nome === est.nome
 		}));
+		// agrupadas por livro (básico primeiro), como as raças
+		const porLivro = new Map();
+		for (const o of origens) (porLivro.get(o.fonte) ?? porLivro.set(o.fonte, []).get(o.fonte)).push(o);
+		const grupos = [...porLivro.entries()]
+			.sort(([a], [b]) => (a ? 1 : 0) - (b ? 1 : 0) || a.localeCompare(b, "pt-BR"))
+			.map(([fonte, l]) => ({ titulo: fonte || (sub === "regional" ? "Origens regionais" : "Tormenta20 — Jogo do Ano"), origens: l }));
 		const def = lista.find((o) => o.nome === est.nome);
 		let info = null;
 		if (def) {
@@ -1782,6 +1896,35 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				});
 			}
 			const itens = (def.itens ?? []).map((it, i) => this.#ctxItemOrigem(it, i, est, base));
+			let mundana = null;
+			if (def.especial === "mundana") {
+				const p = poder(this.dados, def.poder);
+				const extras = [];
+				for (const n of def.poderesExtras ?? []) {
+					const x = poder(this.dados, n);
+					if (x) extras.push(await this.#infoPoder(x));
+				}
+				mundana = {
+					poder: p ? { ...(await this.#infoPoder(p)), aberto: true } : null,
+					pericias: (def.periciasMundanas ?? []).map((k) => ({ nome: rotuloPericia(k), atributo: this.#cardPericia(k).atributo })),
+					oficios: (def.oficiosSemPericia ?? []).map((x) => `Ofício (${x})`).join(", "),
+					extras,
+					escolhaPericia: def.escolhaPericia ? {
+						campo: `${base}.amnPericia`,
+						lista: `pericias:${def.escolhaPericia.opcoes.join("|")}`,
+						titulo: def.escolhaPericia.titulo,
+						rotulo: def.escolhaPericia.titulo,
+						escolhido: est.amnPericia ? rotuloPericia(est.amnPericia) : ""
+					} : null,
+					escolhaPoder: def.escolhaPoder ? {
+						campo: `${base}.amnPoder`,
+						lista: `poderes:${def.escolhaPoder.opcoes.join("|")}`,
+						titulo: def.escolhaPoder.titulo,
+						rotulo: def.escolhaPoder.titulo,
+						escolhido: est.amnPoder ?? ""
+					} : null
+				};
+			}
 			let amnesico = null;
 			if (def.especial === "amnesico") {
 				const todas = Object.keys(CONFIG.T20?.pericias ?? {});
@@ -1809,18 +1952,27 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				descricao: def.descricao ?? "",
 				tibares: def.tibares ?? "",
 				beneficios,
-				qtdBeneficios: this.beneficiosPorOrigem,
+				qtdBeneficios: this.beneficiosPorOrigem(sub),
+				rotuloBeneficios: this.beneficiosPorOrigem(sub) === 1 ? "1 benefício" : `${this.beneficiosPorOrigem(sub)} benefícios`,
 				escolhidos: est.beneficios.length,
 				campoBeneficios: `${base}.beneficios`,
 				itens,
-				amnesico
+				amnesico,
+				mundana,
+				fonte: def.fonte ?? ""
 			};
 		}
-		return { origens, info, campoNome: `${base}.nome` };
+		return { origens, grupos, variosGrupos: grupos.length > 1, filtro: this.filtros?.[`origem-${sub}`] ?? "", chaveFiltro: `origem-${sub}`, info, campoNome: `${base}.nome` };
 	}
 
 	#resumoOrigem(o) {
 		if (o.especial === "amnesico") return "Perícia e poder escolhidos pelo mestre";
+		if (o.especial === "mundana") {
+			const partes = (o.periciasMundanas ?? []).map(rotuloPericia);
+			(o.oficiosSemPericia ?? []).forEach((x) => partes.push(`Ofício (${x})`));
+			if (o.escolhaPericia) partes.push(o.escolhaPericia.titulo);
+			return [...partes, o.poder].join(", ");
+		}
 		const pericias = expandirPericias(o.pericias).filter((k) => !OFICIOS.includes(k)).map(rotuloPericia);
 		if ((o.pericias ?? []).includes("oficio")) pericias.push("Ofício");
 		return [...pericias, ...(o.poderes ?? []), ...(o.grupos ?? []).map((g) => `poder de ${g}`)].join(", ");
@@ -1874,10 +2026,15 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const devoto = this.ehDevoto;
 		const divindades = this.dados.divindades.map((d) => {
 			const impedimento = this.impedimentoDivindade(d);
-			return { nome: d.nome, titulo: d.menor ? `${d.titulo} · deus menor` : d.titulo, selecionado: d.nome === e.divindade, bloqueado: !!impedimento, impedimento };
+			return { nome: d.nome, titulo: d.titulo, menor: !!d.menor, selecionado: d.nome === e.divindade, bloqueado: !!impedimento, impedimento };
 		});
 		// mostra primeiro as permitidas
 		divindades.sort((a, b) => Number(a.bloqueado) - Number(b.bloqueado));
+		// O Panteão (os 20 deuses maiores) e, se houver, os deuses menores dos suplementos
+		const gruposDivindades = [
+			{ titulo: "O Panteão", divindades: divindades.filter((d) => !d.menor) },
+			{ titulo: "Deuses Menores", divindades: divindades.filter((d) => d.menor) }
+		].filter((g) => g.divindades.length);
 		let info = null;
 		const div = this.dados.divindades.find((d) => d.nome === (this.focoDivindade || e.divindade));
 		if (devoto && div) {
@@ -1914,6 +2071,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			devoto,
 			naoDevoto: !obrig && e.devoto === false,
 			divindades,
+			gruposDivindades,
+			filtro: this.filtros?.divindade ?? "",
 			info
 		};
 	}
@@ -1950,7 +2109,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	async #ctxEquipamento() {
 		const e = this.estado;
 		const r = this.regrasClasse ?? {};
-		const prof = r.proficiencias ?? [];
+		const prof = this.proficiencias;
 		const foco = this.focoEquip;
 		const card = (nome, extra = {}) => {
 			const f = this.#fichaEquip(nome);
@@ -2012,7 +2171,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		}
 		const venda = this.#ctxVenda();
 		venda.bloqueado = !!this.pendencia({ id: "equipamento" });
-		return { armas, armaduras, recebidos, info, itensClasse: this.#ctxItensClasse(), venda };
+		return { armas, armaduras, recebidos, info, itensClasse: this.#ctxItensClasse(), venda, filtro: this.filtros?.equipamento ?? "" };
 	}
 
 	/**
@@ -2167,7 +2326,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const raca = this.raca;
 		const classe = this.classe;
 
-		const poderesRaciais = this.poderesDaRaca().map((x) => x.poder);
+		const poderesRaciais = this.poderesDaRaca().filter((x) => !x.daRaca).map((x) => x.poder);
 
 		// Escolhas das habilidades raciais e de classe: ajustes nos efeitos, magias, poderes e itens extras
 		const daRaca = this.#processarEscolhas(this.poderesDaRaca());
@@ -2206,6 +2365,11 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				(o.def.poderes ?? []).forEach(addOrigem);
 				if (o.estado.amnPoder) addOrigem(o.estado.amnPoder);
 			}
+			if (o.def.especial === "mundana") {
+				addOrigem(o.def.poder);
+				(o.def.poderesExtras ?? []).forEach(addOrigem);
+				if (o.estado.amnPoder) addOrigem(o.estado.amnPoder);
+			}
 			itens.push(...this.#itensDaOrigem(o.def, o.estado));
 		}
 
@@ -2230,9 +2394,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			...(r.equipamentoExtra ?? []).map((n) => ({ nome: n, qtd: 1 }))
 		);
 		if (e.equip.arma) itens.push({ nome: e.equip.arma, qtd: 1 });
-		if (e.equip.armaMarcial && (r.proficiencias ?? []).includes("marcial")) itens.push({ nome: e.equip.armaMarcial, qtd: 1 });
+		if (e.equip.armaMarcial && this.temProficiencia("marcial")) itens.push({ nome: e.equip.armaMarcial, qtd: 1 });
 		if (e.equip.armadura) itens.push({ nome: e.equip.armadura, qtd: 1 });
-		if ((r.proficiencias ?? []).includes("escudo") && this.dados.equipamento.escudo) {
+		if (this.temProficiencia("escudo") && this.dados.equipamento.escudo) {
 			itens.push({ nome: this.dados.equipamento.escudo, qtd: 1 });
 		}
 		itens.push(...daClasse.itens);
@@ -2297,8 +2461,10 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	 */
 	#processarEscolhas(lista) {
 		const out = { ajustes: {}, magias: [], poderes: [], itens: [], texto: [] };
-		for (const { poder: p, regra } of lista) {
+		for (const { poder: p, regra, daRaca } of lista) {
 			if (!regra) continue;
+			// escolha da própria raça (ex.: natureza do duende): o resumo usa o título da escolha
+			const rotulo = daRaca ? regra.titulo : p.name;
 			for (const n of regra.magiasFixas ?? []) {
 				const m = magiaPorNome(this.dados, n);
 				if (m) out.magias.push({ doc: m, atributo: regra.atributo });
@@ -2311,7 +2477,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				case "opcao": {
 					const o = regra.opcoes.find((x) => x.valor === v);
 					if (!o) break;
-					ajuste(regra.efeito === "imunidade" ? { imunidade: o.valor } : { resistencia: o.valor, valor: regra.valor });
+					if (regra.efeito === "imunidade") ajuste({ imunidade: o.valor });
+					else if (regra.efeito === "pericia") ajuste({ bonusPericias: [o.valor], bonus: regra.valor });
+					else ajuste({ resistencia: o.valor, valor: regra.valor });
 					resumo = o.nome;
 					break;
 				}
@@ -2366,7 +2534,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				}
 			}
 			if (resumo) {
-				out.texto.push(`${p.name}: ${resumo}`);
+				out.texto.push(`${rotulo}: ${resumo}`);
 				ajuste({ anotacao: resumo });
 			}
 		}
@@ -2401,6 +2569,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				e.magiasEscolas = [];
 				e.magias = [];
 				e.periciasOu = [];
+				e.periciasFixasManuais = [];
 				e.periciasClasse = [];
 				e.poderesConcedidos = [];
 				e.divindade = "";
@@ -2423,6 +2592,11 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			if (campo === "magiasEscolas") {
 				const validas = new Set(this.magiasDisponiveis().map((m) => m.uuid));
 				e.magias = e.magias.filter((u) => validas.has(u));
+			}
+			if (campo === "periciasFixasManuais") {
+				const fixas = new Set(valor);
+				e.periciasClasse = e.periciasClasse.filter((k) => !fixas.has(k));
+				e.periciasInt = e.periciasInt.filter((k) => !fixas.has(k));
 			}
 			if (campo.startsWith("periciasOu")) {
 				const ja = this.periciasTreinadas({ ate: "classe" });

@@ -161,7 +161,7 @@ export async function carregarDados() {
 			.sort((a, b) => ordenar(a.doc, b.doc)),
 		estruturaLoja: ESTRUTURA_LOJA,
 		regrasClasses: { ...regrasClasses, ...sup.regrasClasses },
-		origens: origens.origens ?? [],
+		origens: [...(origens.origens ?? []), ...(sup.origensMundanas ?? [])],
 		origensRegionais: sup.origensRegionais ?? regionais.origens ?? [],
 		divindades: sup.divindades ?? divindades.divindades ?? [],
 		/** Conteúdo vindo dos Suplementos de Arton: uuid → nome do compêndio. */
@@ -237,7 +237,19 @@ function verificarReferencias(d) {
 	d.equipamento.kitBase?.forEach(checarEquip);
 	Object.values(d.equipamento.armaduras ?? {}).flat().forEach(checarEquip);
 	if (d.equipamento.escudo) checarEquip(d.equipamento.escudo);
+	const checarLista = (regra) => {
+		const lista = regra?.poder?.lista ?? "";
+		if (lista.startsWith("poderes:")) lista.slice(8).split("|").forEach(checarPoder);
+	};
 	for (const [nome, r] of [...Object.entries(d.regrasRacas), ...Object.entries(d.regrasPoderesClasse)]) {
+		// regras de suplemento só são conferidas com o suplemento carregado
+		const doSuplemento = r.somenteSuplemento || r.escolhas?.some((x) => x.somenteSuplemento);
+		if (doSuplemento && !d.suplementoLigado) continue;
+		// sem o suplemento, as regras das raças dele (Plurivalente, Tabu...) não têm o que conferir
+		if (!d.suplementoLigado && !nome.startsWith("raca:") && !poder(d, nome)) continue;
+		(r.escolhas ?? []).forEach(checarLista);
+		checarLista(r);
+		if (nome.startsWith("raca:")) continue;
 		checarPoder(nome);
 		for (const m of [...(r.nomes ?? []), ...(r.magiasFixas ?? [])]) {
 			if (!magiaPorNome(d, m)) faltando.add(`magia "${m}"`);

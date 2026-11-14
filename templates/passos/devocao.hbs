@@ -22,19 +22,28 @@
 
 {{#if devoto}}
 <div class="cf-duas">
-	<div class="cf-lista cf-cards cf-cards-texto">
-		{{#each divindades}}
-		{{#if bloqueado}}
-		<button type="button" class="cf-card bloqueado" data-action="focarDivindade" data-valor="{{nome}}" title="{{impedimento}}">
-		{{else}}
-		<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}}" data-action="definir" data-campo="divindade" data-valor="{{nome}}">
-		{{/if}}
-			<span class="cf-card-texto">
-				<span class="cf-card-nome">{{nome}}</span>
-				<span class="cf-card-sub">{{titulo}}</span>
-			</span>
-		</button>
+	<div class="cf-lista cf-lista-filtravel">
+		<input type="search" class="cf-filtro cf-filtro-lista" data-filtro="divindade" placeholder="Buscar divindade…" value="{{filtro}}" aria-label="Buscar divindade pelo nome">
+		{{#each gruposDivindades}}
+		<section class="cf-grupo">
+			<h4 class="cf-grupo-titulo">{{titulo}} <small>{{divindades.length}}</small></h4>
+			<div class="cf-cards cf-cards-coluna cf-cards-texto">
+				{{#each divindades}}
+				{{#if bloqueado}}
+				<button type="button" class="cf-card bloqueado" data-action="focarDivindade" data-valor="{{nome}}" data-busca="{{nome}} {{titulo}}" title="{{impedimento}}">
+				{{else}}
+				<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}}" data-action="definir" data-campo="divindade" data-valor="{{nome}}" data-busca="{{nome}} {{titulo}}">
+				{{/if}}
+					<span class="cf-card-texto">
+						<span class="cf-card-nome">{{nome}}</span>
+						<span class="cf-card-sub">{{titulo}}</span>
+					</span>
+				</button>
+				{{/each}}
+			</div>
+		</section>
 		{{/each}}
+		<p class="cf-vazio cf-sem-resultado" hidden>Nenhuma divindade com esse nome.</p>
 	</div>
 	<aside class="cf-info">
 		{{#if info}}

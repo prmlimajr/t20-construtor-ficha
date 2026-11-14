@@ -897,3 +897,25 @@
 	opacity: 0.85;
 }
 .t20-construtor p.cf-fonte { margin: 0 0 6px; }
+
+/* Listas de cards: os cards nunca encolhem (o texto não vaza) */
+.t20-construtor button.cf-card {
+	height: auto;
+	min-height: 52px;
+	max-height: none;
+	flex-shrink: 0;
+	overflow: visible;
+	align-items: center;
+	padding-top: 8px;
+	padding-bottom: 8px;
+}
+.t20-construtor .cf-card-texto { gap: 2px; }
+
+/* Raças agrupadas por livro, com busca */
+.t20-construtor .cf-lista-filtravel { display: flex; flex-direction: column; gap: 8px; }
+.t20-construtor .cf-lista-filtravel .cf-filtro-lista { flex: none; width: 100%; position: sticky; top: 0; z-index: 1; }
+.t20-construtor .cf-grupo { flex: none; }
+.t20-construtor .cf-grupo[hidden] { display: none; }
+.t20-construtor .cf-grupo-titulo { margin: 4px 0 6px; }
+.t20-construtor .cf-grupo-titulo small { font-size: 12px; -webkit-text-stroke: 0; opacity: 0.8; }
+.t20-construtor .cf-cards-coluna { grid-template-columns: 1fr; }

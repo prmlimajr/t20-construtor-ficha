@@ -26,8 +26,8 @@
 				"Dica": "O personagem escolhe duas origens: uma profissional (livro básico) e uma regional (Atlas de Arton)."
 			},
 			"beneficiosOrigemDupla": {
-				"Nome": "Homebrew: benefícios por origem",
-				"Dica": "Quantos benefícios cada origem concede quando a origem dupla está ligada."
+				"Nome": "Homebrew: benefícios da origem profissional",
+				"Dica": "Quantos benefícios a origem profissional concede quando a origem dupla está ligada. A origem regional sempre concede um benefício."
 			},
 			"suplementos": {
 				"Nome": "Suplementos de Arton: usar conteúdo",
@@ -60,6 +60,10 @@
 			"supOrigensRegionais": {
 				"Nome": "Suplementos de Arton: origens regionais (Atlas)",
 				"Dica": "Preenche o passo Origem regional com as regiões e os poderes do Atlas de Arton. Requer o homebrew de origem dupla."
+			},
+			"supOrigensMundanas": {
+				"Nome": "Suplementos de Arton: origens mundanas (Heróis de Arton)",
+				"Dica": "As 30 origens mundanas do Heróis de Arton no passo Origem. Cada uma concede um único poder (com as perícias que ele treina), sem itens nem escolha de benefícios."
 			}
 		},
 		"SuplementoInativo": "Construtor de Ficha: a opção \"Usar Suplementos de Arton\" está ligada, mas o módulo Suplementos de Arton não está ativo. O construtor usa só o livro básico."

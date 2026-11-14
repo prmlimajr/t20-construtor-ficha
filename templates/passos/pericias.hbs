@@ -17,6 +17,26 @@
 		<p class="cf-nota"><i class="fa-solid fa-triangle-exclamation"></i> {{repetidas}} já é treinada pela classe. Volte ao passo Raça se quiser trocar por outra perícia.</p>
 		{{/if}}
 		{{/if}}
+		{{#if manuais}}
+		<h4>Perícias treinadas da classe <small>({{manuais.qtd}} indicadas)</small></h4>
+		<p class="cf-nota cf-aviso-manual"><i class="fa-solid fa-book"></i> Esta classe de suplemento não tem as perícias registradas. Indique as perícias que a classe treina automaticamente, conforme o livro; as escolhas da classe vêm em seguida.</p>
+		<div class="cf-cards">
+			{{#each manuais.cards}}
+			{{#if bloqueado}}
+			<button type="button" class="cf-card bloqueado {{#if foco}}foco{{/if}}" data-action="focarPericia" data-valor="{{chave}}" title="Já treinada pela raça">
+			{{else}}
+			<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if foco}}foco{{/if}}"
+				data-action="escolherPericia" data-campo="periciasFixasManuais" data-valor="{{chave}}">
+			{{/if}}
+				<span class="cf-sigla">{{atributo}}</span>
+				<span class="cf-card-texto">
+					<span class="cf-card-nome">{{nome}}</span>
+					<span class="cf-card-sub">{{#if bloqueado}}Já treinada pela raça{{else}}{{tags}}{{/if}}</span>
+				</span>
+			</button>
+			{{/each}}
+		</div>
+		{{else}}
 		<h4>Treinadas pela classe</h4>
 		<div class="cf-cards">
 			{{#each fixas}}
@@ -29,6 +49,7 @@
 			</button>
 			{{/each}}
 		</div>
+		{{/if}}
 
 		{{#each grupos}}
 		<h4>Escolha uma</h4>

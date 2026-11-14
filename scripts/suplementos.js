@@ -14,7 +14,7 @@ import { MODULE_ID, ATRIBUTOS, normalizar } from "./regras.js";
 export const SUPLEMENTO_ID = "suplementos-de-arton";
 
 /** Chaves de conteúdo (configuração `sup<Chave>`), na ordem do menu de configurações. */
-export const CONTEUDOS_SUPLEMENTO = ["Racas", "Classes", "Poderes", "Magias", "Itens", "Divindades", "OrigensRegionais"];
+export const CONTEUDOS_SUPLEMENTO = ["Racas", "Classes", "Poderes", "Magias", "Itens", "Divindades", "OrigensRegionais", "OrigensMundanas"];
 
 /** O suplemento está ligado (configuração) e ativo (módulo)? */
 export function suplementoLigado() {
@@ -207,13 +207,15 @@ function regrasClasseSuplemento(doc, poderesSup, regrasBase, config) {
 	}
 	return {
 		fixas: [], ou: [], opcoes: ["todas"], numero: Number(doc.system?.pericias?.numero) || 2,
+		// as perícias treinadas da classe não estão nos dados: o jogador indica no passo Perícias
+		periciasManuais: true,
 		proficiencias: [],
 		habilidades, escolhas,
 		...(conjurador ? { conjurador } : {}),
 		...(devocao ? { devocao } : {}),
 		equipamentoExtra: [],
 		suplemento: true,
-		aviso: "Classe de suplemento sem regras cadastradas: perícias à sua escolha, só proficiências básicas e habilidades de 1º nível deduzidas. Confira com o livro."
+		aviso: "Classe de suplemento sem regras cadastradas: indique as perícias treinadas da classe no passo Perícias (conforme o livro); só proficiências básicas e habilidades de 1º nível deduzidas. Confira com o livro."
 	};
 }
 
@@ -282,6 +284,36 @@ function origensRegionaisDoAtlas(poderesSup, fonte) {
 	return [...regioes.values()].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 }
 
+/* ---------------- Origens mundanas ---------------- */
+
+/**
+ * Origens mundanas do Heróis de Arton: cada uma é um único poder (subtipo "Mundana") que já diz
+ * tudo o que a origem concede; não há itens nem escolha de benefícios. As perícias e escolhas
+ * vêm de data/suplementos.json → "origensMundanas".
+ */
+function origensMundanas(poderesSup, fonte, config) {
+	return poderesSup
+		.filter((p) => p.system?.tipo === "origem" && p.system?.subtipo === "Mundana")
+		.map((p) => {
+			const extra = config.origensMundanas?.[p.name] ?? {};
+			return {
+				nome: p.name,
+				descricao: "",
+				especial: "mundana",
+				poder: p.name,
+				periciasMundanas: extra.pericias ?? [],
+				oficiosSemPericia: extra.oficiosSemPericia ?? [],
+				poderesExtras: extra.poderesExtras ?? [],
+				escolhaPericia: extra.escolhaPericia ?? null,
+				escolhaPoder: extra.escolhaPoder ?? null,
+				itens: [], pericias: [], poderes: [], grupos: [],
+				fonte: fonte.get(p.uuid) ?? "Heróis de Arton",
+				suplemento: true
+			};
+		})
+		.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+}
+
 /* ---------------- Carregamento ---------------- */
 
 /**
@@ -340,6 +372,7 @@ export async function carregarSuplementos(base, config) {
 		}
 	}
 	if (conteudoLigado("Divindades")) out.divindades = divindadesComSuplemento(base.divindades, poderesSup, fonte);
+	if (conteudoLigado("OrigensMundanas")) out.origensMundanas = origensMundanas(poderesSup, fonte, config);
 	if (conteudoLigado("OrigensRegionais")) {
 		const atlas = origensRegionaisDoAtlas(poderesSup, fonte);
 		const existentes = new Set(base.origensRegionais.map((o) => normalizar(o.nome)));
@@ -350,6 +383,7 @@ export async function carregarSuplementos(base, config) {
 		+ `${out.racas.length} raças, ${out.classes.length} classes, ${poderesSup.length} poderes, `
 		+ `${out.magias.length} magias, ${out.itens.length} itens na loja`
 		+ (out.divindades ? `, ${out.divindades.filter((d) => d.menor).length} deuses menores` : "")
-		+ (out.origensRegionais ? `, ${out.origensRegionais.length} origens regionais` : ""));
+		+ (out.origensRegionais ? `, ${out.origensRegionais.length} origens regionais` : "")
+		+ (out.origensMundanas ? `, ${out.origensMundanas.length} origens mundanas` : ""));
 	return out;
 }

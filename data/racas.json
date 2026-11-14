@@ -1,5 +1,5 @@
 {
-  "_comentario": "Escolhas das habilidades raciais (T20 Jogo do Ano, cap. 1). Chave = nome do poder racial no compêndio tormenta20.poderes. Tipos: 'opcao' (escolha única: resistência/imunidade), 'magias' (N magias de uma lista ou de um círculo), 'beneficio' (perícias treinadas ou com bônus; até 'poder.maximo' delas podem virar um poder). 'magiasFixas' = magias concedidas sem escolha. 'semOrigem' = a raça não escolhe origem.",
+  "_comentario": "Escolhas das habilidades raciais (T20 Jogo do Ano, cap. 1). Chave = nome do poder racial no compêndio tormenta20.poderes. Tipos: 'opcao' (escolha única: resistência/imunidade), 'magias' (N magias de uma lista ou de um círculo), 'beneficio' (perícias treinadas ou com bônus; até 'poder.maximo' delas podem virar um poder). 'magiasFixas' = magias concedidas sem escolha. 'semOrigem' = a raça não escolhe origem. Suplementos de Arton: 'somenteSuplemento' limita a regra ao poder homônimo do suplemento; 'opcoesPericias'/'atributosPericias' restringem as perícias; 'periciasFixas'/'proficiencias' são concedidas sem escolha; a chave 'raca:<Nome>' guarda escolhas da raça que não pertencem a uma habilidade; listas de poder: 'poderGeral', 'grupo:<Grupo>', 'poderGeralOrigem', 'poderes:A|B|C'; 'opcao' com efeito 'pericia' aplica 'valor' na perícia escolhida.",
   "poderes": {
     "Fonte Elemental": {
       "id": "fonteElemental",
@@ -7,10 +7,22 @@
       "efeito": "imunidade",
       "titulo": "Espírito elemental",
       "opcoes": [
-        { "valor": "frio", "nome": "Água (frio)" },
-        { "valor": "eletricidade", "nome": "Ar (eletricidade)" },
-        { "valor": "fogo", "nome": "Fogo (fogo)" },
-        { "valor": "acido", "nome": "Terra (ácido)" }
+        {
+          "valor": "frio",
+          "nome": "Água (frio)"
+        },
+        {
+          "valor": "eletricidade",
+          "nome": "Ar (eletricidade)"
+        },
+        {
+          "valor": "fogo",
+          "nome": "Fogo (fogo)"
+        },
+        {
+          "valor": "acido",
+          "nome": "Terra (ácido)"
+        }
       ]
     },
     "Resistência Elemental": {
@@ -20,12 +32,30 @@
       "valor": 10,
       "titulo": "Ascendência (redução 10)",
       "opcoes": [
-        { "valor": "frio", "nome": "Água (frio)" },
-        { "valor": "eletricidade", "nome": "Ar (eletricidade)" },
-        { "valor": "fogo", "nome": "Fogo (fogo)" },
-        { "valor": "acido", "nome": "Terra (ácido)" },
-        { "valor": "luz", "nome": "Luz (luz)" },
-        { "valor": "trevas", "nome": "Trevas (trevas)" }
+        {
+          "valor": "frio",
+          "nome": "Água (frio)"
+        },
+        {
+          "valor": "eletricidade",
+          "nome": "Ar (eletricidade)"
+        },
+        {
+          "valor": "fogo",
+          "nome": "Fogo (fogo)"
+        },
+        {
+          "valor": "acido",
+          "nome": "Terra (ácido)"
+        },
+        {
+          "valor": "luz",
+          "nome": "Luz (luz)"
+        },
+        {
+          "valor": "trevas",
+          "nome": "Trevas (trevas)"
+        }
       ]
     },
     "Magia das Fadas": {
@@ -34,7 +64,12 @@
       "titulo": "Magias das fadas",
       "quantidade": 2,
       "atributo": "car",
-      "nomes": ["Criar Ilusão", "Enfeitiçar", "Luz", "Sono"]
+      "nomes": [
+        "Criar Ilusão",
+        "Enfeitiçar",
+        "Luz",
+        "Sono"
+      ]
     },
     "Canção dos Mares": {
       "id": "cancaoMares",
@@ -42,7 +77,14 @@
       "titulo": "Canções dos mares",
       "quantidade": 2,
       "atributo": "car",
-      "nomes": ["Amedrontar", "Comando", "Despedaçar", "Enfeitiçar", "Hipnotismo", "Sono"]
+      "nomes": [
+        "Amedrontar",
+        "Comando",
+        "Despedaçar",
+        "Enfeitiçar",
+        "Hipnotismo",
+        "Sono"
+      ]
     },
     "Tatuagem Mística": {
       "id": "tatuagemMistica",
@@ -58,7 +100,11 @@
       "titulo": "Perícias treinadas",
       "quantidade": 2,
       "pericia": "treinada",
-      "poder": { "lista": "poderGeral", "nome": "poder geral", "maximo": 1 }
+      "poder": {
+        "lista": "poderGeral",
+        "nome": "poder geral",
+        "maximo": 1
+      }
     },
     "Híbrido": {
       "id": "hibrido",
@@ -73,7 +119,11 @@
       "titulo": "Perícia treinada ou poder geral",
       "quantidade": 1,
       "pericia": "treinada",
-      "poder": { "lista": "poderGeral", "nome": "poder geral", "maximo": 1 }
+      "poder": {
+        "lista": "poderGeral",
+        "nome": "poder geral",
+        "maximo": 1
+      }
     },
     "Deformidade": {
       "id": "deformidade",
@@ -82,18 +132,304 @@
       "quantidade": 2,
       "pericia": "bonus",
       "bonus": 2,
-      "poder": { "lista": "grupo:Tormenta", "nome": "poder da Tormenta", "maximo": 1 }
+      "poder": {
+        "lista": "grupo:Tormenta",
+        "nome": "poder da Tormenta",
+        "maximo": 1
+      }
     },
     "Propósito de Criação": {
       "id": "propositoCriacao",
       "tipo": "beneficio",
       "titulo": "Poder geral",
       "quantidade": 1,
-      "poder": { "lista": "poderGeral", "nome": "poder geral", "maximo": 1 },
+      "poder": {
+        "lista": "poderGeral",
+        "nome": "poder geral",
+        "maximo": 1
+      },
       "semOrigem": true
     },
-    "Amiga das Plantas": { "magiasFixas": ["Controlar Plantas"], "atributo": "sab" },
-    "Luz Sagrada": { "magiasFixas": ["Luz"], "atributo": "car" },
-    "Sombras Profanas": { "magiasFixas": ["Escuridão"], "atributo": "int" }
+    "Amiga das Plantas": {
+      "magiasFixas": [
+        "Controlar Plantas"
+      ],
+      "atributo": "sab"
+    },
+    "Luz Sagrada": {
+      "magiasFixas": [
+        "Luz"
+      ],
+      "atributo": "car"
+    },
+    "Sombras Profanas": {
+      "magiasFixas": [
+        "Escuridão"
+      ],
+      "atributo": "int"
+    },
+    "Plurivalente": {
+      "id": "plurivalente",
+      "tipo": "beneficio",
+      "titulo": "Poder geral",
+      "quantidade": 1,
+      "poder": {
+        "lista": "poderGeral",
+        "nome": "poder geral",
+        "maximo": 1
+      }
+    },
+    "Papel Tribal": {
+      "id": "papelTribal",
+      "tipo": "beneficio",
+      "titulo": "Perícia treinada (Cura, Intimidação, Ofício ou Sobrevivência)",
+      "quantidade": 1,
+      "pericia": "treinada",
+      "opcoesPericias": [
+        "cura",
+        "inti",
+        "oficio",
+        "sobr"
+      ]
+    },
+    "Herança Dracônica": {
+      "id": "herancaDraconica",
+      "tipo": "opcao",
+      "efeito": "resistencia",
+      "valor": 5,
+      "titulo": "Tipo de dano (redução 5)",
+      "opcoes": [
+        {
+          "valor": "acido",
+          "nome": "Ácido"
+        },
+        {
+          "valor": "eletricidade",
+          "nome": "Eletricidade"
+        },
+        {
+          "valor": "fogo",
+          "nome": "Fogo"
+        },
+        {
+          "valor": "frio",
+          "nome": "Frio"
+        },
+        {
+          "valor": "luz",
+          "nome": "Luz"
+        },
+        {
+          "valor": "trevas",
+          "nome": "Trevas"
+        }
+      ]
+    },
+    "Chassi - Mashin": {
+      "id": "chassiMashin",
+      "tipo": "beneficio",
+      "titulo": "Perícias treinadas (uma pode virar maravilha mecânica)",
+      "quantidade": 2,
+      "pericia": "treinada",
+      "poder": {
+        "lista": "poderes:Adaptação Elemental|Arma Acoplada|Arma Elemental|Auxílio de Mira|Canalizar Reparos|Canhão Energético|Dínamo de Mana|Pernas Aprimoradas|Reservatório Alquímico",
+        "nome": "maravilha mecânica",
+        "maximo": 1
+      }
+    },
+    "Cura das Águas": {
+      "magiasFixas": [
+        "Curar Ferimentos"
+      ],
+      "atributo": "sab"
+    },
+    "Esperteza Vulpina": {
+      "id": "espertezaVulpina",
+      "tipo": "beneficio",
+      "titulo": "+2 em perícias de Inteligência ou Carisma",
+      "quantidade": 2,
+      "pericia": "bonus",
+      "bonus": 2,
+      "atributosPericias": [
+        "int",
+        "car"
+      ]
+    },
+    "Sapiência": {
+      "id": "sapiencia",
+      "tipo": "magias",
+      "titulo": "Magia de adivinhação",
+      "quantidade": 1,
+      "circulo": 1,
+      "escolas": [
+        "adv"
+      ],
+      "atributo": "sab"
+    },
+    "Adaptável": {
+      "id": "adaptavel",
+      "tipo": "beneficio",
+      "titulo": "Perícia treinada",
+      "quantidade": 1,
+      "pericia": "treinada"
+    },
+    "Natureza Orgânica": {
+      "id": "naturezaOrganica",
+      "tipo": "beneficio",
+      "titulo": "Perícia treinada ou poder geral",
+      "quantidade": 1,
+      "pericia": "treinada",
+      "poder": {
+        "lista": "poderGeral",
+        "nome": "poder geral",
+        "maximo": 1
+      }
+    },
+    "Resquícios da Outra Vida": {
+      "id": "resquiciosOutraVida",
+      "tipo": "beneficio",
+      "titulo": "Perícia treinada ou poder geral",
+      "quantidade": 1,
+      "pericia": "treinada",
+      "poder": {
+        "lista": "poderGeral",
+        "nome": "poder geral",
+        "maximo": 1
+      }
+    },
+    "Terror Vivo": {
+      "id": "terrorVivo",
+      "tipo": "beneficio",
+      "titulo": "Poder da Tormenta",
+      "quantidade": 1,
+      "poder": {
+        "lista": "grupo:Tormenta",
+        "nome": "poder da Tormenta",
+        "maximo": 1
+      }
+    },
+    "Infância entre os Pequenos": {
+      "id": "infanciaPequenos",
+      "tipo": "beneficio",
+      "titulo": "Perícia treinada",
+      "quantidade": 1,
+      "pericia": "treinada"
+    },
+    "Instrumentista Mágico": {
+      "magiasFixas": [
+        "Amedrontar",
+        "Enfeitiçar",
+        "Hipnotismo",
+        "Sono"
+      ],
+      "atributo": "car"
+    },
+    "Ambição Herdada": {
+      "id": "ambicaoHerdada",
+      "tipo": "beneficio",
+      "titulo": "Poder geral ou poder único de origem",
+      "quantidade": 1,
+      "poder": {
+        "lista": "poderGeralOrigem",
+        "nome": "poder geral ou de origem",
+        "maximo": 1
+      }
+    },
+    "Tabu": {
+      "id": "tabu",
+      "tipo": "opcao",
+      "efeito": "pericia",
+      "valor": -5,
+      "titulo": "Perícia penalizada pelo tabu (−5)",
+      "opcoes": [
+        {
+          "valor": "dipl",
+          "nome": "Diplomacia"
+        },
+        {
+          "valor": "inic",
+          "nome": "Iniciativa"
+        },
+        {
+          "valor": "luta",
+          "nome": "Luta"
+        },
+        {
+          "valor": "perc",
+          "nome": "Percepção"
+        }
+      ]
+    },
+    "Presente": {
+      "id": "presenteDuende",
+      "tipo": "beneficio",
+      "titulo": "Presentes feéricos",
+      "quantidade": 3,
+      "poder": {
+        "lista": "poderes:Afinidade Elemental (Água)|Afinidade Elemental (Fogo)|Afinidade Elemental (Vegetação))|Encantar Objetos|Enfeitiçar|Invisibilidade|Língua da Natureza|Maldição|Mais Lá do que Aqui|Metamorfose Animal|Sonhos Proféticos|Velocidade do Pensamento|Visão Feérica|Voo",
+        "nome": "presente",
+        "maximo": 3
+      }
+    },
+    "Arte da Guerra": {
+      "periciasFixas": [
+        "guer"
+      ],
+      "proficiencias": [
+        "marcial"
+      ]
+    },
+    "Chassi": {
+      "id": "chassiGolemAmeacas",
+      "somenteSuplemento": true,
+      "tipo": "beneficio",
+      "titulo": "Material do chassi",
+      "quantidade": 1,
+      "poder": {
+        "lista": "poderes:Barro|Bronze|Carne|Dourado|Espelhos|Gelo|Pedra|Sucata",
+        "nome": "material",
+        "maximo": 1
+      }
+    },
+    "Criatura Artificial": {
+      "id": "fonteGolemAmeacas",
+      "somenteSuplemento": true,
+      "tipo": "beneficio",
+      "titulo": "Fonte de energia",
+      "quantidade": 1,
+      "poder": {
+        "lista": "poderes:Alquímica|Elemental|Sagrada|Vapor",
+        "nome": "fonte de energia",
+        "maximo": 1
+      }
+    },
+    "raca:Duende": {
+      "escolhas": [
+        {
+          "id": "naturezaDuende",
+          "somenteSuplemento": true,
+          "tipo": "beneficio",
+          "titulo": "Natureza",
+          "quantidade": 1,
+          "poder": {
+            "lista": "poderes:Natureza Animal|Natureza Vegetal|Natureza Mineral",
+            "nome": "natureza",
+            "maximo": 1
+          }
+        },
+        {
+          "id": "tamanhoDuende",
+          "somenteSuplemento": true,
+          "tipo": "beneficio",
+          "titulo": "Tamanho",
+          "quantidade": 1,
+          "poder": {
+            "lista": "poderes:Duende Minúsculo|Duende Pequeno|Duende Médio|Duende Grande",
+            "nome": "tamanho",
+            "maximo": 1
+          }
+        }
+      ]
+    }
   }
 }

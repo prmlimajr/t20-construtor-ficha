@@ -1,6 +1,8 @@
 {
-  "_comentario": "Ajustes para o módulo Suplementos de Arton (suplementos-de-arton). 'variantes': classe do suplemento → classe básica da qual herda perícias e proficiências (identificadas por habilidades em comum e mesmo PV/PM; conferir com o livro). 'classes': regras completas no formato de classes.json, que substituem a dedução automática. 'ignorarClasses': itens de classe que não são classes jogáveis.",
-  "ignorarClasses": ["Melhor Amigo"],
+  "_comentario": "Ajustes para o módulo Suplementos de Arton (suplementos-de-arton). 'variantes': classe do suplemento → classe básica da qual herda perícias e proficiências (identificadas por habilidades em comum e mesmo PV/PM; conferir com o livro). 'classes': regras completas no formato de classes.json, que substituem a dedução automática. 'ignorarClasses': itens de classe que não são classes jogáveis. 'origensMundanas': origens mundanas do Heróis de Arton (cada uma é um único poder, sem itens nem escolha de benefícios): 'pericias' treinadas automaticamente (chaves do sistema), 'oficiosSemPericia' (Ofícios que o sistema não tem como perícia; ficam como anotação), 'poderesExtras', 'escolhaPericia'/'escolhaPoder' quando o texto pede uma escolha.",
+  "ignorarClasses": [
+    "Melhor Amigo"
+  ],
   "variantes": {
     "Duelista": "Bucaneiro",
     "Machado de Pedra": "Bárbaro",
@@ -14,5 +16,184 @@
     "Usurpador": "Clérigo",
     "Ermitão": "Druida"
   },
-  "classes": {}
+  "classes": {},
+  "origensMundanas": {
+    "Bacharel": {
+      "pericias": [
+        "conh",
+        "dipl",
+        "nobr"
+      ]
+    },
+    "Boticário": {
+      "pericias": [
+        "cura",
+        "alqu"
+      ]
+    },
+    "Caçador de Ratos": {
+      "pericias": [
+        "furt",
+        "inve",
+        "sobr"
+      ]
+    },
+    "Carcereiro": {},
+    "Carpinteiro de Guilda": {
+      "pericias": [
+        "arte"
+      ]
+    },
+    "Catador da Catástrofe": {
+      "pericias": [
+        "fort",
+        "perc"
+      ]
+    },
+    "Cão de Briga": {},
+    "Chef Hynne": {
+      "pericias": [
+        "cozi"
+      ]
+    },
+    "Cirurgião-Barbeiro": {
+      "pericias": [
+        "cura"
+      ],
+      "oficiosSemPericia": [
+        "barbeiro"
+      ]
+    },
+    "Citadino Abastado": {
+      "pericias": [
+        "nobr"
+      ],
+      "escolhaPericia": {
+        "titulo": "Ofício à sua escolha",
+        "opcoes": [
+          "alfa",
+          "alqu",
+          "arme",
+          "arte",
+          "cozi",
+          "enge"
+        ]
+      }
+    },
+    "Cocheiro": {
+      "pericias": [
+        "ades",
+        "pilo"
+      ]
+    },
+    "Construtor": {
+      "pericias": [
+        "fort"
+      ],
+      "oficiosSemPericia": [
+        "pedreiro"
+      ]
+    },
+    "Contrabandista": {
+      "pericias": [
+        "enga",
+        "ladi"
+      ]
+    },
+    "Coureiro": {
+      "pericias": [
+        "fort"
+      ],
+      "oficiosSemPericia": [
+        "coureiro"
+      ]
+    },
+    "Escriba": {
+      "pericias": [
+        "conh"
+      ],
+      "oficiosSemPericia": [
+        "escriba"
+      ],
+      "poderesExtras": [
+        "Lendas e Histórias"
+      ]
+    },
+    "Espião": {
+      "pericias": [
+        "enga",
+        "ladi"
+      ]
+    },
+    "Ferreiro Militar": {
+      "pericias": [
+        "arme"
+      ]
+    },
+    "Freira": {
+      "pericias": [
+        "cura"
+      ]
+    },
+    "Goradista": {
+      "pericias": [
+        "cozi"
+      ]
+    },
+    "Insciente": {
+      "pericias": [
+        "sobr"
+      ]
+    },
+    "Interrogador": {
+      "pericias": [
+        "inti",
+        "inve"
+      ]
+    },
+    "Ladrão de Túmulos": {
+      "pericias": [
+        "ladi",
+        "sobr"
+      ]
+    },
+    "Menestrel": {
+      "pericias": [
+        "atua"
+      ],
+      "escolhaPoder": {
+        "titulo": "Música de bardo",
+        "opcoes": [
+          "Música: Balada Fascinante",
+          "Música: Canção Assustadora",
+          "Música: Melodia Curativa"
+        ]
+      }
+    },
+    "Mensageiro": {},
+    "Náufrago": {},
+    "Padeiro": {
+      "pericias": [
+        "cozi"
+      ]
+    },
+    "Pedinte": {},
+    "Pescador": {
+      "pericias": [
+        "sobr"
+      ],
+      "oficiosSemPericia": [
+        "pescador"
+      ]
+    },
+    "Servo": {
+      "pericias": [
+        "dipl"
+      ],
+      "oficiosSemPericia": [
+        "serviçal"
+      ]
+    },
+    "Suporte de Tropas": {}
+  }
 }

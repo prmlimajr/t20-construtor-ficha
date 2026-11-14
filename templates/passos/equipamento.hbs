@@ -1,11 +1,13 @@
 <div class="cf-duas">
-	<div class="cf-lista">
+	<div class="cf-lista cf-lista-filtravel">
+		<input type="search" class="cf-filtro cf-filtro-lista" data-filtro="equipamento" placeholder="Buscar equipamento…" value="{{filtro}}" aria-label="Buscar equipamento pelo nome">
 		{{#each armas}}
+		<section class="cf-grupo">
 		<h4>{{titulo}}</h4>
 		<div class="cf-cards">
 			{{#each cards}}
 			<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if vendido}}vendido{{/if}} {{#if foco}}foco{{/if}}"
-				data-action="escolherEquip" data-campo="{{campo}}" data-valor="{{valor}}" data-nome="{{nome}}">
+				data-action="escolherEquip" data-campo="{{campo}}" data-valor="{{valor}}" data-nome="{{nome}}" data-busca="{{nome}} {{sub}}">
 				<img src="{{img}}" alt="">
 				<span class="cf-card-texto">
 					<span class="cf-card-nome">{{nome}}</span>
@@ -14,13 +16,15 @@
 			</button>
 			{{/each}}
 		</div>
+		</section>
 		{{/each}}
 
+		<section class="cf-grupo">
 		<h4>Armadura</h4>
 		<div class="cf-cards">
 			{{#each armaduras}}
 			<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if vendido}}vendido{{/if}} {{#if foco}}foco{{/if}}"
-				data-action="escolherEquip" data-campo="{{campo}}" data-valor="{{valor}}" data-nome="{{nome}}">
+				data-action="escolherEquip" data-campo="{{campo}}" data-valor="{{valor}}" data-nome="{{nome}}" data-busca="{{nome}} {{sub}}">
 				<img src="{{img}}" alt="">
 				<span class="cf-card-texto">
 					<span class="cf-card-nome">{{nome}}</span>
@@ -29,6 +33,7 @@
 			</button>
 			{{/each}}
 		</div>
+		</section>
 
 
 		{{#each itensClasse}}
@@ -74,15 +79,17 @@
 		</div>
 		{{/each}}
 
+		<section class="cf-grupo">
 		<h4>Itens que você já recebe</h4>
 		{{#if venda.temVendas}}
 		<p class="cf-nota cf-venda"><i class="fa-solid fa-hand-holding-dollar"></i> Vendidos por {{venda.total}}: {{venda.listaVendidos}}. Use <strong>Vender itens</strong> para alterar.</p>
 		{{/if}}
 		{{#each recebidos}}
+		<section class="cf-grupo">
 		<p class="cf-subtitulo">{{titulo}}</p>
 		<div class="cf-cards">
 			{{#each cards}}
-			<button type="button" class="cf-card cf-card-fixo {{#if foco}}foco{{/if}}" data-action="focarEquip" data-nome="{{nome}}">
+			<button type="button" class="cf-card cf-card-fixo {{#if foco}}foco{{/if}}" data-action="focarEquip" data-nome="{{nome}}" data-busca="{{nome}} {{sub}}">
 				<img src="{{img}}" alt="">
 				<span class="cf-card-texto">
 					<span class="cf-card-nome">{{nome}}{{#if qtd}} <small>×{{qtd}}</small>{{/if}}</span>
@@ -91,7 +98,10 @@
 			</button>
 			{{/each}}
 		</div>
+		</section>
 		{{/each}}
+		</section>
+		<p class="cf-vazio cf-sem-resultado" hidden>Nenhum equipamento com esse nome.</p>
 	</div>
 
 	<aside class="cf-info">

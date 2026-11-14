@@ -26,8 +26,8 @@
 				"Dica": "The character picks two origins: a professional one (core book) and a regional one (Atlas de Arton)."
 			},
 			"beneficiosOrigemDupla": {
-				"Nome": "Homebrew: benefits per origin",
-				"Dica": "How many benefits each origin grants when the dual origin option is on."
+				"Nome": "Homebrew: professional origin benefits",
+				"Dica": "How many benefits the professional origin grants when the dual origin is on. The regional origin always grants one benefit."
 			},
 			"suplementos": {
 				"Nome": "Suplementos de Arton: use content",
@@ -60,6 +60,10 @@
 			"supOrigensRegionais": {
 				"Nome": "Suplementos de Arton: regional origins (Atlas)",
 				"Dica": "Fills the Regional origin step with Atlas de Arton regions and powers. Requires the dual-origin homebrew."
+			},
+			"supOrigensMundanas": {
+				"Nome": "Suplementos de Arton: mundane origins (Heróis de Arton)",
+				"Dica": "The 30 mundane origins from Heróis de Arton in the Origin step. Each grants a single power (with the skills it trains), no items or benefit choices."
 			}
 		},
 		"SuplementoInativo": "Character Builder: \"Use Suplementos de Arton\" is enabled, but the Suplementos de Arton module is not active. Only the core book is used."
