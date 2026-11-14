@@ -1,35 +1,88 @@
-<div class="cf-bloco">
-	<h4>Perícias da classe</h4>
-	<p>Você é treinado em: <strong>{{fixas}}</strong></p>
-	{{#each grupos}}
-	<label class="cf-campo">Escolha uma:
-		<select data-campo="{{campo}}">
-			<option value="">—</option>
-			{{#each opcoes}}<option value="{{chave}}" {{#if selecionado}}selected{{/if}}>{{nome}}</option>{{/each}}
-		</select>
-	</label>
-	{{/each}}
-</div>
+<div class="cf-duas">
+	<div class="cf-lista">
+		<h4>Treinadas pela classe</h4>
+		<div class="cf-cards">
+			{{#each fixas}}
+			<button type="button" class="cf-card selecionado cf-card-fixo {{#if foco}}foco{{/if}}" data-action="focarPericia" data-valor="{{chave}}">
+				<span class="cf-sigla">{{atributo}}</span>
+				<span class="cf-card-texto">
+					<span class="cf-card-nome">{{nome}}</span>
+					{{#if tags}}<span class="cf-card-sub">{{tags}}</span>{{/if}}
+				</span>
+			</button>
+			{{/each}}
+		</div>
 
-<div class="cf-bloco">
-	<h4>Escolha {{numeroClasse}} perícias da classe <small>({{escolhidasClasse}}/{{numeroClasse}})</small></h4>
-	<div class="cf-chips">
-		{{#each opcoesClasse}}
-		<button type="button" class="cf-chip {{#if selecionado}}selecionado{{/if}}" data-action="alternar" data-campo="periciasClasse" data-valor="{{chave}}" data-limite="{{../numeroClasse}}" {{#if bloqueado}}disabled title="Já treinada"{{/if}}>{{nome}}</button>
+		{{#each grupos}}
+		<h4>Escolha uma</h4>
+		<div class="cf-cards">
+			{{#each cards}}
+			<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if foco}}foco{{/if}}"
+				data-action="escolherPericia" data-modo="unica" data-campo="{{../campo}}" data-valor="{{chave}}">
+				<span class="cf-sigla">{{atributo}}</span>
+				<span class="cf-card-texto">
+					<span class="cf-card-nome">{{nome}}</span>
+					{{#if tags}}<span class="cf-card-sub">{{tags}}</span>{{/if}}
+				</span>
+			</button>
+			{{/each}}
+		</div>
 		{{/each}}
-	</div>
-</div>
 
-<div class="cf-bloco">
-	<h4>Perícias por Inteligência <small>(Int {{intTotal}} → {{nInt}}; {{escolhidasInt}}/{{nInt}})</small></h4>
-	{{#if nInt}}
-	<p class="cf-nota">Você pode escolher qualquer perícia.</p>
-	<div class="cf-chips">
-		{{#each opcoesInt}}
-		<button type="button" class="cf-chip {{#if selecionado}}selecionado{{/if}}" data-action="alternar" data-campo="periciasInt" data-valor="{{chave}}" data-limite="{{../nInt}}" {{#if bloqueado}}disabled title="Já treinada"{{/if}}>{{nome}}</button>
-		{{/each}}
+		<h4>Escolha {{numeroClasse}} perícias da classe <small>({{escolhidasClasse}}/{{numeroClasse}})</small></h4>
+		<div class="cf-cards">
+			{{#each opcoesClasse}}
+			{{#if bloqueado}}
+			<button type="button" class="cf-card bloqueado {{#if foco}}foco{{/if}}" data-action="focarPericia" data-valor="{{chave}}" title="Já treinada">
+			{{else}}
+			<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if foco}}foco{{/if}}"
+				data-action="escolherPericia" data-campo="periciasClasse" data-valor="{{chave}}" data-limite="{{../numeroClasse}}">
+			{{/if}}
+				<span class="cf-sigla">{{atributo}}</span>
+				<span class="cf-card-texto">
+					<span class="cf-card-nome">{{nome}}</span>
+					<span class="cf-card-sub">{{#if bloqueado}}Já treinada{{else}}{{tags}}{{/if}}</span>
+				</span>
+			</button>
+			{{/each}}
+		</div>
+
+		<h4>Perícias por Inteligência <small>(Int {{intTotal}} → {{nInt}}; {{escolhidasInt}}/{{nInt}})</small></h4>
+		{{#if nInt}}
+		<p class="cf-nota">Você pode escolher qualquer perícia.</p>
+		<div class="cf-cards">
+			{{#each opcoesInt}}
+			{{#if bloqueado}}
+			<button type="button" class="cf-card bloqueado {{#if foco}}foco{{/if}}" data-action="focarPericia" data-valor="{{chave}}" title="Já treinada">
+			{{else}}
+			<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if foco}}foco{{/if}}"
+				data-action="escolherPericia" data-campo="periciasInt" data-valor="{{chave}}" data-limite="{{../nInt}}">
+			{{/if}}
+				<span class="cf-sigla">{{atributo}}</span>
+				<span class="cf-card-texto">
+					<span class="cf-card-nome">{{nome}}</span>
+					<span class="cf-card-sub">{{#if bloqueado}}Já treinada{{else}}{{tags}}{{/if}}</span>
+				</span>
+			</button>
+			{{/each}}
+		</div>
+		{{else}}
+		<p class="cf-nota">Sua Inteligência não concede perícias adicionais.</p>
+		{{/if}}
 	</div>
-	{{else}}
-	<p class="cf-nota">Sua Inteligência não concede perícias adicionais.</p>
-	{{/if}}
+
+	<aside class="cf-info">
+		{{#if info}}
+		<h3>{{info.nome}}</h3>
+		<dl class="cf-dados">
+			<dt>Atributo</dt><dd>{{info.atributo}}</dd>
+			<dt>Somente treinado</dt><dd>{{#if info.somenteTreinado}}Sim{{else}}Não{{/if}}</dd>
+			<dt>Penalidade de armadura</dt><dd>{{#if info.penalidade}}Sim{{else}}Não{{/if}}</dd>
+			<dt>Situação</dt><dd>{{#if info.treinada}}Treinada{{else}}Não treinada{{/if}}</dd>
+		</dl>
+		{{#if info.descricao}}<div class="cf-descricao">{{{info.descricao}}}</div>{{/if}}
+		{{else}}
+		<p class="cf-vazio">Clique em uma perícia para ver os detalhes.</p>
+		{{/if}}
+	</aside>
 </div>

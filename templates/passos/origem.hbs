@@ -23,11 +23,8 @@
 				{{#each info.itens}}
 				<li>
 					{{#if campo}}
-					{{#if rotulo}}{{rotulo}}: {{/if}}
-					<select data-campo="{{campo}}">
-						<option value="">— escolha —</option>
-						{{#each opcoes}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{nome}}</option>{{/each}}
-					</select>
+					<span class="cf-rotulo-abrir">{{rotulo}}:</span>
+					{{> "modules/t20-construtor-ficha/templates/partes/abrir.hbs" this}}
 					{{else}}{{texto}}{{/if}}
 				</li>
 				{{/each}}
@@ -40,18 +37,8 @@
 			<h4>Amnésico</h4>
 			<p class="cf-nota">Você recebe Lembranças Graduais, uma perícia e um poder escolhidos pelo mestre.</p>
 			{{> "modules/t20-construtor-ficha/templates/partes/poder.hbs" info.amnesico.lembrancas}}
-			<label class="cf-campo">Perícia:
-				<select data-campo="{{info.amnesico.pericia.campo}}">
-					<option value="">—</option>
-					{{#each info.amnesico.pericia.opcoes}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{nome}}</option>{{/each}}
-				</select>
-			</label>
-			<label class="cf-campo">Poder:
-				<select data-campo="{{info.amnesico.poder.campo}}">
-					<option value="">—</option>
-					{{#each info.amnesico.poder.opcoes}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{nome}}</option>{{/each}}
-				</select>
-			</label>
+			<div class="cf-campo"><span class="cf-rotulo-abrir">Perícia:</span> {{> "modules/t20-construtor-ficha/templates/partes/abrir.hbs" info.amnesico.pericia}}</div>
+			<div class="cf-campo"><span class="cf-rotulo-abrir">Poder:</span> {{> "modules/t20-construtor-ficha/templates/partes/abrir.hbs" info.amnesico.poder}}</div>
 		</div>
 		{{else}}
 		<div class="cf-bloco">
@@ -63,10 +50,7 @@
 					<small>{{tipo}}</small> {{nome}}
 				</button>
 				{{#if grupo}}
-				<select data-campo="{{grupo.campo}}">
-					<option value="">— escolha o poder —</option>
-					{{#each grupo.opcoes}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{nome}}</option>{{/each}}
-				</select>
+				<div class="cf-abrir-linha">{{> "modules/t20-construtor-ficha/templates/partes/abrir.hbs" grupo}}</div>
 				{{/if}}
 				{{#if info}}{{> "modules/t20-construtor-ficha/templates/partes/poder.hbs" info}}{{/if}}
 			</div>

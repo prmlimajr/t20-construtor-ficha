@@ -56,5 +56,48 @@
 			</button>
 			{{/if}}
 		</footer>
+
+		{{#if slideout}}
+		<div class="cf-slideout-fundo" data-action="fecharSlideout"></div>
+		<div class="cf-slideout {{#if slideout.animar}}animar{{/if}}" tabindex="-1">
+			<header class="cf-slideout-cabecalho">
+				<button type="button" class="cf-slideout-fechar" data-action="fecharSlideout" title="Fechar (Esc)">
+					<i class="fa-solid fa-arrow-right"></i>
+				</button>
+				<h3>{{slideout.titulo}}</h3>
+				{{#if slideout.longa}}
+				<input type="search" class="cf-filtro" placeholder="Filtrar…" value="{{slideout.filtro}}">
+				{{/if}}
+			</header>
+			<div class="cf-duas">
+				<div class="cf-lista cf-cards">
+					{{#each slideout.cards}}
+					<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if foco}}foco{{/if}}"
+						data-action="focarSlideout" data-valor="{{valor}}" data-busca="{{nome}} {{sub}}">
+						{{#if img}}<img src="{{img}}" alt="">{{else if sigla}}<span class="cf-sigla">{{sigla}}</span>{{/if}}
+						<span class="cf-card-texto">
+							<span class="cf-card-nome">{{nome}}</span>
+							{{#if sub}}<span class="cf-card-sub">{{sub}}</span>{{/if}}
+						</span>
+					</button>
+					{{/each}}
+				</div>
+				<aside class="cf-info">
+					{{#with slideout.info}}
+					<h3>{{#if img}}<img src="{{img}}" alt="">{{/if}} {{nome}}</h3>
+					<button type="button" class="cf-primario cf-escolher" data-action="confirmarSlideout" data-valor="{{valor}}">
+						<i class="fa-solid fa-check"></i> {{#if jaEscolhido}}Manter{{else}}Escolher{{/if}} {{nome}}
+					</button>
+					{{#if stats.length}}
+					<dl class="cf-dados">{{#each stats}}<dt>{{rotulo}}</dt><dd>{{valor}}</dd>{{/each}}</dl>
+					{{/if}}
+					{{#if descricao}}<div class="cf-descricao">{{{descricao}}}</div>{{/if}}
+					{{else}}
+					<p class="cf-vazio">Clique em uma opção para ver os detalhes.</p>
+					{{/with}}
+				</aside>
+			</div>
+		</div>
+		{{/if}}
 	</section>
 </div>

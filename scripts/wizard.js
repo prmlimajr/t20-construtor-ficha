@@ -14,7 +14,7 @@ const TPL = `modules/${MODULE_ID}/templates`;
 
 export const TEMPLATES_PASSOS = [
 	"raca", "atributos", "classe", "magias", "pericias", "origem", "devocao", "equipamento", "dinheiro", "revisao"
-].map((p) => `${TPL}/passos/${p}.hbs`).concat(`${TPL}/partes/poder.hbs`);
+].map((p) => `${TPL}/passos/${p}.hbs`).concat(`${TPL}/partes/poder.hbs`, `${TPL}/partes/abrir.hbs`);
 
 const ATRIBUTOS_DINAMICOS = 3;
 
@@ -30,6 +30,7 @@ function estadoInicial(actor) {
 		racaAtributos: [],
 		atrModo: "",
 		atrPontos: { ...zeros },
+		atrPontosTotal: PONTOS_TOTAIS,
 		atrRolagem: { brutos: null, valores: null, rerrolou: false, atribuicao: { ...vazio } },
 		atrFixo: { arranjo: 0, atribuicao: { ...vazio } },
 		classe: "",
@@ -76,6 +77,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		this.indice = 0;
 		this.focoMagia = "";
 		this.focoEquip = "";
+		this.focoPericia = "";
+		/** Slideout aberto: { campo, lista, titulo, foco, animar, filtro } */
+		this.slideout = null;
 		this._cacheHtml = new Map();
 		this._salvarRascunho = foundry.utils.debounce(() => this.#salvarRascunho(), 500);
 	}
@@ -96,6 +100,12 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			rerrolarMenor: ConstrutorFicha.#rerrolarMenor,
 			focarMagia: ConstrutorFicha.#focarMagia,
 			focarEquip: ConstrutorFicha.#focarEquip,
+			escolherPericia: ConstrutorFicha.#escolherPericia,
+			abrirSlideout: ConstrutorFicha.#abrirSlideout,
+			fecharSlideout: ConstrutorFicha.#fecharSlideout,
+			focarSlideout: ConstrutorFicha.#focarSlideout,
+			confirmarSlideout: ConstrutorFicha.#confirmarSlideout,
+			focarPericia: ConstrutorFicha.#focarPericia,
 			escolherEquip: ConstrutorFicha.#escolherEquip,
 			rolarDinheiro: ConstrutorFicha.#rolarDinheiro,
 			finalizar: ConstrutorFicha.#finalizar,
@@ -106,7 +116,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	static PARTS = {
 		main: {
 			template: `${TPL}/wizard.hbs`,
-			scrollable: [".cf-lista", ".cf-info", ".cf-conteudo"]
+			scrollable: [".cf-lista", ".cf-info", ".cf-conteudo", ".cf-slideout .cf-lista", ".cf-slideout .cf-info"]
 		}
 	};
 
@@ -139,6 +149,12 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	get beneficiosPorOrigem() {
 		return this.origemDupla ? game.settings.get(MODULE_ID, "beneficiosOrigemDupla") : 2;
+	}
+
+	/** Total de pontos da compra de pontos (editável pelo jogador; padrão 10). */
+	get pontosTotais() {
+		const n = Number(this.estado.atrPontosTotal);
+		return Number.isFinite(n) && n >= 0 ? Math.floor(n) : PONTOS_TOTAIS;
 	}
 
 	modosPermitidos() {
@@ -272,7 +288,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				if (!e.atrModo) return "Escolha a modalidade de atributos.";
 				if (e.atrModo === "pontos") {
 					const gastos = pontosGastos(e.atrPontos);
-					if (gastos > PONTOS_TOTAIS) return `Você gastou ${gastos} pontos; o máximo é ${PONTOS_TOTAIS}.`;
+					if (gastos > this.pontosTotais) return `Você gastou ${gastos} pontos; o máximo é ${this.pontosTotais}.`;
 					return null;
 				}
 				if (e.atrModo === "rolagem" && !e.atrRolagem.valores) return "Role seus atributos.";
@@ -412,11 +428,33 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			resumoLateral: this.#resumoLateral()
 		};
 		Object.assign(ctx, await this.#contextoPasso(atual));
+		ctx.slideout = await this.#ctxSlideout();
 		return ctx;
 	}
 
 	_onRender(context, options) {
 		super._onRender(context, options);
+		const filtro = this.element.querySelector(".cf-slideout .cf-filtro");
+		if (filtro) {
+			const aplicar = () => {
+				const termo = normalizar(filtro.value);
+				if (this.slideout) this.slideout.filtro = filtro.value;
+				for (const card of this.element.querySelectorAll(".cf-slideout .cf-card")) {
+					card.hidden = !!termo && !normalizar(card.dataset.busca).includes(termo);
+				}
+			};
+			filtro.addEventListener("input", aplicar);
+			aplicar();
+			if (context.slideout?.animar) filtro.focus();
+		}
+		const slide = this.element.querySelector(".cf-slideout");
+		slide?.addEventListener("keydown", (ev) => {
+			if (ev.key === "Escape") {
+				ev.stopPropagation();
+				this.slideout = null;
+				this.render();
+			}
+		});
 		for (const el of this.element.querySelectorAll("input[data-campo], select[data-campo]")) {
 			el.addEventListener("change", (ev) => this.#aoAlterarCampo(ev.currentTarget));
 		}
@@ -430,6 +468,94 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	#mudou() {
 		this._salvarRascunho();
 		this.render();
+	}
+
+	/* ---------------- Slideout (submenus de escolha) ---------------- */
+
+	/** Opções de uma lista de slideout: [{valor, nome, img, sub}] */
+	#opcoesSlideout(lista) {
+		const [tipo, arg = ""] = lista.split(/:(.*)/s);
+		const equip = (nome) => {
+			const f = this.#fichaEquip(nome);
+			return { valor: nome, nome: f.nome, img: f.img, sub: f.sub };
+		};
+		const poderCard = (p) => ({ valor: p.name, nome: p.name, img: p.img, sub: p.system.subtipo ?? "" });
+		switch (tipo) {
+			case "arma": {
+				const cats = arg.split(",");
+				return this.dados.armas.filter((a) => cats.includes(a.system.proficiencia)).map((a) => equip(a.name));
+			}
+			case "nomes":
+				return arg.split("|").map(equip);
+			case "grupo":
+				return poderesDoGrupo(this.dados, arg).map(poderCard);
+			case "poderGeral":
+				return this.dados.poderes.filter((p) => p.system.tipo === "geral")
+					.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")).map(poderCard);
+			case "pericia": {
+				const atual = foundry.utils.getProperty(this.estado, this.slideout?.campo ?? "");
+				const treinadas = this.periciasTreinadas({ ate: "origem" });
+				return ordenarPericias(Object.keys(CONFIG.T20?.pericias ?? {}))
+					.filter((k) => !treinadas.has(k) || k === atual)
+					.map((k) => {
+						const c = this.#cardPericia(k);
+						return { valor: k, nome: c.nome, sigla: c.atributo, sub: c.tags };
+					});
+			}
+		}
+		return [];
+	}
+
+	/** Detalhes do item em foco no slideout. */
+	async #infoSlideout(lista, valor) {
+		const tipo = lista.split(":")[0];
+		if (tipo === "arma" || tipo === "nomes") {
+			const f = this.#fichaEquip(valor);
+			return {
+				nome: f.nome, img: f.img,
+				stats: f.stats.map(([rotulo, v]) => ({ rotulo, valor: v })),
+				descricao: f.doc ? await this.#html(f.doc.uuid, f.doc.system?.description?.value) : ""
+			};
+		}
+		if (tipo === "grupo" || tipo === "poderGeral") {
+			const p = poder(this.dados, valor);
+			if (!p) return null;
+			const i = await this.#infoPoder(p);
+			return { ...i, stats: [{ rotulo: "Tipo", valor: p.system.subtipo }] };
+		}
+		if (tipo === "pericia") {
+			const cfg = CONFIG.T20?.pericias?.[valor];
+			if (!cfg) return null;
+			return {
+				nome: rotuloPericia(valor),
+				stats: [
+					{ rotulo: "Atributo", valor: NOMES_ATRIBUTOS[cfg.abl] ?? cfg.abl },
+					{ rotulo: "Somente treinado", valor: cfg.trainedOnly ? "Sim" : "Não" },
+					{ rotulo: "Penalidade de armadura", valor: cfg.armorPenalty ? "Sim" : "Não" }
+				],
+				descricao: await this.#descricaoPericia(valor)
+			};
+		}
+		return null;
+	}
+
+	async #ctxSlideout() {
+		const so = this.slideout;
+		if (!so) return null;
+		const atual = foundry.utils.getProperty(this.estado, so.campo) ?? "";
+		const cards = this.#opcoesSlideout(so.lista).map((c) => ({
+			...c,
+			selecionado: c.valor === atual,
+			foco: c.valor === so.foco
+		}));
+		const info = so.foco ? await this.#infoSlideout(so.lista, so.foco) : null;
+		if (info) {
+			info.valor = so.foco;
+			info.jaEscolhido = so.foco === atual;
+		}
+		const animar = so.animar;
+		so.animar = false;
+		return { titulo: so.titulo, cards, info, animar, filtro: so.filtro, longa: cards.length > 8 };
 	}
 
 	/* ---------------- Contexto por passo ---------------- */
@@ -532,7 +658,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			ehPontos: e.atrModo === "pontos",
 			ehRolagem: e.atrModo === "rolagem",
 			ehFixo: e.atrModo === "fixo",
-			pontosTotais: PONTOS_TOTAIS
+			pontosTotais: this.pontosTotais
 		};
 		let valores = null;
 		let atribuicao = null;
@@ -580,8 +706,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		if (e.atrModo === "pontos") {
 			const gastos = pontosGastos(e.atrPontos);
 			ctx.gastos = gastos;
-			ctx.restantes = PONTOS_TOTAIS - gastos;
-			ctx.estourou = gastos > PONTOS_TOTAIS;
+			ctx.restantes = this.pontosTotais - gastos;
+			ctx.estourou = gastos > this.pontosTotais;
 		}
 		return ctx;
 	}
@@ -678,33 +804,75 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		};
 	}
 
-	#ctxPericias() {
+	/** Descrição da perícia vinda do diário "Perícias" do sistema (Ofícios usam a página "Ofício"). */
+	async #descricaoPericia(k) {
+		const chave = OFICIOS.includes(k) ? "ofic" : k;
+		const uuid = CONFIG.T20?.skillCompendiumEntries?.[chave];
+		if (!uuid) return "";
+		if (!this._cacheHtml.has(uuid)) {
+			const page = await fromUuid(uuid).catch(() => null);
+			this._cacheHtml.set(uuid, await enriquecer(page?.text?.content ?? ""));
+		}
+		return this._cacheHtml.get(uuid);
+	}
+
+	#cardPericia(k, extra = {}) {
+		const cfg = CONFIG.T20?.pericias?.[k] ?? {};
+		const tags = [];
+		if (cfg.trainedOnly) tags.push("Só treinado");
+		if (cfg.armorPenalty) tags.push("Penalidade de armadura");
+		return {
+			chave: k,
+			nome: rotuloPericia(k),
+			atributo: NOMES_ATRIBUTOS[cfg.abl]?.slice(0, 3) ?? "",
+			tags: tags.join(" · "),
+			foco: k === this.focoPericia,
+			...extra
+		};
+	}
+
+	async #ctxPericias() {
 		const e = this.estado;
 		const r = this.regrasClasse;
 		if (!r) return {};
-		const fixas = ordenarPericias(r.fixas).map(rotuloPericia);
+		const card = (k, extra) => this.#cardPericia(k, extra);
+
+		const fixas = ordenarPericias(r.fixas).map((k) => card(k, { fixa: true }));
 		const grupos = r.ou.map((g, i) => ({
 			campo: `periciasOu.${i}`,
-			opcoes: ordenarPericias(expandirPericias(g)).map((k) => ({
-				chave: k, nome: rotuloPericia(k), selecionado: e.periciasOu[i] === k
-			}))
+			cards: ordenarPericias(expandirPericias(g)).map((k) => card(k, { selecionado: e.periciasOu[i] === k }))
 		}));
+
 		const jaClasse = this.periciasTreinadas({ ate: "classe" });
-		const opcoesClasse = ordenarPericias(expandirPericias(r.opcoes)).map((k) => ({
-			chave: k, nome: rotuloPericia(k),
+		const opcoesClasse = ordenarPericias(expandirPericias(r.opcoes)).map((k) => card(k, {
 			selecionado: e.periciasClasse.includes(k),
 			bloqueado: jaClasse.has(k) && !e.periciasClasse.includes(k)
 		}));
+
 		const jaInt = this.periciasTreinadas({ ate: "int" });
 		const nInt = Math.max(0, this.atributoFinal("int"));
-		const todas = Object.keys(CONFIG.T20?.pericias ?? {});
-		const opcoesInt = ordenarPericias(todas).map((k) => ({
-			chave: k, nome: rotuloPericia(k),
+		const opcoesInt = ordenarPericias(Object.keys(CONFIG.T20?.pericias ?? {})).map((k) => card(k, {
 			selecionado: e.periciasInt.includes(k),
 			bloqueado: jaInt.has(k) && !e.periciasInt.includes(k)
 		}));
+
+		let info = null;
+		const k = this.focoPericia;
+		if (k && CONFIG.T20?.pericias?.[k]) {
+			const cfg = CONFIG.T20.pericias[k];
+			const treinadas = this.periciasTreinadas({ ate: "origem" });
+			info = {
+				nome: rotuloPericia(k),
+				atributo: NOMES_ATRIBUTOS[cfg.abl] ?? cfg.abl,
+				somenteTreinado: !!cfg.trainedOnly,
+				penalidade: !!cfg.armorPenalty,
+				treinada: treinadas.has(k),
+				descricao: await this.#descricaoPericia(k)
+			};
+		}
+
 		return {
-			fixas: fixas.join(", "),
+			fixas,
 			grupos,
 			opcoesClasse,
 			numeroClasse: r.numero,
@@ -712,7 +880,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			nInt,
 			escolhidasInt: e.periciasInt.length,
 			opcoesInt,
-			intTotal: sinal(this.atributoFinal("int"))
+			intTotal: sinal(this.atributoFinal("int")),
+			info
 		};
 	}
 
@@ -763,9 +932,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 					selecionado: sel,
 					grupo: sel ? {
 						campo: `${base}.grupos.${g}`,
-						opcoes: poderesDoGrupo(this.dados, g).map((p) => ({
-							valor: p.name, nome: p.name, selecionado: p.name === escolhido
-						}))
+						lista: `grupo:${g}`,
+						titulo: `Escolha um poder de ${g}`,
+						escolhido: escolhido ?? ""
 					} : null,
 					info: sel && escolhido ? await this.#infoPoder(poder(this.dados, escolhido)) : null
 				});
@@ -781,12 +950,15 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 					lembrancas: await this.#infoPoder(poder(this.dados, "Lembranças Graduais")),
 					pericia: {
 						campo: `${base}.amnPericia`,
-						opcoes: ordenarPericias(todas).filter((k) => !treinadas.has(k) || k === est.amnPericia)
-							.map((k) => ({ valor: k, nome: rotuloPericia(k), selecionado: k === est.amnPericia }))
+						lista: "pericia",
+						titulo: "Perícia (escolhida pelo mestre)",
+						escolhido: est.amnPericia ? rotuloPericia(est.amnPericia) : ""
 					},
 					poder: {
 						campo: `${base}.amnPoder`,
-						opcoes: gerais.map((p) => ({ valor: p.name, nome: `${p.name} (${p.system.subtipo})`, selecionado: p.name === est.amnPoder }))
+						lista: "poderGeral",
+						titulo: "Poder geral (escolhido pelo mestre)",
+						escolhido: est.amnPoder ?? ""
 					}
 				};
 			}
@@ -817,16 +989,21 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		if (it.escolha) {
 			return {
 				campo: `${base}.itens.${i}`,
-				opcoes: it.escolha.map((n) => ({ valor: n, nome: n, selecionado: est.itens[i] === n }))
+				rotulo: it.escolha.join(" ou "),
+				lista: `nomes:${it.escolha.join("|")}`,
+				titulo: `Escolha: ${it.escolha.join(" ou ")}`,
+				escolhido: est.itens[i] ?? ""
 			};
 		}
 		if (it.arma) {
 			const nomesProf = { simples: "simples", marcial: "marcial", exotica: "exótica", fogo: "de fogo" };
+			const rotulo = `Arma ${it.arma.map((p) => nomesProf[p] ?? p).join(" ou ")}`;
 			return {
 				campo: `${base}.itens.${i}`,
-				rotulo: `Arma ${it.arma.map((p) => nomesProf[p] ?? p).join(" ou ")}`,
-				opcoes: this.dados.armas.filter((a) => it.arma.includes(a.system.proficiencia))
-					.map((a) => ({ valor: a.name, nome: a.name, selecionado: est.itens[i] === a.name }))
+				rotulo,
+				lista: `arma:${it.arma.join(",")}`,
+				titulo: `Escolha: ${rotulo.toLowerCase()}`,
+				escolhido: est.itens[i] ?? ""
 			};
 		}
 		return { texto: "?" };
@@ -1096,7 +1273,34 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	/* ---------------- Ações ---------------- */
 
+	static #abrirSlideout(event, target) {
+		const { campo, lista, titulo } = target.dataset;
+		const atual = foundry.utils.getProperty(this.estado, campo) ?? "";
+		this.slideout = { campo, lista, titulo, foco: atual, animar: true, filtro: "" };
+		this.render();
+	}
+
+	static #fecharSlideout() {
+		this.slideout = null;
+		this.render();
+	}
+
+	static #focarSlideout(event, target) {
+		if (!this.slideout) return;
+		this.slideout.foco = target.dataset.valor;
+		this.render();
+	}
+
+	static #confirmarSlideout(event, target) {
+		if (!this.slideout) return;
+		const { campo } = this.slideout;
+		const valor = target.dataset.valor ?? this.slideout.foco;
+		this.slideout = null;
+		this.#definirCampo(campo, valor);
+	}
+
 	static #avancar() {
+		this.slideout = null;
 		const passos = this.passos();
 		const pend = this.pendencia(passos[this.indice]);
 		if (pend) return ui.notifications.warn(pend);
@@ -1106,6 +1310,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	}
 
 	static #voltar() {
+		this.slideout = null;
 		this.indice = Math.max(0, this.indice - 1);
 		this.render();
 	}
@@ -1113,6 +1318,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	static #irPara(event, target) {
 		const i = Number(target.dataset.indice);
 		if (i <= this.estado.alcancado) {
+			this.slideout = null;
 			this.indice = i;
 			this.render();
 		}
@@ -1184,6 +1390,22 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			flavor: "Construtor de Personagem — nova rolagem do menor atributo"
 		});
 		this.#mudou();
+	}
+
+	static #focarPericia(event, target) {
+		this.focoPericia = target.dataset.valor;
+		this.render();
+	}
+
+	/** Seleciona/desmarca uma perícia e mostra os detalhes dela. */
+	static #escolherPericia(event, target) {
+		const { campo, valor, modo } = target.dataset;
+		this.focoPericia = valor;
+		if (modo === "unica") {
+			const atual = foundry.utils.getProperty(this.estado, campo);
+			return this.#definirCampo(campo, atual === valor ? "" : valor);
+		}
+		return ConstrutorFicha.#alternar.call(this, event, target);
 	}
 
 	static #focarEquip(event, target) {

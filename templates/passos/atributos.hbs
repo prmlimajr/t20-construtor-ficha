@@ -11,10 +11,12 @@
 
 {{#if ehPontos}}
 <div class="cf-placar {{#if estourou}}erro{{/if}}">
-	<span>Pontos gastos <strong>{{gastos}}</strong> de {{pontosTotais}}</span>
+	<span>Pontos gastos <strong>{{gastos}}</strong> de
+		<input type="number" class="cf-pontos-total" data-campo="atrPontosTotal" data-tipo="numero" value="{{pontosTotais}}" min="0" max="50" step="1" title="Total de pontos (padrão 10)">
+	</span>
 	<span>Restantes <strong>{{restantes}}</strong></span>
 </div>
-<p class="cf-nota">Todos começam em 0. Custo: −1 devolve 1 ponto · 1 custa 1 · 2 custa 2 · 3 custa 4 · 4 custa 7.</p>
+<p class="cf-nota">O padrão do livro é 10 pontos; altere o total se a mesa usar outro valor. Todos começam em 0. Custo: −1 devolve 1 ponto · 1 custa 1 · 2 custa 2 · 3 custa 4 · 4 custa 7.</p>
 {{/if}}
 
 {{#if ehRolagem}}
