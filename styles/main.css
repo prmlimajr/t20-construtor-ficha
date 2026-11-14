@@ -820,3 +820,39 @@
 .t20-construtor .cf-imagem input[type="text"] { width: 100%; max-width: 320px; }
 .t20-construtor .cf-check-linha { display: inline-flex; align-items: center; gap: 6px; }
 .t20-construtor .cf-check-linha input { flex: none; margin: 0; }
+
+/* Cabeçalho do passo: título à esquerda, ação (ex.: Vender itens) à direita */
+.t20-construtor .cf-cabecalho {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+.t20-construtor .cf-cabecalho-texto { min-width: 0; flex: 1; }
+.t20-construtor .cf-cabecalho button.cf-cabecalho-acao { flex: none; width: auto; white-space: nowrap; }
+
+/* Slideout de venda: itens marcáveis + rodapé com o total */
+.t20-construtor .cf-card.cf-card-venda .cf-marca { flex: none; font-size: 18px; color: var(--cf-ouro); width: 20px; text-align: center; }
+.t20-construtor .cf-slideout > .cf-nota { margin: 0; }
+.t20-construtor .cf-slideout .cf-duas { flex: 1; }
+.t20-construtor .cf-venda-rodape {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding-top: 8px;
+	border-top: 1px solid var(--cf-borda);
+}
+.t20-construtor .cf-venda-rodape button { flex: none; width: auto; }
+.t20-construtor .cf-venda-total { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: 1; text-align: right; }
+.t20-construtor .cf-venda-total strong { color: var(--cf-ouro); font-size: 16px; }
+.t20-construtor .cf-venda-total small { color: var(--cf-texto-suave); }
+.t20-construtor .cf-venda-rodape button:disabled { opacity: 0.5; cursor: default; }
+
+/* Loja: tipo (linha de cima) → categoria (linha de baixo) */
+.t20-construtor .cf-loja-filtros { align-items: flex-start; }
+.t20-construtor .cf-loja-navegacao { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.t20-construtor .cf-loja-tipos .cf-chip { font-weight: bold; padding: 3px 14px; }
+.t20-construtor .cf-loja-categorias { padding-left: 10px; border-left: 2px solid var(--cf-ouro); }
+.t20-construtor .cf-loja-categorias .cf-chip { font-size: 12px; padding: 1px 9px; }
+.t20-construtor .cf-loja-categorias .cf-chip small { opacity: 0.7; margin-left: 2px; }

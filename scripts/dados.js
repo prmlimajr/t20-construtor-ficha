@@ -19,7 +19,42 @@ const MELHORIAS_COM_PRE_REQUISITO = new Set(["Pungente", "Atroz", "Material Espe
 
 /** Pastas do compêndio de equipamentos que não entram na loja. */
 const FORA_DA_LOJA = new Set(["Tesouro", "Itens de Origem"]);
-const ORDEM_LOJA = ["Armas", "Armaduras & Escudos", "Equipamento de Aventura", "Ferramentas", "Vestuários", "Consumíveis", "Animais", "Esotérico", "Veículos"];
+/** Organização da loja: tipo → categorias, na ordem de exibição. */
+const ESTRUTURA_LOJA = [
+	{ tipo: "Armas e munições", categorias: ["Armas simples", "Armas marciais", "Armas exóticas", "Armas de fogo", "Munições"] },
+	{ tipo: "Armaduras e escudos", categorias: ["Armaduras leves", "Armaduras pesadas", "Escudos"] },
+	{ tipo: "Itens gerais", categorias: ["Equipamento de aventura", "Ferramentas", "Vestuário", "Esotérico", "Alquímicos", "Alimentação", "Animais", "Veículos"] }
+];
+
+const ARMAS_POR_PROFICIENCIA = { simples: "Armas simples", marcial: "Armas marciais", exotica: "Armas exóticas", fogo: "Armas de fogo" };
+const ARMADURAS_POR_TIPO = { leve: "Armaduras leves", pesada: "Armaduras pesadas", escudo: "Escudos" };
+const GERAIS_POR_PASTA = {
+	"Equipamento de Aventura": "Equipamento de aventura",
+	Ferramentas: "Ferramentas",
+	Vestuários: "Vestuário",
+	Esotérico: "Esotérico",
+	Animais: "Animais",
+	Veículos: "Veículos"
+};
+
+/**
+ * Categoria da loja de um item. Usa a pasta do compêndio e, quando ela não basta, o tipo do item
+ * (munições na raiz de Armas, o Pique na pasta Marciais, consumíveis por tipo).
+ */
+function categoriaLoja(doc, pasta) {
+	const s = doc.system ?? {};
+	if (pasta === "Armas") {
+		if (doc.type === "arma") return ARMAS_POR_PROFICIENCIA[s.proficiencia] ?? "Armas exóticas";
+		return "Munições";
+	}
+	if (pasta === "Armaduras & Escudos") return ARMADURAS_POR_TIPO[s.tipo] ?? "Armaduras leves";
+	if (pasta === "Consumíveis") {
+		if (s.tipo === "food") return "Alimentação";
+		if (s.tipo === "material") return "Esotérico"; // componentes materiais de magias
+		return "Alquímicos"; // preparados, catalisadores e venenos
+	}
+	return GERAIS_POR_PASTA[pasta] ?? "Equipamento de aventura";
+}
 
 /** Nome da pasta de primeiro nível de um documento de compêndio. */
 function pastaRaiz(doc, pack) {
@@ -100,10 +135,15 @@ export async function carregarDados() {
 			.sort(ordenar),
 		packEquip,
 		loja: [...indiceEquip]
-			.map((d) => ({ doc: d, categoria: pastaRaiz(d, packEquip) }))
-			.filter(({ doc, categoria }) => !FORA_DA_LOJA.has(categoria) && Number(doc.system?.preco) > 0)
+			.map((d) => ({ doc: d, pasta: pastaRaiz(d, packEquip) }))
+			.filter(({ doc, pasta }) => !FORA_DA_LOJA.has(pasta) && Number(doc.system?.preco) > 0)
+			.map(({ doc, pasta }) => {
+				const categoria = categoriaLoja(doc, pasta);
+				const tipo = ESTRUTURA_LOJA.find((t) => t.categorias.includes(categoria))?.tipo ?? "Itens gerais";
+				return { doc, categoria, tipo };
+			})
 			.sort((a, b) => ordenar(a.doc, b.doc)),
-		categoriasLoja: ORDEM_LOJA,
+		estruturaLoja: ESTRUTURA_LOJA,
 		regrasClasses,
 		origens: origens.origens ?? [],
 		origensRegionais: regionais.origens ?? [],

@@ -1,0 +1,41 @@
+{{!-- Slideout de venda (contexto: slideout com venda=true) --}}
+<p class="cf-nota">Marque os itens que quer vender. Cada um rende metade do preço, somada ao dinheiro inicial.</p>
+<div class="cf-duas">
+	<div class="cf-lista cf-cards">
+		{{#each cards}}
+		<button type="button" class="cf-card cf-card-venda {{#if selecionado}}selecionado{{/if}} {{#if foco}}foco{{/if}}"
+			data-action="alternarVenda" data-indice="{{indice}}" data-busca="{{nome}} {{sub}}" aria-pressed="{{#if selecionado}}true{{else}}false{{/if}}">
+			<i class="cf-marca fa-{{#if selecionado}}solid fa-square-check{{else}}regular fa-square{{/if}}"></i>
+			<img src="{{img}}" alt="">
+			<span class="cf-card-texto">
+				<span class="cf-card-nome">{{nome}}</span>
+				<span class="cf-card-sub">{{sub}}</span>
+			</span>
+		</button>
+		{{/each}}
+	</div>
+	<aside class="cf-info">
+		{{#with info}}
+		<h3>{{#if img}}<img src="{{img}}" alt="">{{/if}} {{nome}}</h3>
+		<button type="button" class="cf-primario cf-escolher" data-action="alternarVenda" data-indice="{{indice}}">
+			{{#if selecionado}}<i class="fa-solid fa-xmark"></i> Não vender{{else}}<i class="fa-solid fa-plus"></i> Marcar para vender{{/if}}
+		</button>
+		{{#if stats.length}}
+		<dl class="cf-dados">{{#each stats}}<dt>{{rotulo}}</dt><dd>{{valor}}</dd>{{/each}}</dl>
+		{{/if}}
+		{{#if descricao}}<div class="cf-descricao">{{{descricao}}}</div>{{/if}}
+		{{else}}
+		<p class="cf-vazio">Clique em um item para marcá-lo e ver os detalhes.</p>
+		{{/with}}
+	</aside>
+</div>
+<footer class="cf-venda-rodape">
+	<button type="button" class="cf-link" data-action="marcarTodosVenda">{{#if todos}}Desmarcar todos{{else}}Marcar todos{{/if}}</button>
+	<div class="cf-venda-total">
+		<span>{{qtdSelecionados}} item(ns) · <strong><i class="fa-solid fa-coins"></i> +{{total}}</strong> para a carteira</span>
+		{{#if carteira}}<small>Carteira após a venda: {{carteira}}</small>{{/if}}
+	</div>
+	<button type="button" class="cf-primario" data-action="confirmarVenda" {{#unless mudou}}disabled{{/unless}}>
+		<i class="fa-solid fa-hand-holding-dollar"></i> Confirmar venda
+	</button>
+</footer>

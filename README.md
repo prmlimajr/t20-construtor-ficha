@@ -34,7 +34,7 @@ Jogadores precisam da permissão **"Criar novos atores"** (Configurações → P
 5. **Perícias**: obrigatórias da classe, escolhas da classe e perícias extras pelo valor de Inteligência.
 6. **Origem**: itens e 2 benefícios (perícias, poderes ou um poder de um grupo). Com o homebrew ligado: origem profissional + regional.
 7. **Devoção**: opcional, ou obrigatória para Clérigo, Druida e Paladino (Druida só Allihanna, Megalokk e Oceano; Paladino só Azgher, Khalmyr, Lena, Lin-Wu, Marah, Tanna-Toh, Thyatis e Valkaria). A raça ou a classe precisa estar entre os devotos do deus; humanos e clérigos podem seguir qualquer um. 1 poder concedido (2 para Clérigo e Druida). Alternativas sem divindade e sem poder concedido: Paladino do Bem e Clérigo devoto do Panteão.
-8. **Equipamento**: kit básico, itens da classe e da origem, arma (simples, ou marcial se proficiente), armadura e escudo. O botão **Vender itens** abre um slideout para vender itens iniciais pela metade do preço; o valor é somado ao dinheiro inicial (e pode ser desfeito).
+8. **Equipamento**: kit básico, itens da classe e da origem, arma (simples, ou marcial se proficiente), armadura e escudo. O botão **Vender itens** (no cabeçalho) abre um slideout onde se marcam vários itens iniciais de uma vez, vendo o total que vai para a carteira (metade do preço de cada); **Confirmar venda** aplica, e reabrir o slideout permite desmarcar.
 9. **Dinheiro**: 4d6 T$, rolado no chat, uma vez só.
 10. **Revisão**: nome, retrato e token (pelo navegador de arquivos do Foundry ou colando o caminho; o token pode usar o retrato) e resumo de tudo.
 

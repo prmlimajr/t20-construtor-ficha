@@ -32,8 +32,14 @@
 
 	<section class="cf-principal">
 		<header class="cf-cabecalho">
-			<h2>{{passo.titulo}}</h2>
-			<p>{{passo.dica}}</p>
+			<div class="cf-cabecalho-texto">
+				<h2>{{passo.titulo}}</h2>
+				<p>{{passo.dica}}</p>
+			</div>
+			{{#if venda.podeVender}}
+			<button type="button" class="cf-primario cf-cabecalho-acao" data-action="abrirVenda">
+				<i class="fa-solid fa-hand-holding-dollar"></i> Vender itens</button>
+			{{/if}}
 		</header>
 
 		<div class="cf-conteudo">
@@ -71,6 +77,9 @@
 				<input type="search" class="cf-filtro" placeholder="Filtrar…" value="{{slideout.filtro}}">
 				{{/if}}
 			</header>
+			{{#if slideout.venda}}
+			{{> "modules/t20-construtor-ficha/templates/partes/venda.hbs" slideout}}
+			{{else}}
 			<div class="cf-duas">
 				<div class="cf-lista cf-cards">
 					{{#each slideout.cards}}
@@ -100,6 +109,7 @@
 					{{/with}}
 				</aside>
 			</div>
+			{{/if}}
 		</div>
 		{{/if}}
 	</section>

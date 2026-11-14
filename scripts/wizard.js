@@ -14,7 +14,7 @@ const TPL = `modules/${MODULE_ID}/templates`;
 
 export const TEMPLATES_PASSOS = [
 	"raca", "atributos", "classe", "magias", "pericias", "origem", "devocao", "equipamento", "dinheiro", "revisao"
-].map((p) => `${TPL}/passos/${p}.hbs`).concat(`${TPL}/partes/poder.hbs`, `${TPL}/partes/abrir.hbs`, `${TPL}/partes/aprimoramentos.hbs`, `${TPL}/partes/escolha-racial.hbs`, `${TPL}/partes/poder-escolha.hbs`);
+].map((p) => `${TPL}/passos/${p}.hbs`).concat(`${TPL}/partes/poder.hbs`, `${TPL}/partes/abrir.hbs`, `${TPL}/partes/aprimoramentos.hbs`, `${TPL}/partes/escolha-racial.hbs`, `${TPL}/partes/poder-escolha.hbs`, `${TPL}/partes/venda.hbs`);
 
 const ATRIBUTOS_DINAMICOS = 3;
 
@@ -130,7 +130,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		this.slideout = null;
 		/** Dado escolhido por clique (alternativa ao arrastar). */
 		this.dadoSelecionado = null;
-		this.lojaCategoria = "Armas";
+		this.lojaTipo = "Armas e munições";
+		this.lojaCategoria = "Armas simples";
 		this.focoLoja = "";
 		this.lojaFiltro = "";
 		this._cacheHtml = new Map();
@@ -157,10 +158,14 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			abrirSlideout: ConstrutorFicha.#abrirSlideout,
 			selecionarDado: ConstrutorFicha.#selecionarDado,
 			lojaCategoria: ConstrutorFicha.#lojaCategoria,
+			lojaTipo: ConstrutorFicha.#lojaTipo,
 			focarLoja: ConstrutorFicha.#focarLoja,
 			comprar: ConstrutorFicha.#comprar,
 			ajustarAlquimico: ConstrutorFicha.#ajustarAlquimico,
-			desfazerVenda: ConstrutorFicha.#desfazerVenda,
+			abrirVenda: ConstrutorFicha.#abrirVenda,
+			alternarVenda: ConstrutorFicha.#alternarVenda,
+			marcarTodosVenda: ConstrutorFicha.#marcarTodosVenda,
+			confirmarVenda: ConstrutorFicha.#confirmarVenda,
 			escolherImagem: ConstrutorFicha.#escolherImagem,
 			colocarDado: ConstrutorFicha.#colocarDado,
 			fecharSlideout: ConstrutorFicha.#fecharSlideout,
@@ -808,9 +813,14 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const ctx = { dinheiro: e.dinheiro, rolado: e.dinheiro !== null, extras: extras.join(" + ") };
 		if (!ctx.rolado) return ctx;
 		const saldo = this.saldo;
+		// tipo (Armas e munições, Armaduras e escudos, Itens gerais) → categoria; só os que têm itens
 		const presentes = new Set(this.dados.loja.map((x) => x.categoria));
-		const ordem = [...this.dados.categoriasLoja.filter((c) => presentes.has(c)), ...[...presentes].filter((c) => !this.dados.categoriasLoja.includes(c))];
-		if (!presentes.has(this.lojaCategoria)) this.lojaCategoria = ordem[0];
+		const tipos = this.dados.estruturaLoja
+			.map((t) => ({ ...t, categorias: t.categorias.filter((c) => presentes.has(c)) }))
+			.filter((t) => t.categorias.length);
+		let tipo = tipos.find((t) => t.tipo === this.lojaTipo) ?? tipos[0];
+		this.lojaTipo = tipo?.tipo;
+		if (!tipo?.categorias.includes(this.lojaCategoria)) this.lojaCategoria = tipo?.categorias[0];
 		const cards = this.dados.loja.filter((x) => x.categoria === this.lojaCategoria).map(({ doc }) => {
 			const f = this.#fichaEquip(doc.name);
 			const preco = Number(doc.system.preco);
@@ -854,7 +864,11 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			fmtGasto: fmt(this.gastoCompras),
 			fmtVendas: this.valorVendas ? fmt(this.valorVendas) : "",
 			fmtSaldo: fmt(saldo),
-			categorias: ordem.map((c) => ({ nome: c, selecionado: c === this.lojaCategoria })),
+			tipos: tipos.map((t) => ({ nome: t.tipo, selecionado: t.tipo === this.lojaTipo })),
+			categorias: (tipo?.categorias ?? []).map((c) => ({
+				nome: c, selecionado: c === this.lojaCategoria,
+				qtd: this.dados.loja.filter((x) => x.categoria === c).length
+			})),
 			cards,
 			carrinho,
 			info,
@@ -966,20 +980,6 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 						return { valor: k, nome: c.nome, sigla: c.atributo, sub: c.tags };
 					});
 			}
-			case "venda": {
-				const iniciais = this.plano({ semVendas: true }).itens;
-				const vendidos = new Set(this.#vendas(iniciais).indices);
-				const vistos = new Set();
-				const out = [];
-				iniciais.forEach((it, i) => {
-					const pv = this.precoVenda(it);
-					if (!pv || vendidos.has(i) || vistos.has(it.nome)) return;
-					vistos.add(it.nome);
-					const f = equip(it.nome);
-					out.push({ ...f, nome: it.qtd > 1 ? `${f.nome} ×${it.qtd}` : f.nome, sub: `Vende por ${ConstrutorFicha.formatarTibares(pv)}${f.sub ? ` · ${f.sub}` : ""}` });
-				});
-				return out;
-			}
 			case "lojaAte": {
 				const max = Number(arg);
 				return this.dados.loja.filter(({ doc }) => Number(doc.system.preco) <= max)
@@ -1034,17 +1034,6 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			if (!m) return null;
 			return { nome: m.name, img: m.img, stats: [{ rotulo: "Custo", valor: "+T$ 300 (1 melhoria)" }], descricao: await this.#html(m.uuid, m.description) };
 		}
-		if (tipo === "venda") {
-			const f = this.#fichaEquip(valor);
-			const it = this.plano({ semVendas: true }).itens.find((x) => x.nome === valor);
-			return {
-				nome: f.nome, img: f.img,
-				stats: [{ rotulo: "Venda", valor: `${ConstrutorFicha.formatarTibares(it ? this.precoVenda(it) : 0)} (metade do preço)` },
-					...f.stats.map(([rotulo, v]) => ({ rotulo, valor: v }))],
-				descricao: f.doc ? await this.#html(f.doc.uuid, f.doc.system?.description?.value) : "",
-				rotuloEscolher: "Vender"
-			};
-		}
 		if (tipo === "arma" || tipo === "nomes" || tipo === "lojaAte" || tipo === "itemSuperior") {
 			const f = this.#fichaEquip(valor);
 			return {
@@ -1078,9 +1067,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	async #ctxSlideout() {
 		const so = this.slideout;
 		if (!so) return null;
+		if (so.tipo === "venda") return this.#ctxSlideoutVenda();
 		const atual = foundry.utils.getProperty(this.estado, so.campo) ?? "";
-		// vendas: o mesmo item pode ser vendido mais de uma vez (entradas repetidas), nada fica "selecionado"
-		const ehLista = Array.isArray(atual) && so.campo !== "vendas";
+		const ehLista = Array.isArray(atual);
 		const cards = this.#opcoesSlideout(so.lista).map((c) => ({
 			...c,
 			selecionado: ehLista ? atual.includes(c.valor) : c.valor === atual,
@@ -1089,11 +1078,60 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const info = so.foco ? await this.#infoSlideout(so.lista, so.foco) : null;
 		if (info) {
 			info.valor = so.foco;
-			info.jaEscolhido = so.campo === "vendas" ? false : (ehLista ? atual.includes(so.foco) : so.foco === atual);
+			info.jaEscolhido = ehLista ? atual.includes(so.foco) : so.foco === atual;
 		}
 		const animar = so.animar;
 		so.animar = false;
 		return { titulo: so.titulo, cards, info, animar, filtro: so.filtro, longa: cards.length > 8 };
+	}
+
+	/** Slideout de venda: marcar vários itens iniciais, ver o total e confirmar de uma vez. */
+	async #ctxSlideoutVenda() {
+		const so = this.slideout;
+		const fmt = ConstrutorFicha.formatarTibares;
+		const iniciais = this.plano({ semVendas: true }).itens;
+		const sel = this.vendaRascunho ?? new Set();
+		const cards = [];
+		iniciais.forEach((it, i) => {
+			const pv = this.precoVenda(it);
+			if (!pv) return;
+			const f = this.#fichaEquip(it.nome);
+			cards.push({
+				indice: i, img: f.img,
+				nome: it.qtd > 1 ? `${f.nome} ×${it.qtd}` : f.nome,
+				sub: [`Vende por ${fmt(pv)}`, f.sub].filter(Boolean).join(" · "),
+				selecionado: sel.has(i),
+				foco: so.foco === i
+			});
+		});
+		const total = Math.round([...sel].reduce((t, i) => t + (iniciais[i] ? this.precoVenda(iniciais[i]) : 0), 0) * 100) / 100;
+		let info = null;
+		const it = iniciais[so.foco];
+		if (it && this.precoVenda(it)) {
+			const f = this.#fichaEquip(it.nome);
+			info = {
+				indice: so.foco, nome: f.nome, img: f.img,
+				selecionado: sel.has(so.foco),
+				stats: [
+					{ rotulo: "Venda", valor: `${fmt(this.precoVenda(it))} (metade do preço)` },
+					...f.stats.map(([rotulo, valor]) => ({ rotulo, valor }))
+				],
+				descricao: f.doc ? await this.#html(f.doc.uuid, f.doc.system?.description?.value) : ""
+			};
+		}
+		const atual = this.#vendas(iniciais);
+		const animar = so.animar;
+		so.animar = false;
+		const rolado = this.estado.dinheiro !== null;
+		return {
+			venda: true, titulo: so.titulo, cards, info, animar, filtro: so.filtro, longa: cards.length > 8,
+			qtdSelecionados: sel.size,
+			total: fmt(total),
+			todos: sel.size === cards.length,
+			mudou: !(sel.size === atual.indices.length && atual.indices.every((i) => sel.has(i))),
+			// com o dinheiro já rolado, mostra como fica a carteira
+			carteira: rolado ? fmt(this.saldo - atual.total + total) : null
+		};
 	}
 
 	/* ---------------- Contexto por passo ---------------- */
@@ -1909,8 +1947,11 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			const it = iniciais[i];
 			return { nome: it.nome, rotulo: it.qtd > 1 ? `${it.nome} ×${it.qtd}` : it.nome, valor: ConstrutorFicha.formatarTibares(this.precoVenda(it)) };
 		});
-		const restam = iniciais.some((it, i) => this.precoVenda(it) > 0 && !vendas.indices.includes(i));
-		return { vendidos, total: ConstrutorFicha.formatarTibares(vendas.total), temVendas: vendidos.length > 0, podeVender: restam };
+		const temItens = iniciais.some((it) => this.precoVenda(it) > 0);
+		return {
+			vendidos, total: ConstrutorFicha.formatarTibares(vendas.total), temVendas: vendidos.length > 0, podeVender: temItens,
+			listaVendidos: vendidos.map((v) => v.rotulo).join(", ")
+		};
 	}
 
 	/** Espólio (Nobre) e Protótipo (Inventor). */
@@ -2329,6 +2370,12 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	/* ---------------- Ações ---------------- */
 
+	static #lojaTipo(event, target) {
+		this.lojaTipo = target.dataset.valor;
+		this.lojaCategoria = "";
+		this.render();
+	}
+
 	static #lojaCategoria(event, target) {
 		this.lojaCategoria = target.dataset.valor;
 		this.render();
@@ -2377,13 +2424,43 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		}
 	}
 
-	/** Desfaz a venda de um item inicial (remove uma ocorrência do nome). */
-	static #desfazerVenda(event, target) {
-		const vendas = [...(this.estado.vendas ?? [])];
-		const i = vendas.lastIndexOf(target.dataset.nome);
-		if (i < 0) return;
-		vendas.splice(i, 1);
-		this.#definirCampo("vendas", vendas);
+	/** Abre o slideout de venda com os itens já vendidos marcados. */
+	static #abrirVenda() {
+		const iniciais = this.plano({ semVendas: true }).itens;
+		this.vendaRascunho = new Set(this.#vendas(iniciais).indices);
+		this.slideout = { tipo: "venda", titulo: "Vender itens", foco: null, animar: true, filtro: "" };
+		this.render();
+	}
+
+	/** Marca/desmarca um item para vender (e mostra os detalhes dele). */
+	static #alternarVenda(event, target) {
+		if (this.slideout?.tipo !== "venda") return;
+		const i = Number(target.dataset.indice);
+		this.vendaRascunho ??= new Set();
+		if (this.vendaRascunho.has(i)) this.vendaRascunho.delete(i);
+		else this.vendaRascunho.add(i);
+		this.slideout.foco = i;
+		this.render();
+	}
+
+	/** Marca todos os itens vendáveis, ou desmarca todos se já estavam marcados. */
+	static #marcarTodosVenda() {
+		if (this.slideout?.tipo !== "venda") return;
+		const iniciais = this.plano({ semVendas: true }).itens;
+		const todos = iniciais.map((it, i) => (this.precoVenda(it) > 0 ? i : null)).filter((i) => i !== null);
+		const marcados = this.vendaRascunho ?? new Set();
+		this.vendaRascunho = todos.every((i) => marcados.has(i)) ? new Set() : new Set(todos);
+		this.render();
+	}
+
+	/** Confirma a venda: os itens marcados saem do inventário e metade do preço vai para a carteira. */
+	static #confirmarVenda() {
+		if (this.slideout?.tipo !== "venda") return;
+		const iniciais = this.plano({ semVendas: true }).itens;
+		const nomes = [...(this.vendaRascunho ?? [])].sort((a, b) => a - b).map((i) => iniciais[i]?.nome).filter(Boolean);
+		this.slideout = null;
+		this.vendaRascunho = null;
+		this.#definirCampo("vendas", nomes);
 	}
 
 	/** Protótipo: +1/−1 num item alquímico, respeitando 10 itens e T$ 500. */
@@ -2450,10 +2527,6 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const atual = foundry.utils.getProperty(this.estado, campo);
 		// campo de lista (ex.: magias): adiciona o item em vez de substituir
 		if (Array.isArray(atual)) {
-			if (campo === "vendas") {
-				this.slideout = null;
-				return this.#definirCampo(campo, [...atual, valor]);
-			}
 			if (atual.includes(valor)) {
 				this.slideout = null;
 				return this.render();

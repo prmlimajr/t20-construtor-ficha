@@ -26,10 +26,17 @@
 	</div>
 
 	<div class="cf-loja-filtros">
-		<div class="cf-chips">
-			{{#each categorias}}
-			<button type="button" class="cf-chip {{#if selecionado}}selecionado{{/if}}" data-action="lojaCategoria" data-valor="{{nome}}">{{nome}}</button>
-			{{/each}}
+		<div class="cf-loja-navegacao">
+			<div class="cf-chips cf-loja-tipos">
+				{{#each tipos}}
+				<button type="button" class="cf-chip {{#if selecionado}}selecionado{{/if}}" data-action="lojaTipo" data-valor="{{nome}}">{{nome}}</button>
+				{{/each}}
+			</div>
+			<div class="cf-chips cf-loja-categorias">
+				{{#each categorias}}
+				<button type="button" class="cf-chip {{#if selecionado}}selecionado{{/if}}" data-action="lojaCategoria" data-valor="{{nome}}">{{nome}} <small>{{qtd}}</small></button>
+				{{/each}}
+			</div>
 		</div>
 		<input type="search" class="cf-filtro" placeholder="Filtrar…" value="{{filtro}}">
 	</div>

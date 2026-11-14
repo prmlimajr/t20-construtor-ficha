@@ -89,21 +89,9 @@
 		{{/each}}
 
 		<h4>Itens que você já recebe</h4>
-		<div class="cf-venda">
-			{{#if venda.podeVender}}
-			<button type="button" class="cf-primario" data-action="abrirSlideout" data-campo="vendas" data-lista="venda"
-				data-titulo="Vender itens — metade do preço"><i class="fa-solid fa-hand-holding-dollar"></i> Vender itens</button>
-			{{/if}}
-			{{#if venda.temVendas}}
-			<p class="cf-nota">Vendidos por {{venda.total}}, somados ao dinheiro inicial:</p>
-			<div class="cf-chips">
-				{{#each venda.vendidos}}
-				<button type="button" class="cf-chip selecionado cf-chip-remover" data-action="desfazerVenda" data-nome="{{nome}}"
-					title="Desfazer venda">{{rotulo}} <small>{{valor}}</small> <i class="fa-solid fa-xmark"></i></button>
-				{{/each}}
-			</div>
-			{{/if}}
-		</div>
+		{{#if venda.temVendas}}
+		<p class="cf-nota cf-venda"><i class="fa-solid fa-hand-holding-dollar"></i> Vendidos por {{venda.total}}: {{venda.listaVendidos}}. Use <strong>Vender itens</strong> para alterar.</p>
+		{{/if}}
 		{{#each recebidos}}
 		<p class="cf-subtitulo">{{titulo}}</p>
 		<div class="cf-cards">
