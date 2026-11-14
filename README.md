@@ -22,7 +22,7 @@ Jogadores precisam da permissão **"Criar novos atores"** (Configurações → P
 4. **Magias** (classes conjuradoras): magias de 1º círculo do tipo da classe; Bardo e Druida escolhem 3 escolas antes.
 5. **Perícias**: obrigatórias da classe, escolhas da classe e perícias extras pelo valor de Inteligência.
 6. **Origem**: itens e 2 benefícios (perícias, poderes ou um poder de um grupo). Com o homebrew ligado: origem profissional + regional.
-7. **Devoção**: opcional, ou obrigatória para Clérigo, Druida e Paladino (Druida só Allihanna, Megalokk e Oceano). A raça ou a classe precisa estar entre os devotos do deus; humanos e clérigos podem seguir qualquer um. 1 poder concedido (2 para Clérigo e Druida).
+7. **Devoção**: opcional, ou obrigatória para Clérigo, Druida e Paladino (Druida só Allihanna, Megalokk e Oceano; Paladino só Azgher, Khalmyr, Lena, Lin-Wu, Marah, Tanna-Toh, Thyatis e Valkaria). A raça ou a classe precisa estar entre os devotos do deus; humanos e clérigos podem seguir qualquer um. 1 poder concedido (2 para Clérigo e Druida).
 8. **Equipamento**: kit básico, itens da classe e da origem, arma (simples, ou marcial se proficiente), armadura e escudo.
 9. **Dinheiro**: 4d6 T$, rolado no chat, uma vez só.
 10. **Revisão**: nome e resumo de tudo.

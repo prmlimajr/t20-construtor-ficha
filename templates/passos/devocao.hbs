@@ -1,5 +1,18 @@
 {{#if obrigatoria}}
 <p class="cf-aviso">{{motivo}}</p>
+{{else if alternativa}}
+<div class="cf-chips cf-bloco">
+	<button type="button" class="cf-chip {{#if devoto}}selecionado{{/if}}" data-action="definir" data-campo="devoto" data-tipo="bool" data-valor="true">Devoto de um deus</button>
+	<button type="button" class="cf-chip {{#if naoDevoto}}selecionado{{/if}}" data-action="definir" data-campo="devoto" data-tipo="bool" data-valor="false">{{alternativa.nome}}</button>
+</div>
+{{#if naoDevoto}}
+<div class="cf-info cf-alternativa">
+	<h3>{{alternativa.nome}}</h3>
+	<p class="cf-lore">{{alternativa.descricao}}</p>
+</div>
+{{else}}
+<p class="cf-nota">{{alternativa.aviso}}</p>
+{{/if}}
 {{else}}
 <div class="cf-chips cf-bloco">
 	<button type="button" class="cf-chip {{#if devoto}}selecionado{{/if}}" data-action="definir" data-campo="devoto" data-tipo="bool" data-valor="true">Sim, é devoto</button>

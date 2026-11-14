@@ -282,6 +282,27 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		return this.dados.divindades.filter((d) => !this.impedimentoDivindade(d));
 	}
 
+	/** Alternativa à devoção oferecida pela classe (ex.: Paladino do Bem). */
+	get alternativaDevocao() {
+		return this.regrasClasse?.devocao?.alternativa ?? null;
+	}
+
+	/** A classe obriga a ser devoto de um deus, sem alternativa. */
+	get devocaoForcada() {
+		return !!this.regrasClasse?.devocao?.obrigatoria && !this.alternativaDevocao;
+	}
+
+	get ehDevoto() {
+		return this.devocaoForcada || this.estado.devoto === true;
+	}
+
+	/** Nome gravado em "divindade" na ficha. */
+	get textoDivindade() {
+		if (this.ehDevoto) return this.estado.divindade;
+		if (this.estado.devoto === false && this.alternativaDevocao) return this.alternativaDevocao.nome;
+		return "";
+	}
+
 	poderesConcedidosPermitidos() {
 		return this.regrasClasse?.devocao?.poderes ?? 1;
 	}
@@ -389,9 +410,12 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				return null;
 			}
 			case "devocao": {
-				const obrig = this.regrasClasse?.devocao?.obrigatoria;
-				if (e.devoto === null && !obrig) return "Responda se o personagem é devoto.";
-				if (!e.devoto && !obrig) return null;
+				const forcada = this.devocaoForcada;
+				const alt = this.alternativaDevocao;
+				if (e.devoto === null && !forcada) {
+					return alt ? `Escolha entre ser devoto de um deus ou ${alt.nome}.` : "Responda se o personagem é devoto.";
+				}
+				if (!e.devoto && !forcada) return null;
 				if (!e.divindade) return "Escolha uma divindade.";
 				const n = this.poderesConcedidosPermitidos();
 				if (e.poderesConcedidos.length !== n) return `Escolha ${n} poder(es) concedido(s).`;
@@ -780,7 +804,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		if (this.classe) linhas.push(["Classe", this.classe.name]);
 		const origens = this.origensAtivas().map((o) => o.def.nome);
 		if (origens.length) linhas.push(["Origem", origens.join(" / ")]);
-		if (e.devoto && e.divindade) linhas.push(["Divindade", e.divindade]);
+		if (this.textoDivindade) linhas.push(["Divindade", this.textoDivindade]);
 		if (e.dinheiro !== null) linhas.push(["Tibares", ConstrutorFicha.formatarTibares(this.saldo)]);
 		const atributos = e.atrModo
 			? ATRIBUTOS.map((k) => ({ sigla: k.toUpperCase(), valor: sinal(this.atributoFinal(k)) }))
@@ -963,7 +987,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 					? `${conj.tipo === "arc" ? "Arcanas" : "Divinas"} — ${conj.quantidade} magias de 1º círculo${conj.escolas ? ` de ${conj.escolas} escolas à sua escolha` : ""}`
 					: null,
 				devocao: r.devocao?.obrigatoria
-					? `Devoto obrigatório${r.devocao.divindades ? ` (${r.devocao.divindades.join(", ")})` : ""}`
+					? `Devoto obrigatório${r.devocao.divindades ? ` (${r.devocao.divindades.join(", ")})` : ""}${r.devocao.alternativa ? `, ou ${r.devocao.alternativa.nome}` : ""}`
 					: null,
 				descricao: await this.#html(c.uuid, c.system.description?.value),
 				habilidades,
@@ -1292,8 +1316,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	async #ctxDevocao() {
 		const e = this.estado;
 		const r = this.regrasClasse;
-		const obrig = !!r?.devocao?.obrigatoria;
-		const devoto = obrig || e.devoto === true;
+		const obrig = this.devocaoForcada;
+		const alt = this.alternativaDevocao;
+		const devoto = this.ehDevoto;
 		const divindades = this.dados.divindades.map((d) => {
 			const impedimento = this.impedimentoDivindade(d);
 			return { nome: d.nome, titulo: d.titulo, selecionado: d.nome === e.divindade, bloqueado: !!impedimento, impedimento };
@@ -1322,9 +1347,15 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				poderes, qtd: this.poderesConcedidosPermitidos(), escolhidos: e.poderesConcedidos.length
 			};
 		}
+		const lista = r?.devocao?.divindades ? ` de ${r.devocao.divindades.join(", ")}` : "";
 		return {
 			obrigatoria: obrig,
-			motivo: obrig ? `${this.classe.name}s precisam ser devotos${r.devocao.divindades ? ` de ${r.devocao.divindades.join(", ")}` : ""}.` : null,
+			motivo: obrig ? `${this.classe.name}s precisam ser devotos${lista}.` : null,
+			alternativa: alt ? {
+				nome: alt.nome,
+				descricao: alt.descricao,
+				aviso: `Se for devoto, ${this.classe.name.toLowerCase()}s só podem seguir${lista.replace(/^ de/, "")}.`
+			} : null,
 			devoto,
 			naoDevoto: !obrig && e.devoto === false,
 			divindades,
@@ -1480,7 +1511,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			itens.push(...this.#itensDaOrigem(o.def, o.estado));
 		}
 
-		const devoto = !!(r.devocao?.obrigatoria || e.devoto);
+		const devoto = this.ehDevoto;
 		if (devoto) e.poderesConcedidos.forEach(add);
 
 		itens.unshift(
@@ -1513,7 +1544,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			pericias: ordenarPericias([...this.periciasTreinadas()]),
 			atributos: Object.fromEntries(ATRIBUTOS.map((k) => [k, { base: this.base(k) ?? 0, racial: this.racial(k) }])),
 			origem: this.origensAtivas().map((o) => o.def.nome).join(" / "),
-			divindade: devoto ? e.divindade : "",
+			divindade: this.textoDivindade,
 			dinheiro: this.saldo,
 			dinheiroRolado: e.dinheiro ?? 0,
 			gasto: this.gastoCompras,
@@ -1565,6 +1596,10 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				Object.assign(e.origens[sub], { beneficios: [], grupos: {}, itens: {}, amnPericia: "", amnPoder: "" });
 			}
 			if (campo === "divindade") e.poderesConcedidos = [];
+			if (campo === "devoto" && valor === false) {
+				e.divindade = "";
+				e.poderesConcedidos = [];
+			}
 			if (campo === "atrModo" || campo === "atrFixo.arranjo") {
 				this.dadoSelecionado = null;
 				for (const k of ATRIBUTOS) e.atrFixo.atribuicao[k] = "";
