@@ -1,0 +1,17 @@
+<label class="cf-campo cf-nome">Nome do personagem
+	<input type="text" data-campo="nome" value="{{nome}}" placeholder="Nome">
+</label>
+
+<dl class="cf-dados cf-revisao">
+	<dt>Raça</dt><dd>{{racaNome}}</dd>
+	<dt>Classe</dt><dd>{{classeNome}}</dd>
+	<dt>Origem</dt><dd>{{plano.origem}}</dd>
+	<dt>Divindade</dt><dd>{{#if plano.divindade}}{{plano.divindade}}{{else}}—{{/if}}</dd>
+	<dt>Atributos</dt><dd>{{#each atributos}}{{nome}} {{valor}}{{#unless @last}} · {{/unless}}{{/each}}</dd>
+	<dt>Perícias treinadas</dt><dd>{{listaPericias}}</dd>
+	<dt>Poderes e habilidades</dt><dd>{{listaPoderes}}</dd>
+	{{#if listaMagias}}<dt>Magias</dt><dd>{{listaMagias}}</dd>{{/if}}
+	<dt>Itens</dt><dd>{{listaItens}}</dd>
+	<dt>Dinheiro</dt><dd>T$ {{plano.dinheiro}}</dd>
+</dl>
+<p class="cf-nota">Ao criar, alguns poderes do sistema podem abrir janelas pedindo escolhas adicionais (ex.: perícias de um poder).</p>

@@ -1,0 +1,34 @@
+{
+	"T20CF": {
+		"CriarPersonagem": "Criar personagem (wizard)",
+		"Construtor": "Construtor",
+		"NovoPersonagem": "Novo personagem",
+		"SemPermissao": "Você não tem permissão para criar atores. Peça ao mestre para liberar \"Criar novos atores\" nas permissões.",
+		"Config": {
+			"abrirAoCriar": {
+				"Nome": "Abrir ao criar personagem",
+				"Dica": "Abre o construtor automaticamente quando um novo ator do tipo personagem é criado."
+			},
+			"modoPontos": {
+				"Nome": "Atributos: permitir compra de pontos",
+				"Dica": "10 pontos; valores de −1 a 4."
+			},
+			"modoRolagem": {
+				"Nome": "Atributos: permitir rolagem",
+				"Dica": "4d6 descartando o menor, seis vezes, convertidos pela tabela do livro."
+			},
+			"modoFixo": {
+				"Nome": "Atributos: permitir valores fixos",
+				"Dica": "O jogador escolhe um arranjo pronto (equivalente a 10 pontos) e distribui os valores."
+			},
+			"origemDupla": {
+				"Nome": "Homebrew: origem profissional + regional",
+				"Dica": "O personagem escolhe duas origens: uma profissional (livro básico) e uma regional (Atlas de Arton)."
+			},
+			"beneficiosOrigemDupla": {
+				"Nome": "Homebrew: benefícios por origem",
+				"Dica": "Quantos benefícios cada origem concede quando a origem dupla está ligada."
+			}
+		}
+	}
+}

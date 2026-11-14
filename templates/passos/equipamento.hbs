@@ -1,0 +1,29 @@
+<div class="cf-bloco">
+	<h4>Itens que você já recebe</h4>
+	<p><strong>Todo aventureiro:</strong> {{kit}}</p>
+	{{#if extras}}<p><strong>Classe:</strong> {{extras}}</p>{{/if}}
+	{{#each origens}}<p><strong>{{nome}}:</strong> {{itens}}</p>{{/each}}
+</div>
+
+<div class="cf-bloco">
+	<h4>Escolhas</h4>
+	<label class="cf-campo">Arma:
+		<select data-campo="equip.arma">
+			<option value="">— escolha —</option>
+			{{#each grupos}}
+			<optgroup label="{{nome}}">
+				{{#each opcoes}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{nome}}</option>{{/each}}
+			</optgroup>
+			{{/each}}
+		</select>
+	</label>
+	<label class="cf-campo">Armadura:
+		<select data-campo="equip.armadura">
+			<option value="" {{#if semArmadura}}selected{{/if}}>Nenhuma</option>
+			{{#each armaduras}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{nome}}</option>{{/each}}
+		</select>
+	</label>
+	{{#if podeEscudo}}
+	<label class="cf-campo"><input type="checkbox" data-campo="equip.escudo" {{#if escudo}}checked{{/if}}> {{nomeEscudo}}</label>
+	{{/if}}
+</div>

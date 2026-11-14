@@ -1,0 +1,47 @@
+{
+  "id": "t20-construtor-ficha",
+  "title": "T20 — Construtor de Ficha",
+  "description": "Wizard passo a passo para criar personagens de Tormenta20 (nível 1): raça, atributos (pontos, rolagem ou valores fixos), classe, magias, perícias, origem, devoção, equipamento e tibares iniciais.",
+  "version": "0.1.0",
+  "authors": [
+    {
+      "name": "Paulo Lima"
+    }
+  ],
+  "url": "https://github.com/prmlimajr/t20-construtor-ficha",
+  "manifest": "https://github.com/prmlimajr/t20-construtor-ficha/releases/latest/download/module.json",
+  "download": "https://github.com/prmlimajr/t20-construtor-ficha/releases/download/0.1.0/module.zip",
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14"
+  },
+  "relationships": {
+    "systems": [
+      {
+        "id": "tormenta20",
+        "type": "system",
+        "compatibility": {
+          "minimum": "1.6.7"
+        }
+      }
+    ]
+  },
+  "esmodules": [
+    "scripts/main.js"
+  ],
+  "styles": [
+    "styles/main.css"
+  ],
+  "languages": [
+    {
+      "lang": "pt-BR",
+      "name": "Português (Brasil)",
+      "path": "lang/pt-BR.json"
+    },
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ]
+}

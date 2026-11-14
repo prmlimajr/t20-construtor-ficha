@@ -1,0 +1,9 @@
+<div class="cf-centro">
+	{{#unless rolado}}
+	<p>Todo personagem começa com <strong>4d6 tibares (T$)</strong>. A rolagem aparece no chat e só pode ser feita uma vez.</p>
+	<button type="button" class="cf-primario cf-grande" data-action="rolarDinheiro"><i class="fa-solid fa-coins"></i> Rolar 4d6</button>
+	{{else}}
+	<p class="cf-moedas"><i class="fa-solid fa-coins"></i> T$ {{dinheiro}}</p>
+	<p class="cf-nota">Esse valor irá para as moedas de prata (T$) da ficha.</p>
+	{{/unless}}
+</div>

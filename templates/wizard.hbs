@@ -1,0 +1,60 @@
+<div class="cf-layout">
+	<nav class="cf-lateral">
+		<ol class="cf-passos">
+			{{#each passos}}
+			<li>
+				<button type="button" class="cf-passo {{#if atual}}atual{{/if}} {{#if feito}}feito{{/if}}"
+					data-action="irPara" data-indice="{{indice}}" {{#unless acessivel}}disabled{{/unless}}>
+					<span class="cf-num">{{#if feito}}<i class="fa-solid fa-check"></i>{{else}}{{numero}}{{/if}}</span>
+					<span>{{titulo}}</span>
+				</button>
+			</li>
+			{{/each}}
+		</ol>
+		<div class="cf-resumo">
+			{{#each resumoLateral.linhas}}
+			<div class="cf-resumo-linha"><span>{{rotulo}}</span><strong>{{valor}}</strong></div>
+			{{/each}}
+			{{#if resumoLateral.atributos}}
+			<div class="cf-resumo-atributos">
+				{{#each resumoLateral.atributos}}
+				<div><small>{{sigla}}</small><strong>{{valor}}</strong></div>
+				{{/each}}
+			</div>
+			{{/if}}
+		</div>
+		<button type="button" class="cf-recomecar" data-action="recomecar">
+			<i class="fa-solid fa-rotate-left"></i> Recomeçar
+		</button>
+	</nav>
+
+	<section class="cf-principal">
+		<header class="cf-cabecalho">
+			<h2>{{passo.titulo}}</h2>
+			<p>{{passo.dica}}</p>
+		</header>
+
+		<div class="cf-conteudo">
+			{{> (lookup passo "template") }}
+		</div>
+
+		<footer class="cf-rodape">
+			<span class="cf-pendencia {{#unless pendencia}}ok{{/unless}}">
+				{{#if pendencia}}<i class="fa-solid fa-circle-exclamation"></i> {{pendencia}}
+				{{else}}<i class="fa-solid fa-circle-check"></i> Tudo certo neste passo.{{/if}}
+			</span>
+			<button type="button" data-action="voltar" {{#if primeiro}}disabled{{/if}}>
+				<i class="fa-solid fa-arrow-left"></i> Voltar
+			</button>
+			{{#if ultimo}}
+			<button type="button" class="cf-primario" data-action="finalizar" {{#if pendencia}}disabled{{/if}}>
+				<i class="fa-solid fa-flag-checkered"></i> Criar personagem
+			</button>
+			{{else}}
+			<button type="button" class="cf-primario" data-action="avancar" {{#if pendencia}}disabled{{/if}}>
+				Avançar <i class="fa-solid fa-arrow-right"></i>
+			</button>
+			{{/if}}
+		</footer>
+	</section>
+</div>

@@ -1,0 +1,25 @@
+{
+  "_comentario": "Deuses maiores (T20 Jogo do Ano). 'poderes' = nomes dos poderes concedidos no compêndio tormenta20.poderes. 'devotos' vazio = sem restrição; preencha {racas:[], classes:[]} com os nomes do compêndio para restringir.",
+  "divindades": [
+    { "nome": "Aharadak", "titulo": "O Deus da Tormenta", "poderes": ["Afinidade com a Tormenta", "Êxtase da Loucura", "Percepção Temporal", "Rejeição Divina"], "devotos": {} },
+    { "nome": "Allihanna", "titulo": "A Deusa da Natureza", "poderes": ["Compreender os Ermos", "Dedo Verde", "Descanso Natural", "Voz da Natureza"], "devotos": {} },
+    { "nome": "Arsenal", "titulo": "O Deus da Guerra", "poderes": ["Conjurar Arma", "Coragem Total", "Fé Guerreira", "Sangue de Ferro"], "devotos": {} },
+    { "nome": "Azgher", "titulo": "O Deus-Sol", "poderes": ["Espada Solar", "Fulgor Solar", "Habitante do Deserto", "Inimigo das Trevas"], "devotos": {} },
+    { "nome": "Hyninn", "titulo": "O Deus da Trapaça", "poderes": ["Apostar com o Trapaceiro", "Farsa do Fingidor", "Forma de Macaco", "Golpista Divino"], "devotos": {} },
+    { "nome": "Kallyadranoch", "titulo": "O Deus dos Dragões", "poderes": ["Aura de Medo", "Escamas Dracônicas", "Presas Primordiais", "Servos do Dragão"], "devotos": {} },
+    { "nome": "Khalmyr", "titulo": "O Deus da Justiça", "poderes": ["Coragem Total", "Dom da Verdade", "Espada Justiceira", "Reparar Injustiça"], "devotos": {} },
+    { "nome": "Lena", "titulo": "A Deusa da Vida", "poderes": ["Ataque Piedoso", "Aura Restauradora", "Cura Gentil", "Curandeira Perfeita"], "devotos": {} },
+    { "nome": "Lin-Wu", "titulo": "O Deus Dragão Celestial", "poderes": ["Coragem Total", "Kiai Divino", "Mente Vazia", "Tradição de Samurai"], "devotos": {} },
+    { "nome": "Marah", "titulo": "A Deusa da Paz", "poderes": ["Aura de Paz", "Dom da Esperança", "Palavras de Bondade", "Talento Artístico"], "devotos": {} },
+    { "nome": "Megalokk", "titulo": "O Deus dos Monstros", "poderes": ["Olhar Amedrontador", "Presas Primordiais", "Urro Divino", "Voz dos Monstros"], "devotos": {} },
+    { "nome": "Nimb", "titulo": "O Deus do Caos", "poderes": ["Êxtase da Loucura", "Poder Oculto", "Sorte dos Loucos", "Transmissão da Loucura"], "devotos": {} },
+    { "nome": "Oceano", "titulo": "O Deus dos Mares", "poderes": ["Anfíbio", "Arsenal das Profundezas", "Mestre dos Mares", "Sopro do Mar"], "devotos": {} },
+    { "nome": "Sszzaas", "titulo": "O Deus da Traição", "poderes": ["Astúcia da Serpente", "Familiar Ofídico", "Presas Venenosas", "Sangue Ofídico"], "devotos": {} },
+    { "nome": "Tanna-Toh", "titulo": "A Deusa do Conhecimento", "poderes": ["Conhecimento Enciclopédico", "Mente Analítica", "Pesquisa Abençoada", "Voz da Civilização"], "devotos": {} },
+    { "nome": "Tenebra", "titulo": "A Deusa das Trevas", "poderes": ["Carícia Sombria", "Manto da Penumbra", "Visão nas Trevas", "Zumbificar"], "devotos": {} },
+    { "nome": "Thwor", "titulo": "O Deus dos Goblinoides", "poderes": ["Almejar o Impossível", "Fúria Divina", "Olhar Amedrontador", "Tropas Goblinóides"], "devotos": {} },
+    { "nome": "Thyatis", "titulo": "O Deus da Ressurreição e da Profecia", "poderes": ["Ataque Piedoso", "Dom da Imortalidade", "Dom da Profecia", "Dom da Ressurreição"], "devotos": {} },
+    { "nome": "Valkaria", "titulo": "A Deusa da Ambição", "poderes": ["Almejar o Impossível", "Armas da Ambição", "Coragem Total", "Liberdade Divina"], "devotos": {} },
+    { "nome": "Wynna", "titulo": "A Deusa da Magia", "poderes": ["Bênção do Mana", "Centelha Mágica", "Escudo Mágico", "Teurgista Místico"], "devotos": {} }
+  ]
+}

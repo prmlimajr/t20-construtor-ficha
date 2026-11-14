@@ -1,0 +1,34 @@
+{
+	"T20CF": {
+		"CriarPersonagem": "Create character (wizard)",
+		"Construtor": "Builder",
+		"NovoPersonagem": "New character",
+		"SemPermissao": "You are not allowed to create actors. Ask the GM to enable \"Create New Actors\" in the permissions.",
+		"Config": {
+			"abrirAoCriar": {
+				"Nome": "Open when creating a character",
+				"Dica": "Automatically opens the builder when a new character actor is created."
+			},
+			"modoPontos": {
+				"Nome": "Attributes: allow point buy",
+				"Dica": "10 points; values from −1 to 4."
+			},
+			"modoRolagem": {
+				"Nome": "Attributes: allow rolling",
+				"Dica": "4d6 drop lowest, six times, converted by the rulebook table."
+			},
+			"modoFixo": {
+				"Nome": "Attributes: allow fixed arrays",
+				"Dica": "The player picks a ready-made array (worth 10 points) and assigns the values."
+			},
+			"origemDupla": {
+				"Nome": "Homebrew: professional + regional origin",
+				"Dica": "The character picks two origins: a professional one (core book) and a regional one (Atlas de Arton)."
+			},
+			"beneficiosOrigemDupla": {
+				"Nome": "Homebrew: benefits per origin",
+				"Dica": "How many benefits each origin grants when the dual origin option is on."
+			}
+		}
+	}
+}

@@ -1,0 +1,75 @@
+{{#if variosModos}}
+<div class="cf-bloco">
+	<h4>Modalidade</h4>
+	<div class="cf-chips">
+		{{#each modos}}
+		<button type="button" class="cf-chip {{#if selecionado}}selecionado{{/if}}" data-action="definir" data-campo="atrModo" data-valor="{{id}}">{{nome}}</button>
+		{{/each}}
+	</div>
+</div>
+{{/if}}
+
+{{#if ehPontos}}
+<div class="cf-placar {{#if estourou}}erro{{/if}}">
+	<span>Pontos gastos <strong>{{gastos}}</strong> de {{pontosTotais}}</span>
+	<span>Restantes <strong>{{restantes}}</strong></span>
+</div>
+<p class="cf-nota">Todos começam em 0. Custo: −1 devolve 1 ponto · 1 custa 1 · 2 custa 2 · 3 custa 4 · 4 custa 7.</p>
+{{/if}}
+
+{{#if ehRolagem}}
+<div class="cf-bloco">
+	{{#if rolagem}}
+	<div class="cf-rolagens">
+		{{#each rolagem.brutos}}<span class="cf-dado"><small>{{total}}</small><strong>{{valor}}</strong></span>{{/each}}
+	</div>
+	<p class="cf-nota">Soma dos atributos: {{rolagem.soma}}.
+		{{#if rolagem.podeRerrolar}}Como a soma é menor que +6, você pode rolar novamente o menor valor.{{/if}}</p>
+	{{#if rolagem.podeRerrolar}}
+	<button type="button" data-action="rerrolarMenor"><i class="fa-solid fa-dice"></i> Rolar novamente o menor</button>
+	{{/if}}
+	{{else}}
+	<p class="cf-nota">Role 4d6 seis vezes, descartando o menor dado de cada rolagem. O resultado vai para o chat e só pode ser rolado uma vez.</p>
+	<button type="button" class="cf-primario" data-action="rolarAtributos"><i class="fa-solid fa-dice"></i> Rolar atributos</button>
+	{{/if}}
+</div>
+{{/if}}
+
+{{#if ehFixo}}
+<div class="cf-bloco">
+	<h4>Arranjo</h4>
+	<div class="cf-chips">
+		{{#each arranjos}}
+		<button type="button" class="cf-chip {{#if selecionado}}selecionado{{/if}}" data-action="definir" data-campo="atrFixo.arranjo" data-tipo="numero" data-valor="{{indice}}">{{texto}}</button>
+		{{/each}}
+	</div>
+</div>
+{{/if}}
+
+{{#if modo}}
+<table class="cf-tabela-atributos">
+	<thead><tr><th>Atributo</th><th>Base</th><th>Raça</th><th>Total</th></tr></thead>
+	<tbody>
+		{{#each linhas}}
+		<tr>
+			<td>{{nome}}</td>
+			<td class="cf-base">
+				{{#if ../ehPontos}}
+				<button type="button" class="cf-mini" data-action="ajustarPonto" data-atributo="{{chave}}" data-delta="-1" {{#unless podeDiminuir}}disabled{{/unless}}>−</button>
+				<strong>{{base}}</strong>
+				<button type="button" class="cf-mini" data-action="ajustarPonto" data-atributo="{{chave}}" data-delta="1" {{#unless podeAumentar}}disabled{{/unless}}>+</button>
+				<small>({{custo}} pts)</small>
+				{{else if opcoes}}
+				<select data-campo="{{campo}}">
+					<option value="">—</option>
+					{{#each opcoes}}<option value="{{indice}}" {{#if selecionado}}selected{{/if}}>{{texto}}</option>{{/each}}
+				</select>
+				{{else}}—{{/if}}
+			</td>
+			<td>{{racial}}</td>
+			<td class="cf-total">{{total}}</td>
+		</tr>
+		{{/each}}
+	</tbody>
+</table>
+{{/if}}

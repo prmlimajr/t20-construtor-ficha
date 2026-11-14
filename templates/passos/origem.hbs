@@ -1,0 +1,81 @@
+{{#if semOrigens}}
+<p class="cf-aviso">Nenhuma origem regional cadastrada ainda (data/origens-regionais.json). Este passo pode ser pulado.</p>
+{{else}}
+<div class="cf-duas">
+	<div class="cf-lista cf-cards cf-cards-texto">
+		{{#each origens}}
+		<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}}" data-action="definir" data-campo="{{../campoNome}}" data-valor="{{nome}}">
+			<span class="cf-card-texto">
+				<span class="cf-card-nome">{{nome}}</span>
+				<span class="cf-card-sub">{{resumo}}</span>
+			</span>
+		</button>
+		{{/each}}
+	</div>
+	<aside class="cf-info">
+		{{#if info}}
+		<h3>{{info.nome}}</h3>
+
+		<div class="cf-bloco">
+			<h4>Itens</h4>
+			{{#if info.itens.length}}
+			<ul class="cf-itens">
+				{{#each info.itens}}
+				<li>
+					{{#if campo}}
+					{{#if rotulo}}{{rotulo}}: {{/if}}
+					<select data-campo="{{campo}}">
+						<option value="">— escolha —</option>
+						{{#each opcoes}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{nome}}</option>{{/each}}
+					</select>
+					{{else}}{{texto}}{{/if}}
+				</li>
+				{{/each}}
+			</ul>
+			{{else}}<p class="cf-nota">Nenhum item.</p>{{/if}}
+		</div>
+
+		{{#if info.amnesico}}
+		<div class="cf-bloco">
+			<h4>Amnésico</h4>
+			<p class="cf-nota">Você recebe Lembranças Graduais, uma perícia e um poder escolhidos pelo mestre.</p>
+			{{> "modules/t20-construtor-ficha/templates/partes/poder.hbs" info.amnesico.lembrancas}}
+			<label class="cf-campo">Perícia:
+				<select data-campo="{{info.amnesico.pericia.campo}}">
+					<option value="">—</option>
+					{{#each info.amnesico.pericia.opcoes}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{nome}}</option>{{/each}}
+				</select>
+			</label>
+			<label class="cf-campo">Poder:
+				<select data-campo="{{info.amnesico.poder.campo}}">
+					<option value="">—</option>
+					{{#each info.amnesico.poder.opcoes}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{nome}}</option>{{/each}}
+				</select>
+			</label>
+		</div>
+		{{else}}
+		<div class="cf-bloco">
+			<h4>Escolha {{info.qtdBeneficios}} benefícios <small>({{info.escolhidos}}/{{info.qtdBeneficios}})</small></h4>
+			{{#each info.beneficios}}
+			<div class="cf-beneficio {{#if selecionado}}selecionado{{/if}}">
+				<button type="button" class="cf-check" data-action="alternar" data-campo="{{../info.campoBeneficios}}" data-valor="{{id}}" data-limite="{{../info.qtdBeneficios}}" {{#if bloqueado}}disabled title="Já treinada"{{/if}}>
+					<i class="fa-{{#if selecionado}}solid fa-square-check{{else}}regular fa-square{{/if}}"></i>
+					<small>{{tipo}}</small> {{nome}}
+				</button>
+				{{#if grupo}}
+				<select data-campo="{{grupo.campo}}">
+					<option value="">— escolha o poder —</option>
+					{{#each grupo.opcoes}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{nome}}</option>{{/each}}
+				</select>
+				{{/if}}
+				{{#if info}}{{> "modules/t20-construtor-ficha/templates/partes/poder.hbs" info}}{{/if}}
+			</div>
+			{{/each}}
+		</div>
+		{{/if}}
+		{{else}}
+		<p class="cf-vazio">Selecione uma origem para ver o que ela fornece.</p>
+		{{/if}}
+	</aside>
+</div>
+{{/if}}

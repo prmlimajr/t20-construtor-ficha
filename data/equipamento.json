@@ -1,0 +1,9 @@
+{
+  "_comentario": "Equipamento inicial comum a todas as classes. Nomes resolvidos no compêndio tormenta20.equipamentos. REVISAR contra o livro.",
+  "kitBase": ["Mochila", "Saco de Dormir", "Traje de viajante"],
+  "armaduras": {
+    "leve": ["Armadura de couro"],
+    "pesada": ["Brunea"]
+  },
+  "escudo": "Escudo leve"
+}

@@ -1,0 +1,169 @@
+{
+  "_comentario": "Regras de nível 1 por classe (T20 Jogo do Ano). Chaves de perícia = CONFIG.T20.pericias; 'oficio' = qualquer Ofício. 'ou' = escolha uma perícia de cada grupo. Habilidades/escolhas referenciam poderes do compêndio tormenta20.poderes pelo nome.",
+  "Arcanista": {
+    "fixas": ["mist", "vont"],
+    "ou": [],
+    "opcoes": ["conh", "dipl", "enga", "guer", "inic", "inti", "intu", "inve", "nobr", "oficio", "perc"],
+    "numero": 2,
+    "proficiencias": [],
+    "habilidades": ["Magias (Arcanista)"],
+    "escolhas": [
+      {
+        "id": "caminho",
+        "titulo": "Caminho do Arcanista",
+        "opcoes": [
+          { "poder": "Caminho do Arcanista: Bruxo", "conjuracao": "int" },
+          { "poder": "Caminho do Arcanista: Feiticeiro", "conjuracao": "car", "subescolha": "linhagem" },
+          { "poder": "Caminho do Arcanista: Mago", "conjuracao": "int" }
+        ]
+      },
+      {
+        "id": "linhagem",
+        "titulo": "Linhagem Sobrenatural (Feiticeiro)",
+        "somenteSub": true,
+        "opcoes": [
+          { "poder": "Linhagem Dracônica Básica" },
+          { "poder": "Linhagem Feérica Básica" },
+          { "poder": "Linhagem Rubra Básica" }
+        ]
+      }
+    ],
+    "conjurador": { "tipo": "arc", "quantidade": 3, "escolas": 0, "atributo": "int" },
+    "equipamentoExtra": []
+  },
+  "Bárbaro": {
+    "fixas": ["fort", "luta"],
+    "ou": [],
+    "opcoes": ["ades", "atle", "cava", "inic", "inti", "oficio", "perc", "pont", "sobr", "vont"],
+    "numero": 4,
+    "proficiencias": ["marcial", "escudo"],
+    "habilidades": ["Fúria"],
+    "escolhas": [],
+    "equipamentoExtra": []
+  },
+  "Bardo": {
+    "fixas": ["atua", "refl"],
+    "ou": [],
+    "opcoes": ["acro", "cava", "conh", "dipl", "enga", "furt", "inic", "intu", "inve", "joga", "ladi", "luta", "mist", "nobr", "perc", "pont", "vont"],
+    "numero": 6,
+    "proficiencias": ["marcial"],
+    "habilidades": ["Inspiração", "Magias (Bardo)"],
+    "escolhas": [],
+    "conjurador": { "tipo": "arc", "quantidade": 2, "escolas": 3, "atributo": "car" },
+    "equipamentoExtra": ["Instrumento Musical"]
+  },
+  "Bucaneiro": {
+    "fixas": ["refl"],
+    "ou": [["luta", "pont"]],
+    "opcoes": ["acro", "atle", "atua", "enga", "fort", "furt", "inic", "inti", "joga", "luta", "oficio", "perc", "pilo", "pont"],
+    "numero": 4,
+    "proficiencias": ["marcial"],
+    "habilidades": ["Audácia", "Insolência"],
+    "escolhas": [],
+    "equipamentoExtra": []
+  },
+  "Caçador": {
+    "fixas": ["sobr"],
+    "ou": [["luta", "pont"]],
+    "opcoes": ["ades", "atle", "cava", "cura", "fort", "furt", "inic", "inve", "luta", "oficio", "perc", "pont", "refl"],
+    "numero": 6,
+    "proficiencias": ["marcial", "escudo"],
+    "habilidades": ["Marca da Presa", "Rastreador"],
+    "escolhas": [],
+    "equipamentoExtra": []
+  },
+  "Cavaleiro": {
+    "fixas": ["fort", "luta"],
+    "ou": [],
+    "opcoes": ["ades", "atle", "cava", "dipl", "guer", "inic", "inti", "nobr", "perc", "vont"],
+    "numero": 2,
+    "proficiencias": ["marcial", "pesada", "escudo"],
+    "habilidades": ["Baluarte", "Código de Honra"],
+    "escolhas": [],
+    "equipamentoExtra": []
+  },
+  "Clérigo": {
+    "fixas": ["reli", "vont"],
+    "ou": [],
+    "opcoes": ["conh", "cura", "dipl", "fort", "inic", "intu", "luta", "mist", "nobr", "oficio", "perc"],
+    "numero": 2,
+    "proficiencias": ["pesada", "escudo"],
+    "habilidades": ["Devoto Fiel (Clérigo)", "Magias (Clérigo)"],
+    "escolhas": [],
+    "conjurador": { "tipo": "div", "quantidade": 3, "escolas": 0, "atributo": "sab" },
+    "devocao": { "obrigatoria": true, "poderes": 2 },
+    "equipamentoExtra": ["Símbolo Sagrado"]
+  },
+  "Druida": {
+    "fixas": ["sobr", "vont"],
+    "ou": [],
+    "opcoes": ["ades", "atle", "cava", "conh", "cura", "fort", "inic", "intu", "luta", "mist", "oficio", "perc", "reli"],
+    "numero": 4,
+    "proficiencias": ["escudo"],
+    "habilidades": ["Devoto Fiel (Druida)", "Empatia Selvagem (Druida)", "Magias (Druida)"],
+    "escolhas": [],
+    "conjurador": { "tipo": "div", "quantidade": 2, "escolas": 3, "atributo": "sab" },
+    "devocao": { "obrigatoria": true, "poderes": 2, "divindades": ["Allihanna", "Megalokk", "Oceano"] },
+    "equipamentoExtra": []
+  },
+  "Guerreiro": {
+    "fixas": ["fort"],
+    "ou": [["luta", "pont"]],
+    "opcoes": ["ades", "atle", "cava", "guer", "inic", "inti", "luta", "oficio", "perc", "pont", "refl"],
+    "numero": 2,
+    "proficiencias": ["marcial", "pesada", "escudo"],
+    "habilidades": ["Ataque Especial"],
+    "escolhas": [],
+    "equipamentoExtra": []
+  },
+  "Inventor": {
+    "fixas": ["vont"],
+    "ou": [["oficio"]],
+    "opcoes": ["conh", "cura", "dipl", "fort", "inic", "inve", "luta", "mist", "oficio", "pilo", "perc", "pont"],
+    "numero": 4,
+    "proficiencias": [],
+    "habilidades": ["Engenhosidade (Inventor)", "Protótipo"],
+    "escolhas": [],
+    "equipamentoExtra": ["Instrumentos de Ofício"]
+  },
+  "Ladino": {
+    "fixas": ["ladi", "refl"],
+    "ou": [],
+    "opcoes": ["acro", "atle", "atua", "cava", "conh", "dipl", "enga", "furt", "inic", "inti", "intu", "inve", "joga", "luta", "oficio", "perc", "pilo", "pont"],
+    "numero": 8,
+    "proficiencias": [],
+    "habilidades": ["Ataque Furtivo", "Especialista"],
+    "escolhas": [],
+    "equipamentoExtra": ["Gazua"]
+  },
+  "Lutador": {
+    "fixas": ["fort", "luta"],
+    "ou": [],
+    "opcoes": ["acro", "ades", "atle", "enga", "furt", "inic", "inti", "oficio", "perc", "pont", "refl"],
+    "numero": 4,
+    "proficiencias": [],
+    "habilidades": ["Briga", "Golpe Relâmpago"],
+    "escolhas": [],
+    "equipamentoExtra": []
+  },
+  "Nobre": {
+    "fixas": ["vont"],
+    "ou": [["dipl", "inti"]],
+    "opcoes": ["ades", "atua", "cava", "conh", "dipl", "enga", "fort", "guer", "inic", "inti", "intu", "inve", "joga", "luta", "nobr", "oficio", "perc", "pont"],
+    "numero": 4,
+    "proficiencias": ["marcial", "pesada", "escudo"],
+    "habilidades": ["Autoconfiança", "Espólio", "Orgulho"],
+    "escolhas": [],
+    "equipamentoExtra": []
+  },
+  "Paladino": {
+    "fixas": ["luta", "vont"],
+    "ou": [],
+    "opcoes": ["ades", "atle", "cava", "cura", "dipl", "fort", "guer", "inic", "intu", "nobr", "perc", "reli"],
+    "numero": 2,
+    "proficiencias": ["marcial", "pesada", "escudo"],
+    "habilidades": ["Abençoado", "Código do Herói", "Golpe Divino"],
+    "escolhas": [],
+    "equipamentoExtra": []
+  }
+}

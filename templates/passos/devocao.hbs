@@ -1,0 +1,40 @@
+{{#if obrigatoria}}
+<p class="cf-aviso">{{motivo}}</p>
+{{else}}
+<div class="cf-chips cf-bloco">
+	<button type="button" class="cf-chip {{#if devoto}}selecionado{{/if}}" data-action="definir" data-campo="devoto" data-tipo="bool" data-valor="true">Sim, é devoto</button>
+	<button type="button" class="cf-chip {{#if naoDevoto}}selecionado{{/if}}" data-action="definir" data-campo="devoto" data-tipo="bool" data-valor="false">Não</button>
+</div>
+{{/if}}
+
+{{#if devoto}}
+<div class="cf-duas">
+	<div class="cf-lista cf-cards cf-cards-texto">
+		{{#each divindades}}
+		<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}}" data-action="definir" data-campo="divindade" data-valor="{{nome}}">
+			<span class="cf-card-texto">
+				<span class="cf-card-nome">{{nome}}</span>
+				<span class="cf-card-sub">{{titulo}}</span>
+			</span>
+		</button>
+		{{/each}}
+	</div>
+	<aside class="cf-info">
+		{{#if info}}
+		<h3>{{info.nome}}</h3>
+		<p class="cf-destaque">{{info.titulo}}</p>
+		<h4>Escolha {{info.qtd}} poder(es) concedido(s) <small>({{info.escolhidos}}/{{info.qtd}})</small></h4>
+		{{#each info.poderes}}
+		<div class="cf-beneficio {{#if selecionado}}selecionado{{/if}}">
+			<button type="button" class="cf-check" data-action="alternar" data-campo="poderesConcedidos" data-valor="{{nome}}" data-limite="{{../info.qtd}}">
+				<i class="fa-{{#if selecionado}}solid fa-square-check{{else}}regular fa-square{{/if}}"></i> {{nome}}
+			</button>
+			{{#if info}}{{> "modules/t20-construtor-ficha/templates/partes/poder.hbs" info}}{{/if}}
+		</div>
+		{{/each}}
+		{{else}}
+		<p class="cf-vazio">Selecione uma divindade para ver seus poderes concedidos.</p>
+		{{/if}}
+	</aside>
+</div>
+{{/if}}

@@ -1,0 +1,35 @@
+<div class="cf-duas">
+	<div class="cf-lista cf-cards">
+		{{#each racas}}
+		<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}}" data-action="definir" data-campo="raca" data-valor="{{uuid}}">
+			<img src="{{img}}" alt="">
+			<span class="cf-card-texto">
+				<span class="cf-card-nome">{{nome}}</span>
+				<span class="cf-card-sub">{{resumo}}</span>
+			</span>
+		</button>
+		{{/each}}
+	</div>
+	<aside class="cf-info">
+		{{#if info}}
+		<h3><img src="{{info.img}}" alt=""> {{info.nome}}</h3>
+		<p class="cf-destaque"><strong>Atributos:</strong> {{info.atributos}}</p>
+		{{#if info.dinamicos}}
+		<div class="cf-bloco">
+			<h4>Escolha {{info.qtdDinamicos}} atributos para receber +1</h4>
+			<div class="cf-chips">
+				{{#each info.dinamicos}}
+				<button type="button" class="cf-chip {{#if selecionado}}selecionado{{/if}}" data-action="alternar"
+					data-campo="racaAtributos" data-valor="{{chave}}" data-limite="{{../info.qtdDinamicos}}">{{nome}}</button>
+				{{/each}}
+			</div>
+		</div>
+		{{/if}}
+		{{#if info.descricao}}<div class="cf-descricao">{{{info.descricao}}}</div>{{/if}}
+		<h4>Habilidades raciais</h4>
+		{{#each info.poderes}}{{> "modules/t20-construtor-ficha/templates/partes/poder.hbs" this}}{{/each}}
+		{{else}}
+		<p class="cf-vazio">Selecione uma raça para ver o que ela fornece.</p>
+		{{/if}}
+	</aside>
+</div>

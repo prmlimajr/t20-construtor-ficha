@@ -1,0 +1,47 @@
+<div class="cf-duas">
+	<div class="cf-lista cf-cards">
+		{{#each classes}}
+		<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}}" data-action="definir" data-campo="classe" data-valor="{{uuid}}">
+			<img src="{{img}}" alt="">
+			<span class="cf-card-texto">
+				<span class="cf-card-nome">{{nome}}</span>
+				<span class="cf-card-sub">{{resumo}}</span>
+			</span>
+		</button>
+		{{/each}}
+	</div>
+	<aside class="cf-info">
+		{{#if info}}
+		<h3><img src="{{info.img}}" alt=""> {{info.nome}}</h3>
+		{{#if info.semRegras}}<p class="cf-aviso">Esta classe não tem regras cadastradas no construtor (data/classes.json).</p>{{/if}}
+		<dl class="cf-dados">
+			<dt>Pontos de vida</dt><dd>{{info.pv}}</dd>
+			<dt>Pontos de mana</dt><dd>{{info.pm}}</dd>
+			<dt>Perícias</dt><dd>{{info.pericias}}</dd>
+			<dt>Proficiências</dt><dd>{{info.proficiencias}}</dd>
+			{{#if info.magias}}<dt>Magias</dt><dd>{{info.magias}}</dd>{{/if}}
+			{{#if info.devocao}}<dt>Devoção</dt><dd>{{info.devocao}}</dd>{{/if}}
+		</dl>
+
+		{{#each info.escolhas}}
+		<div class="cf-bloco">
+			<h4>{{titulo}}</h4>
+			<div class="cf-chips">
+				{{#each opcoes}}
+				<button type="button" class="cf-chip {{#if selecionado}}selecionado{{/if}}" data-action="definir" data-campo="{{../campo}}" data-valor="{{valor}}">{{nome}}</button>
+				{{/each}}
+			</div>
+			{{#each opcoes}}{{#if info}}{{> "modules/t20-construtor-ficha/templates/partes/poder.hbs" info aberto=true}}{{/if}}{{/each}}
+		</div>
+		{{/each}}
+
+		<h4>Habilidades de 1º nível</h4>
+		{{#each info.habilidades}}{{> "modules/t20-construtor-ficha/templates/partes/poder.hbs" this}}{{/each}}
+		{{#if info.descricao}}
+		<details class="cf-poder"><summary><span>Descrição da classe</span></summary><div class="cf-descricao">{{{info.descricao}}}</div></details>
+		{{/if}}
+		{{else}}
+		<p class="cf-vazio">Selecione uma classe para ver o que ela é capaz de fazer.</p>
+		{{/if}}
+	</aside>
+</div>
