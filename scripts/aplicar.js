@@ -162,8 +162,11 @@ export async function aplicarNaFicha(actor, plano, dados) {
 		await criados[indice]?.update({ "system.upgrades.improvement": [uuid] });
 	}
 
-	// PV e PM atuais = máximos, que o sistema calcula com raça, classe, atributos e poderes já na ficha
-	actor.prepareData?.();
+	// PV e PM atuais = máximos, que o sistema calcula com raça, classe, atributos e poderes já na ficha.
+	// reset() recarrega os dados do zero antes de recalcular. NÃO usar prepareData(): ele aplica os
+	// efeitos de novo por cima dos já aplicados, e bônus que se acumulam em lista (ex.: +3 PM do
+	// Coração Heroico em pm.bonus.total) entram em dobro na leitura.
+	actor.reset?.();
 	const pv = actor.system?.attributes?.pv?.max;
 	const pm = actor.system?.attributes?.pm?.max;
 	const recursos = {};
