@@ -673,3 +673,42 @@
 .t20-construtor .cf-preco small { font-size: 11px; color: var(--cf-texto-suave); font-weight: normal; }
 .t20-construtor .cf-qtd { min-width: 20px; text-align: center; }
 .t20-construtor button.cf-comprar { width: auto; flex: none; }
+
+/* ---------- Escolas de magia ---------- */
+.t20-construtor .cf-escolas {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+	gap: 8px;
+}
+.t20-construtor button.cf-escola {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	justify-content: flex-start;
+	gap: 4px;
+	height: auto;
+	padding: 8px 10px;
+	text-align: left;
+	line-height: 1.3;
+	background: var(--cf-fundo-card);
+	border: 1px solid var(--cf-borda);
+	border-radius: 6px;
+}
+.t20-construtor button.cf-escola:hover { border-color: var(--cf-ouro); }
+.t20-construtor button.cf-escola.selecionado { border-color: var(--cf-vermelho); background: var(--cf-vermelho-claro); }
+.t20-construtor .cf-escola-topo { display: flex; align-items: center; gap: 6px; }
+.t20-construtor .cf-escola-topo .fa-square-check { color: var(--cf-ouro); }
+.t20-construtor .cf-escola-topo small { color: var(--cf-texto-suave); }
+.t20-construtor .cf-escola-qtd { margin-left: auto; font-size: 11px; color: var(--cf-texto-suave); white-space: nowrap; }
+.t20-construtor .cf-escola-desc { font-size: 12px; white-space: normal; }
+
+/* Textos de ambientação (origens e deuses) */
+.t20-construtor .cf-lore { font-style: italic; margin: 4px 0 8px; line-height: 1.4; }
+.t20-construtor .cf-obrigacoes {
+	margin: 0 0 8px;
+	padding: 6px 10px;
+	border-left: 3px solid var(--cf-vermelho);
+	background: var(--cf-vermelho-claro);
+	line-height: 1.4;
+}
+.t20-construtor .cf-dados dd { line-height: 1.35; }

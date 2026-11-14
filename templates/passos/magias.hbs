@@ -1,9 +1,17 @@
 {{#if escolas}}
 <div class="cf-bloco">
 	<h4>Escolha {{qtdEscolas}} escolas de magia</h4>
-	<div class="cf-chips">
+	<div class="cf-escolas">
 		{{#each escolas}}
-		<button type="button" class="cf-chip {{#if selecionado}}selecionado{{/if}}" data-action="alternar" data-campo="magiasEscolas" data-valor="{{chave}}" data-limite="{{../qtdEscolas}}">{{nome}}</button>
+		<button type="button" class="cf-escola {{#if selecionado}}selecionado{{/if}}" data-action="alternar" data-campo="magiasEscolas" data-valor="{{chave}}" data-limite="{{../qtdEscolas}}">
+			<span class="cf-escola-topo">
+				<i class="fa-{{#if selecionado}}solid fa-square-check{{else}}regular fa-square{{/if}}"></i>
+				<strong>{{nome}}</strong>
+				{{#if sigla}}<small>({{sigla}})</small>{{/if}}
+				<span class="cf-escola-qtd">{{qtdMagias}} magias</span>
+			</span>
+			{{#if descricao}}<span class="cf-escola-desc">{{descricao}}</span>{{/if}}
+		</button>
 		{{/each}}
 	</div>
 </div>
@@ -30,6 +38,7 @@
 		{{#if foco}}
 		<h3><img src="{{foco.img}}" alt=""> {{foco.nome}}</h3>
 		<p class="cf-destaque">{{foco.escola}} · 1º círculo</p>
+		{{#if foco.escolaDescricao}}<p class="cf-nota">{{foco.escolaDescricao}}</p>{{/if}}
 		<button type="button" class="{{#if foco.selecionado}}{{else}}cf-primario{{/if}}" data-action="alternar" data-campo="magias" data-valor="{{foco.uuid}}" data-limite="{{qtd}}">
 			{{#if foco.selecionado}}Remover{{else}}Escolher esta magia{{/if}}
 		</button>

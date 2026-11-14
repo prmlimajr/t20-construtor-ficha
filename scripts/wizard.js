@@ -50,8 +50,26 @@ function estadoInicial(actor) {
 	};
 }
 
+/**
+ * Remove @Embed/@UUID que apontam para compêndios não instalados. Ex.: as descrições de raça do
+ * sistema incorporam páginas de "tormenta20-dev-env", compêndio que não é distribuído.
+ */
+function limparReferenciasIndisponiveis(html) {
+	return String(html ?? "")
+		.replace(/@(embed|uuid)\[([^\]]+)\](\{[^}]*\})?/gi, (trecho, tipo, uuid, rotulo) => {
+			const m = /^Compendium\.([^.]+)\.([^.]+)\./.exec(uuid);
+			if (!m || game.packs.get(`${m[1]}.${m[2]}`)) return trecho;
+			// link quebrado vira só o texto do rótulo; embed quebrado some
+			return tipo.toLowerCase() === "uuid" && rotulo ? rotulo.slice(1, -1) : "";
+		})
+		.replace(/<p[^>]*>\s*<\/p>/gi, "")
+		.trim();
+}
+
 async function enriquecer(html) {
-	return foundry.applications.ux.TextEditor.implementation.enrichHTML(html ?? "", { async: true });
+	const limpo = limparReferenciasIndisponiveis(html);
+	if (!limpo) return "";
+	return foundry.applications.ux.TextEditor.implementation.enrichHTML(limpo, { async: true });
 }
 
 function rotuloPericia(k) {
@@ -79,6 +97,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		this.focoMagia = "";
 		this.focoEquip = "";
 		this.focoPericia = "";
+		this.focoDivindade = "";
 		/** Slideout aberto: { campo, lista, titulo, foco, animar, filtro } */
 		this.slideout = null;
 		/** Dado escolhido por clique (alternativa ao arrastar). */
@@ -117,6 +136,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			focarSlideout: ConstrutorFicha.#focarSlideout,
 			confirmarSlideout: ConstrutorFicha.#confirmarSlideout,
 			focarPericia: ConstrutorFicha.#focarPericia,
+			focarDivindade: ConstrutorFicha.#focarDivindade,
 			escolherEquip: ConstrutorFicha.#escolherEquip,
 			rolarDinheiro: ConstrutorFicha.#rolarDinheiro,
 			finalizar: ConstrutorFicha.#finalizar,
@@ -238,17 +258,28 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		return out;
 	}
 
-	divindadesDisponiveis() {
+	/**
+	 * Motivo pelo qual o personagem não pode ser devoto da divindade (null = pode).
+	 * Regra do livro: a raça OU a classe precisa estar entre os devotos; humanos e clérigos podem
+	 * seguir qualquer divindade. Druidas só seguem as divindades listadas em classes.json.
+	 */
+	impedimentoDivindade(d) {
 		const r = this.regrasClasse;
 		const raca = this.raca?.name;
 		const classe = this.classe?.name;
-		return this.dados.divindades.filter((d) => {
-			if (r?.devocao?.divindades && !r.devocao.divindades.includes(d.nome)) return false;
-			const dev = d.devotos ?? {};
-			if (dev.racas?.length && raca && !dev.racas.includes(raca)) return false;
-			if (dev.classes?.length && classe && !dev.classes.includes(classe)) return false;
-			return true;
-		});
+		if (r?.devocao?.divindades && !r.devocao.divindades.includes(d.nome)) {
+			return `${classe}s só podem ser devotos de ${r.devocao.divindades.join(", ")}.`;
+		}
+		if (raca === "Humano" || classe === "Clérigo") return null;
+		const dev = d.devotos ?? {};
+		const temLista = dev.racas?.length || dev.classes?.length;
+		if (!temLista) return null;
+		if (dev.racas?.includes(raca) || dev.classes?.includes(classe)) return null;
+		return "Sua raça e sua classe não estão entre os devotos desta divindade.";
+	}
+
+	divindadesDisponiveis() {
+		return this.dados.divindades.filter((d) => !this.impedimentoDivindade(d));
 	}
 
 	poderesConcedidosPermitidos() {
@@ -522,7 +553,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	async #ctxDinheiro() {
 		const e = this.estado;
 		const fmt = ConstrutorFicha.formatarTibares;
-		const ctx = { dinheiro: e.dinheiro, rolado: e.dinheiro !== null };
+		const extras = this.origensAtivas().filter((o) => o.def.tibares).map((o) => `${o.def.tibares} (${o.def.nome})`);
+		const ctx = { dinheiro: e.dinheiro, rolado: e.dinheiro !== null, extras: extras.join(" + ") };
 		if (!ctx.rolado) return ctx;
 		const saldo = this.saldo;
 		const presentes = new Set(this.dados.loja.map((x) => x.categoria));
@@ -946,8 +978,15 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const e = this.estado;
 		const c = this.conjurador;
 		const tipos = c.tipo === "arc" ? ["arc", "uni"] : ["div", "uni"];
+		const tiposMagia = c.tipo === "arc" ? ["arc", "uni"] : ["div", "uni"];
 		const escolas = Object.keys(CONFIG.T20?.spellSchools ?? {}).map((k) => ({
-			chave: k, nome: rotuloEscola(k), selecionado: e.magiasEscolas.includes(k)
+			chave: k,
+			nome: rotuloEscola(k),
+			sigla: this.dados.escolas[k]?.sigla ?? "",
+			descricao: this.dados.escolas[k]?.descricao ?? "",
+			// quantas magias de 1º círculo da classe existem nessa escola
+			qtdMagias: this.dados.magias.filter((m) => m.system.circulo === 1 && m.system.escola === k && tiposMagia.includes(m.system.tipo)).length,
+			selecionado: e.magiasEscolas.includes(k)
 		}));
 		const filtrarEscola = c.escolas > 0;
 		const disponiveis = this.dados.magias.filter((m) =>
@@ -973,6 +1012,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				uuid: foco.uuid,
 				nome: foco.name, img: foco.img,
 				escola: rotuloEscola(foco.system.escola),
+				escolaDescricao: this.dados.escolas[foco.system.escola]?.descricao ?? "",
 				selecionado: e.magias.includes(foco.uuid),
 				stats: this.#statsMagia(foco),
 				descricao: await this.#html(foco.uuid, foco.system.description?.value),
@@ -1189,6 +1229,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			}
 			info = {
 				nome: def.nome,
+				descricao: def.descricao ?? "",
+				tibares: def.tibares ?? "",
 				beneficios,
 				qtdBeneficios: this.beneficiosPorOrigem,
 				escolhidos: est.beneficios.length,
@@ -1211,27 +1253,40 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		if (typeof it === "string") return { texto: it };
 		if (it.nome) return { texto: it.qtd ? `${it.nome} (×${it.qtd})` : it.nome };
 		if (it.texto) return { texto: it.texto };
-		if (it.escolha) {
-			return {
-				campo: `${base}.itens.${i}`,
-				rotulo: it.escolha.join(" ou "),
-				lista: `nomes:${it.escolha.join("|")}`,
-				titulo: `Escolha: ${it.escolha.join(" ou ")}`,
-				escolhido: est.itens[i] ?? ""
-			};
-		}
-		if (it.arma) {
-			const nomesProf = { simples: "simples", marcial: "marcial", exotica: "exótica", fogo: "de fogo" };
-			const rotulo = `Arma ${it.arma.map((p) => nomesProf[p] ?? p).join(" ou ")}`;
+		if (it.escolha || it.arma) {
+			const partes = [...(it.escolha ?? [])];
+			if (it.arma) partes.push(this.#rotuloArma(it));
+			const rotulo = partes.join(" ou ");
 			return {
 				campo: `${base}.itens.${i}`,
 				rotulo,
-				lista: `arma:${it.arma.join(",")}`,
-				titulo: `Escolha: ${rotulo.toLowerCase()}`,
+				lista: `nomes:${this.#opcoesItemOrigem(it).join("|")}`,
+				titulo: `Escolha: ${rotulo}`,
 				escolhido: est.itens[i] ?? ""
 			};
 		}
 		return { texto: "?" };
+	}
+
+	#rotuloArma(it) {
+		const nomesProf = { simples: "simples", marcial: "marcial", exotica: "exótica", fogo: "de fogo" };
+		const prop = { distancia: " de ataque à distância", corpo: " corpo a corpo" }[it.proposito] ?? "";
+		return `uma arma ${it.arma.map((p) => nomesProf[p] ?? p).join(" ou ")}${prop}`;
+	}
+
+	/** Nomes possíveis para um item de origem com escolha e/ou arma. */
+	#opcoesItemOrigem(it) {
+		const nomes = [...(it.escolha ?? [])];
+		if (it.arma) {
+			const ok = (a) => {
+				const prop = String(a.system.proposito ?? "");
+				if (it.proposito === "distancia") return /disparo|arremesso/.test(prop);
+				if (it.proposito === "corpo") return prop.includes("corpo");
+				return true;
+			};
+			nomes.push(...this.dados.armas.filter((a) => it.arma.includes(a.system.proficiencia) && ok(a)).map((a) => a.name));
+		}
+		return nomes;
 	}
 
 	async #ctxDevocao() {
@@ -1239,11 +1294,14 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const r = this.regrasClasse;
 		const obrig = !!r?.devocao?.obrigatoria;
 		const devoto = obrig || e.devoto === true;
-		const divindades = this.divindadesDisponiveis().map((d) => ({
-			nome: d.nome, titulo: d.titulo, selecionado: d.nome === e.divindade
-		}));
+		const divindades = this.dados.divindades.map((d) => {
+			const impedimento = this.impedimentoDivindade(d);
+			return { nome: d.nome, titulo: d.titulo, selecionado: d.nome === e.divindade, bloqueado: !!impedimento, impedimento };
+		});
+		// mostra primeiro as permitidas
+		divindades.sort((a, b) => Number(a.bloqueado) - Number(b.bloqueado));
 		let info = null;
-		const div = this.dados.divindades.find((d) => d.nome === e.divindade);
+		const div = this.dados.divindades.find((d) => d.nome === (this.focoDivindade || e.divindade));
 		if (devoto && div) {
 			const poderes = [];
 			for (const nome of div.poderes) {
@@ -1254,7 +1312,15 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 					info: await this.#infoPoder(p)
 				});
 			}
-			info = { nome: div.nome, titulo: div.titulo, poderes, qtd: this.poderesConcedidosPermitidos(), escolhidos: e.poderesConcedidos.length };
+			const impedimento = this.impedimentoDivindade(div);
+			info = {
+				nome: div.nome, titulo: div.titulo,
+				descricao: div.descricao, crencas: div.crencas, simbolo: div.simbolo,
+				energia: div.energia, arma: div.arma, devotosTexto: div.devotosTexto, obrigacoes: div.obrigacoes,
+				escolhida: div.nome === e.divindade,
+				impedimento,
+				poderes, qtd: this.poderesConcedidosPermitidos(), escolhidos: e.poderesConcedidos.length
+			};
 		}
 		return {
 			obrigatoria: obrig,
@@ -1468,6 +1534,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	/** Define um campo do estado aplicando as invalidações necessárias. */
 	#definirCampo(campo, valor) {
 		const e = this.estado;
+		if (campo === "divindade") this.focoDivindade = "";
 		const anterior = foundry.utils.getProperty(e, campo);
 		foundry.utils.setProperty(e, campo, valor);
 		if (anterior !== valor) {
@@ -1677,6 +1744,11 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		this.#mudou();
 	}
 
+	static #focarDivindade(event, target) {
+		this.focoDivindade = target.dataset.valor;
+		this.render();
+	}
+
 	static #focarPericia(event, target) {
 		this.focoPericia = target.dataset.valor;
 		this.render();
@@ -1714,10 +1786,11 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	static async #rolarDinheiro() {
 		if (this.estado.dinheiro !== null) return;
-		const roll = await new Roll("4d6").evaluate();
+		const extras = this.origensAtivas().map((o) => o.def.tibares).filter(Boolean);
+		const roll = await new Roll(["4d6", ...extras].join(" + ")).evaluate();
 		await roll.toMessage({
 			speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-			flavor: "Construtor de Personagem — tibares iniciais (T$)"
+			flavor: `Construtor de Personagem — tibares iniciais (T$)${extras.length ? ` (4d6 + ${extras.join(" + ")} da origem)` : ""}`
 		});
 		this.estado.dinheiro = roll.total;
 		this.#mudou();

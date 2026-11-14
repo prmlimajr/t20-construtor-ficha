@@ -15,6 +15,7 @@
 	<aside class="cf-info">
 		{{#if info}}
 		<h3>{{info.nome}}</h3>
+		{{#if info.descricao}}<p class="cf-lore">{{info.descricao}}</p>{{/if}}
 
 		<div class="cf-bloco">
 			<h4>Itens</h4>
@@ -30,6 +31,7 @@
 				{{/each}}
 			</ul>
 			{{else}}<p class="cf-nota">Nenhum item.</p>{{/if}}
+			{{#if info.tibares}}<p class="cf-nota"><i class="fa-solid fa-coins"></i> + T$ {{info.tibares}}, rolados junto com os tibares iniciais.</p>{{/if}}
 		</div>
 
 		{{#if info.amnesico}}

@@ -1,0 +1,37 @@
+{
+  "_comentario": "Escolas de magia (Tormenta20 — Jogo do Ano, p. 172). Chaves = CONFIG.T20.spellSchools.",
+  "escolas": {
+    "abj": {
+      "sigla": "Abjur",
+      "descricao": "Magias de proteção, que anulam outras magias ou expulsam criaturas invocadas de volta a seus planos de existência nativos."
+    },
+    "adv": {
+      "sigla": "Adiv",
+      "descricao": "Magias de detecção ou que vasculham passado e futuro."
+    },
+    "con": {
+      "sigla": "Conv",
+      "descricao": "Magias que transportam matéria. Esse transporte é realizado através do Éter Entre Mundos; por isso, qualquer efeito que bloqueia viagens etéreas também impede convocações. Criaturas convocadas surgem em uma superfície desocupada e, quando destruídas, desaparecem e são devolvidas a seus mundos nativos."
+    },
+    "enc": {
+      "sigla": "Encan",
+      "descricao": "Magias que afetam a mente. Todas as magias de encantamento são efeitos mentais."
+    },
+    "evo": {
+      "sigla": "Evoc",
+      "descricao": "Magias que manipulam ou geram energia pura. Ácido, eletricidade, fogo e frio são as energias geradas pelos quatro elementos, respectivamente terra, ar, fogo e água. Magias de fogo funcionam sob a água, mas criam vapor quente em vez de chamas abertas. Luz é energia positiva, cuja manifestação é capaz de iluminar, curar e causar dano de luz. Por fim, essência é energia mágica pura."
+    },
+    "ilu": {
+      "sigla": "Ilusão",
+      "descricao": "Essas magias fazem outros perceberem algo que não existe ou ignorarem algo real. Todas as magias de ilusão são efeitos mentais."
+    },
+    "nec": {
+      "sigla": "Necro",
+      "descricao": "Magias que canalizam energia negativa, criando escuridão, drenando a força vital de criaturas vivas e criando mortos-vivos. Magias de necromancia são efeitos de trevas."
+    },
+    "tra": {
+      "sigla": "Trans",
+      "descricao": "Magias que alteram as propriedades físicas de uma criatura ou objeto."
+    }
+  }
+}

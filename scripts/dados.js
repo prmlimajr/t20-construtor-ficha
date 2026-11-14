@@ -53,7 +53,7 @@ function porNome(docs) {
 export async function carregarDados() {
 	if (cache) return cache;
 
-	const [racas, classes, poderes, magias, regrasClasses, origens, regionais, divindades, equipamento] =
+	const [racas, classes, poderes, magias, regrasClasses, origens, regionais, divindades, equipamento, escolas] =
 		await Promise.all([
 			documentos("racas"),
 			documentos("classes"),
@@ -63,7 +63,8 @@ export async function carregarDados() {
 			lerJson("origens.json"),
 			lerJson("origens-regionais.json"),
 			lerJson("divindades.json"),
-			lerJson("equipamento.json")
+			lerJson("equipamento.json"),
+			lerJson("escolas.json")
 		]);
 
 	const packEquip = game.packs.get(PACKS.equipamentos);
@@ -78,7 +79,13 @@ export async function carregarDados() {
 		poderes,
 		poderesPorNome: porNome(poderes),
 		equipPorNome: new Map([...indiceEquip].map((e) => [normalizar(e.name), e])),
-		armas: [...indiceEquip].filter((e) => e.type === "arma" && e.system?.proficiencia).sort(ordenar),
+		// só armas "de verdade": pasta Armas, com proficiência (exclui Ataque desarmado,
+		// itens de origem como Rolo de macarrão e esotéricos como Cajado Arcano)
+		armas: [...indiceEquip]
+			.filter((e) => e.type === "arma" && e.system?.proficiencia
+				&& normalizar(e.name) !== "ataque desarmado"
+				&& pastaRaiz(e, packEquip) === "Armas")
+			.sort(ordenar),
 		packEquip,
 		loja: [...indiceEquip]
 			.map((d) => ({ doc: d, categoria: pastaRaiz(d, packEquip) }))
@@ -89,7 +96,8 @@ export async function carregarDados() {
 		origens: origens.origens ?? [],
 		origensRegionais: regionais.origens ?? [],
 		divindades: divindades.divindades ?? [],
-		equipamento
+		equipamento,
+		escolas: escolas.escolas ?? {}
 	};
 	verificarReferencias(cache);
 	return cache;

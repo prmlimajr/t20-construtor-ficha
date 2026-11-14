@@ -11,7 +11,11 @@
 <div class="cf-duas">
 	<div class="cf-lista cf-cards cf-cards-texto">
 		{{#each divindades}}
+		{{#if bloqueado}}
+		<button type="button" class="cf-card bloqueado" data-action="focarDivindade" data-valor="{{nome}}" title="{{impedimento}}">
+		{{else}}
 		<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}}" data-action="definir" data-campo="divindade" data-valor="{{nome}}">
+		{{/if}}
 			<span class="cf-card-texto">
 				<span class="cf-card-nome">{{nome}}</span>
 				<span class="cf-card-sub">{{titulo}}</span>
@@ -23,17 +27,37 @@
 		{{#if info}}
 		<h3>{{info.nome}}</h3>
 		<p class="cf-destaque">{{info.titulo}}</p>
+		{{#if info.impedimento}}<p class="cf-aviso">{{info.impedimento}}</p>{{/if}}
+		{{#if info.descricao}}<p class="cf-lore">{{info.descricao}}</p>{{/if}}
+		<dl class="cf-dados">
+			{{#if info.crencas}}<dt>Crenças e objetivos</dt><dd>{{info.crencas}}</dd>{{/if}}
+			{{#if info.simbolo}}<dt>Símbolo sagrado</dt><dd>{{info.simbolo}}</dd>{{/if}}
+			{{#if info.energia}}<dt>Canalizar energia</dt><dd>{{info.energia}}</dd>{{/if}}
+			{{#if info.arma}}<dt>Arma preferida</dt><dd>{{info.arma}}</dd>{{/if}}
+			{{#if info.devotosTexto}}<dt>Devotos</dt><dd>{{info.devotosTexto}}</dd>{{/if}}
+		</dl>
+		{{#if info.obrigacoes}}
+		<h4>Obrigações e restrições</h4>
+		<p class="cf-obrigacoes">{{info.obrigacoes}}</p>
+		{{/if}}
+
+		{{#if info.escolhida}}
 		<h4>Escolha {{info.qtd}} poder(es) concedido(s) <small>({{info.escolhidos}}/{{info.qtd}})</small></h4>
+		{{else}}
+		<h4>Poderes concedidos</h4>
+		{{/if}}
 		{{#each info.poderes}}
 		<div class="cf-beneficio {{#if selecionado}}selecionado{{/if}}">
+			{{#if ../info.escolhida}}
 			<button type="button" class="cf-check" data-action="alternar" data-campo="poderesConcedidos" data-valor="{{nome}}" data-limite="{{../info.qtd}}">
 				<i class="fa-{{#if selecionado}}solid fa-square-check{{else}}regular fa-square{{/if}}"></i> {{nome}}
 			</button>
+			{{/if}}
 			{{#if info}}{{> "modules/t20-construtor-ficha/templates/partes/poder.hbs" info}}{{/if}}
 		</div>
 		{{/each}}
 		{{else}}
-		<p class="cf-vazio">Selecione uma divindade para ver seus poderes concedidos.</p>
+		<p class="cf-vazio">Selecione uma divindade para ver seus dogmas e poderes concedidos.</p>
 		{{/if}}
 	</aside>
 </div>

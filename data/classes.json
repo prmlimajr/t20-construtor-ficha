@@ -164,6 +164,7 @@
     "proficiencias": ["marcial", "pesada", "escudo"],
     "habilidades": ["Abençoado", "Código do Herói", "Golpe Divino"],
     "escolhas": [],
+    "devocao": { "obrigatoria": true, "poderes": 1 },
     "equipamentoExtra": []
   }
 }
