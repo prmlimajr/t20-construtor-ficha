@@ -765,3 +765,8 @@
 	filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
 }
 
+
+/* Magias: vagas para escolher */
+.t20-construtor .cf-card.cf-vaga { border-style: dashed; border-color: var(--cf-ouro); background: transparent; }
+.t20-construtor .cf-card.cf-vaga:hover { background: var(--cf-ouro-claro); }
+.t20-construtor .cf-info h3 small { font-size: 14px; -webkit-text-stroke: 0; font-family: var(--font-primary); }

@@ -91,7 +91,7 @@
     "habilidades": ["Devoto Fiel (Clérigo)", "Magias (Clérigo)"],
     "escolhas": [],
     "conjurador": { "tipo": "div", "quantidade": 3, "escolas": 0, "atributo": "sab" },
-    "devocao": { "obrigatoria": true, "poderes": 2 },
+    "devocao": { "obrigatoria": true, "poderes": 2, "alternativa": { "nome": "Devoto do Panteão", "descricao": "Serve ao Panteão como um todo, sem ser devoto de uma divindade específica. Não recebe poderes concedidos." } },
     "equipamentoExtra": ["Símbolo Sagrado"]
   },
   "Druida": {

@@ -14,7 +14,7 @@ const TPL = `modules/${MODULE_ID}/templates`;
 
 export const TEMPLATES_PASSOS = [
 	"raca", "atributos", "classe", "magias", "pericias", "origem", "devocao", "equipamento", "dinheiro", "revisao"
-].map((p) => `${TPL}/passos/${p}.hbs`).concat(`${TPL}/partes/poder.hbs`, `${TPL}/partes/abrir.hbs`);
+].map((p) => `${TPL}/passos/${p}.hbs`).concat(`${TPL}/partes/poder.hbs`, `${TPL}/partes/abrir.hbs`, `${TPL}/partes/aprimoramentos.hbs`);
 
 const ATRIBUTOS_DINAMICOS = 3;
 
@@ -98,6 +98,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		this.focoEquip = "";
 		this.focoPericia = "";
 		this.focoDivindade = "";
+		this.focoEscola = "";
 		/** Slideout aberto: { campo, lista, titulo, foco, animar, filtro } */
 		this.slideout = null;
 		/** Dado escolhido por clique (alternativa ao arrastar). */
@@ -137,6 +138,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			confirmarSlideout: ConstrutorFicha.#confirmarSlideout,
 			focarPericia: ConstrutorFicha.#focarPericia,
 			focarDivindade: ConstrutorFicha.#focarDivindade,
+			focarEscola: ConstrutorFicha.#focarEscola,
 			escolherEquip: ConstrutorFicha.#escolherEquip,
 			rolarDinheiro: ConstrutorFicha.#rolarDinheiro,
 			finalizar: ConstrutorFicha.#finalizar,
@@ -716,6 +718,11 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				return arg.split("|").map(equip);
 			case "grupo":
 				return poderesDoGrupo(this.dados, arg).map(poderCard);
+			case "magia":
+				return this.magiasDisponiveis().map((m) => ({
+					valor: m.uuid, nome: m.name, img: m.img,
+					sub: `${rotuloEscola(m.system.escola)} · ${m.system.tipo === "uni" ? "Universal" : (m.system.tipo === "arc" ? "Arcana" : "Divina")}`
+				}));
 			case "poderGeral":
 				return this.dados.poderes.filter((p) => p.system.tipo === "geral")
 					.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")).map(poderCard);
@@ -736,6 +743,17 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	/** Detalhes do item em foco no slideout. */
 	async #infoSlideout(lista, valor) {
 		const tipo = lista.split(":")[0];
+		if (tipo === "magia") {
+			const m = this.dados.magias.find((x) => x.uuid === valor);
+			if (!m) return null;
+			const i = await this.#infoMagia(m);
+			return {
+				nome: i.nome, img: i.img,
+				stats: [{ rotulo: "Escola", valor: `${i.escola} · ${i.tipo}` }, ...i.stats],
+				descricao: i.descricao,
+				aprimoramentos: i.aprimoramentos
+			};
+		}
 		if (tipo === "arma" || tipo === "nomes") {
 			const f = this.#fichaEquip(valor);
 			return {
@@ -770,15 +788,16 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const so = this.slideout;
 		if (!so) return null;
 		const atual = foundry.utils.getProperty(this.estado, so.campo) ?? "";
+		const ehLista = Array.isArray(atual);
 		const cards = this.#opcoesSlideout(so.lista).map((c) => ({
 			...c,
-			selecionado: c.valor === atual,
+			selecionado: ehLista ? atual.includes(c.valor) : c.valor === atual,
 			foco: c.valor === so.foco
 		}));
 		const info = so.foco ? await this.#infoSlideout(so.lista, so.foco) : null;
 		if (info) {
 			info.valor = so.foco;
-			info.jaEscolhido = so.foco === atual;
+			info.jaEscolhido = ehLista ? atual.includes(so.foco) : so.foco === atual;
 		}
 		const animar = so.animar;
 		so.animar = false;
@@ -998,51 +1017,96 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		return { classes, info };
 	}
 
+	/** Magias de 1º círculo que a classe pode aprender (respeitando as escolas escolhidas). */
+	magiasDisponiveis() {
+		const c = this.conjurador;
+		if (!c) return [];
+		const tipos = c.tipo === "arc" ? ["arc", "uni"] : ["div", "uni"];
+		const escolas = this.estado.magiasEscolas;
+		return this.dados.magias.filter((m) =>
+			m.system.circulo === 1
+			&& tipos.includes(m.system.tipo)
+			&& (!c.escolas || escolas.includes(m.system.escola)));
+	}
+
+	/** Painel completo de uma magia (ficha, descrição, aprimoramentos). */
+	async #infoMagia(m) {
+		return {
+			uuid: m.uuid,
+			nome: m.name, img: m.img,
+			escola: rotuloEscola(m.system.escola),
+			tipo: m.system.tipo === "uni" ? "Universal" : (m.system.tipo === "arc" ? "Arcana" : "Divina"),
+			escolaDescricao: this.dados.escolas[m.system.escola]?.descricao ?? "",
+			selecionado: this.estado.magias.includes(m.uuid),
+			stats: this.#statsMagia(m),
+			descricao: await this.#html(m.uuid, m.system.description?.value),
+			aprimoramentos: await this.#aprimoramentos(m)
+		};
+	}
+
 	async #ctxMagias() {
 		const e = this.estado;
 		const c = this.conjurador;
 		const tipos = c.tipo === "arc" ? ["arc", "uni"] : ["div", "uni"];
-		const tiposMagia = c.tipo === "arc" ? ["arc", "uni"] : ["div", "uni"];
-		const escolas = Object.keys(CONFIG.T20?.spellSchools ?? {}).map((k) => ({
-			chave: k,
-			nome: rotuloEscola(k),
-			sigla: this.dados.escolas[k]?.sigla ?? "",
-			descricao: this.dados.escolas[k]?.descricao ?? "",
-			// quantas magias de 1º círculo da classe existem nessa escola
-			qtdMagias: this.dados.magias.filter((m) => m.system.circulo === 1 && m.system.escola === k && tiposMagia.includes(m.system.tipo)).length,
-			selecionado: e.magiasEscolas.includes(k)
-		}));
-		const filtrarEscola = c.escolas > 0;
-		const disponiveis = this.dados.magias.filter((m) =>
-			m.system.circulo === 1
-			&& tipos.includes(m.system.tipo)
-			&& (!filtrarEscola || e.magiasEscolas.includes(m.system.escola)));
-		const magias = disponiveis.map((m) => ({
+		const daClasse = (k) => this.dados.magias.filter((m) => m.system.circulo === 1 && m.system.escola === k && tipos.includes(m.system.tipo));
+		const cheioEscolas = e.magiasEscolas.length >= c.escolas;
+
+		const escolas = c.escolas ? Object.keys(CONFIG.T20?.spellSchools ?? {}).map((k) => {
+			const qtd = daClasse(k).length;
+			return {
+				chave: k,
+				nome: rotuloEscola(k),
+				sigla: this.dados.escolas[k]?.sigla ?? "",
+				qtdMagias: qtd,
+				vazia: qtd === 0,
+				selecionado: e.magiasEscolas.includes(k),
+				foco: k === this.focoEscola
+			};
+		}) : null;
+
+		const escolhidas = this.dados.magias.filter((m) => e.magias.includes(m.uuid)).map((m) => ({
 			uuid: m.uuid, nome: m.name, img: m.img,
-			escola: rotuloEscola(m.system.escola),
-			tipo: m.system.tipo === "uni" ? "Universal" : (m.system.tipo === "arc" ? "Arcana" : "Divina"),
-			selecionado: e.magias.includes(m.uuid),
+			sub: `${rotuloEscola(m.system.escola)} · ${m.system.tipo === "uni" ? "Universal" : (m.system.tipo === "arc" ? "Arcana" : "Divina")}`,
 			foco: m.uuid === this.focoMagia
 		}));
-		const foco = disponiveis.find((m) => m.uuid === this.focoMagia);
+		const precisaEscolas = !!c.escolas && e.magiasEscolas.length !== c.escolas;
+		const vagas = Math.max(0, c.quantidade - escolhidas.length);
+
+		// painel de detalhes: escola ou magia em foco
+		let infoEscola = null;
+		let infoMagia = null;
+		if (this.focoEscola && escolas) {
+			const k = this.focoEscola;
+			const sel = e.magiasEscolas.includes(k);
+			const lista = daClasse(k);
+			infoEscola = {
+				chave: k,
+				nome: rotuloEscola(k),
+				sigla: this.dados.escolas[k]?.sigla ?? "",
+				descricao: this.dados.escolas[k]?.descricao ?? "",
+				selecionado: sel,
+				podeEscolher: sel || (!cheioEscolas && lista.length > 0),
+				motivo: !sel && !lista.length ? `Não há magias ${c.tipo === "arc" ? "arcanas" : "divinas"} de 1º círculo nesta escola.`
+					: (!sel && cheioEscolas ? `Você já escolheu ${c.escolas} escolas. Remova uma para trocar.` : ""),
+				magias: lista.map((m) => ({ uuid: m.uuid, nome: m.name, img: m.img }))
+			};
+		} else if (this.focoMagia) {
+			const m = this.dados.magias.find((x) => x.uuid === this.focoMagia);
+			if (m) infoMagia = await this.#infoMagia(m);
+		}
+
 		return {
 			conj: c,
-			escolas: filtrarEscola ? escolas : null,
+			escolas,
 			qtdEscolas: c.escolas,
-			magias,
+			escolasEscolhidas: e.magiasEscolas.length,
+			precisaEscolas,
+			escolhidas,
+			vagas: Array.from({ length: precisaEscolas ? 0 : vagas }, (_, i) => i),
 			qtd: c.quantidade,
-			escolhidas: e.magias.length,
-			foco: foco ? {
-				uuid: foco.uuid,
-				nome: foco.name, img: foco.img,
-				escola: rotuloEscola(foco.system.escola),
-				escolaDescricao: this.dados.escolas[foco.system.escola]?.descricao ?? "",
-				selecionado: e.magias.includes(foco.uuid),
-				stats: this.#statsMagia(foco),
-				descricao: await this.#html(foco.uuid, foco.system.description?.value),
-				aprimoramentos: await this.#aprimoramentos(foco)
-			} : null,
-			precisaEscolas: filtrarEscola && e.magiasEscolas.length !== c.escolas
+			qtdEscolhidas: escolhidas.length,
+			infoEscola,
+			infoMagia
 		};
 	}
 
@@ -1354,7 +1418,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			alternativa: alt ? {
 				nome: alt.nome,
 				descricao: alt.descricao,
-				aviso: `Se for devoto, ${this.classe.name.toLowerCase()}s só podem seguir${lista.replace(/^ de/, "")}.`
+				aviso: lista
+					? `Se for devoto de um deus, ${this.classe.name.toLowerCase()}s só podem seguir${lista.replace(/^ de/, "")}.`
+					: `Como devoto de um deus, você recebe ${this.poderesConcedidosPermitidos()} poder(es) concedido(s); como ${alt.nome}, nenhum.`
 			} : null,
 			devoto,
 			naoDevoto: !obrig && e.devoto === false,
@@ -1586,7 +1652,10 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				const validas = new Set(this.escolhasAtivas().map((x) => x.id));
 				for (const k of Object.keys(e.escolhasClasse)) if (!validas.has(k)) delete e.escolhasClasse[k];
 			}
-			if (campo === "magiasEscolas") e.magias = [];
+			if (campo === "magiasEscolas") {
+				const validas = new Set(this.magiasDisponiveis().map((m) => m.uuid));
+				e.magias = e.magias.filter((u) => validas.has(u));
+			}
 			if (campo.startsWith("periciasOu")) {
 				const ja = this.periciasTreinadas({ ate: "classe" });
 				e.periciasClasse = e.periciasClasse.filter((k) => !ja.has(k));
@@ -1662,8 +1731,10 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	static #abrirSlideout(event, target) {
 		const { campo, lista, titulo } = target.dataset;
+		const limite = Number(target.dataset.limite ?? Infinity);
 		const atual = foundry.utils.getProperty(this.estado, campo) ?? "";
-		this.slideout = { campo, lista, titulo, foco: atual, animar: true, filtro: "" };
+		const foco = Array.isArray(atual) ? "" : atual;
+		this.slideout = { campo, lista, titulo, limite, foco, animar: true, filtro: "" };
 		this.render();
 	}
 
@@ -1680,8 +1751,23 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	static #confirmarSlideout(event, target) {
 		if (!this.slideout) return;
-		const { campo } = this.slideout;
+		const { campo, limite } = this.slideout;
 		const valor = target.dataset.valor ?? this.slideout.foco;
+		const atual = foundry.utils.getProperty(this.estado, campo);
+		// campo de lista (ex.: magias): adiciona o item em vez de substituir
+		if (Array.isArray(atual)) {
+			if (atual.includes(valor)) {
+				this.slideout = null;
+				return this.render();
+			}
+			if (atual.length >= limite) return ui.notifications.info(`Você já escolheu ${limite}. Remova uma para trocar.`);
+			this.slideout = null;
+			if (campo === "magias") {
+				this.focoMagia = valor;
+				this.focoEscola = "";
+			}
+			return this.#definirCampo(campo, [...atual, valor]);
+		}
 		this.slideout = null;
 		this.#definirCampo(campo, valor);
 	}
@@ -1779,6 +1865,12 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		this.#mudou();
 	}
 
+	static #focarEscola(event, target) {
+		this.focoEscola = target.dataset.valor;
+		this.focoMagia = "";
+		this.render();
+	}
+
 	static #focarDivindade(event, target) {
 		this.focoDivindade = target.dataset.valor;
 		this.render();
@@ -1816,6 +1908,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	static #focarMagia(event, target) {
 		this.focoMagia = target.dataset.uuid;
+		this.focoEscola = "";
 		this.render();
 	}
 

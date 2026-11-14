@@ -1,66 +1,86 @@
-{{#if escolas}}
-<div class="cf-bloco">
-	<h4>Escolha {{qtdEscolas}} escolas de magia</h4>
-	<div class="cf-escolas">
-		{{#each escolas}}
-		<button type="button" class="cf-escola {{#if selecionado}}selecionado{{/if}}" data-action="alternar" data-campo="magiasEscolas" data-valor="{{chave}}" data-limite="{{../qtdEscolas}}">
-			<span class="cf-escola-topo">
-				<i class="fa-{{#if selecionado}}solid fa-square-check{{else}}regular fa-square{{/if}}"></i>
-				<strong>{{nome}}</strong>
-				{{#if sigla}}<small>({{sigla}})</small>{{/if}}
-				<span class="cf-escola-qtd">{{qtdMagias}} magias</span>
-			</span>
-			{{#if descricao}}<span class="cf-escola-desc">{{descricao}}</span>{{/if}}
-		</button>
-		{{/each}}
-	</div>
-</div>
-{{/if}}
-
-{{#if precisaEscolas}}
-<p class="cf-vazio">Escolha as escolas para ver as magias disponíveis.</p>
-{{else}}
-<div class="cf-placar"><span>Magias escolhidas <strong>{{escolhidas}}</strong> de {{qtd}}</span></div>
 <div class="cf-duas">
 	<div class="cf-lista">
-		{{#each magias}}
-		<div class="cf-linha {{#if selecionado}}selecionado{{/if}} {{#if foco}}foco{{/if}}">
-			<button type="button" class="cf-check" data-action="alternar" data-campo="magias" data-valor="{{uuid}}" data-limite="{{../qtd}}" title="Escolher">
-				<i class="fa-{{#if selecionado}}solid fa-square-check{{else}}regular fa-square{{/if}}"></i>
+		{{#if escolas}}
+		<h4>Escolas de magia <small>({{escolasEscolhidas}}/{{qtdEscolas}})</small></h4>
+		<div class="cf-cards">
+			{{#each escolas}}
+			<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if foco}}foco{{/if}} {{#if vazia}}bloqueado{{/if}}"
+				data-action="focarEscola" data-valor="{{chave}}">
+				<span class="cf-sigla">{{sigla}}</span>
+				<span class="cf-card-texto">
+					<span class="cf-card-nome">{{nome}}</span>
+					<span class="cf-card-sub">{{#if vazia}}Nenhuma magia para sua classe{{else}}{{qtdMagias}} magias de 1º círculo{{/if}}</span>
+				</span>
 			</button>
-			<button type="button" class="cf-linha-nome" data-action="focarMagia" data-uuid="{{uuid}}">
-				<img src="{{img}}" alt=""> {{nome}} <small>{{escola}} · {{tipo}}</small>
-			</button>
-		</div>
-		{{/each}}
-	</div>
-	<aside class="cf-info">
-		{{#if foco}}
-		<h3><img src="{{foco.img}}" alt=""> {{foco.nome}}</h3>
-		<p class="cf-destaque">{{foco.escola}} · 1º círculo</p>
-		{{#if foco.escolaDescricao}}<p class="cf-nota">{{foco.escolaDescricao}}</p>{{/if}}
-		<button type="button" class="{{#if foco.selecionado}}{{else}}cf-primario{{/if}}" data-action="alternar" data-campo="magias" data-valor="{{foco.uuid}}" data-limite="{{qtd}}">
-			{{#if foco.selecionado}}Remover{{else}}Escolher esta magia{{/if}}
-		</button>
-		{{#if foco.stats.length}}
-		<dl class="cf-dados">{{#each foco.stats}}<dt>{{rotulo}}</dt><dd>{{valor}}</dd>{{/each}}</dl>
-		{{/if}}
-		<div class="cf-descricao">{{{foco.descricao}}}</div>
-		{{#if foco.aprimoramentos.length}}
-		<h4>Aprimoramentos</h4>
-		<ul class="cf-aprimoramentos">
-			{{#each foco.aprimoramentos}}
-			<li class="{{#if bloqueado}}bloqueado{{/if}}">
-				<span class="cf-custo">{{custo}}</span>
-				<div class="cf-descricao">{{{texto}}}</div>
-				{{#if bloqueado}}<span class="cf-requer" title="Disponível a partir do {{circulo}}º círculo">{{circulo}}º círculo</span>{{/if}}
-			</li>
 			{{/each}}
-		</ul>
+		</div>
 		{{/if}}
+
+		<h4>Magias conhecidas <small>({{qtdEscolhidas}}/{{qtd}})</small></h4>
+		{{#if precisaEscolas}}
+		<p class="cf-nota">Escolha {{qtdEscolas}} escolas para liberar as magias.</p>
 		{{else}}
-		<p class="cf-vazio">Clique no nome de uma magia para ler a descrição.</p>
+		<div class="cf-cards">
+			{{#each escolhidas}}
+			<button type="button" class="cf-card selecionado {{#if foco}}foco{{/if}}" data-action="focarMagia" data-uuid="{{uuid}}">
+				<img src="{{img}}" alt="">
+				<span class="cf-card-texto">
+					<span class="cf-card-nome">{{nome}}</span>
+					<span class="cf-card-sub">{{sub}}</span>
+				</span>
+			</button>
+			{{/each}}
+			{{#each vagas}}
+			<button type="button" class="cf-card cf-vaga" data-action="abrirSlideout" data-campo="magias" data-lista="magia"
+				data-titulo="Escolha uma magia de 1º círculo" data-limite="{{../qtd}}">
+				<span class="cf-sigla"><i class="fa-solid fa-plus"></i></span>
+				<span class="cf-card-texto"><span class="cf-card-nome">Escolher magia</span></span>
+			</button>
+			{{/each}}
+		</div>
+		{{/if}}
+	</div>
+
+	<aside class="cf-info">
+		{{#if infoEscola}}
+		<h3>{{infoEscola.nome}} <small>({{infoEscola.sigla}})</small></h3>
+		<p class="cf-lore">{{infoEscola.descricao}}</p>
+		{{#if infoEscola.podeEscolher}}
+		<button type="button" class="{{#unless infoEscola.selecionado}}cf-primario{{/unless}} cf-escolher" data-action="alternar"
+			data-campo="magiasEscolas" data-valor="{{infoEscola.chave}}" data-limite="{{qtdEscolas}}">
+			{{#if infoEscola.selecionado}}<i class="fa-solid fa-xmark"></i> Remover escola{{else}}<i class="fa-solid fa-check"></i> Escolher escola{{/if}}
+		</button>
+		{{else}}
+		<p class="cf-aviso">{{infoEscola.motivo}}</p>
+		{{/if}}
+		{{#if infoEscola.magias.length}}
+		<h4>Magias desta escola</h4>
+		<div class="cf-cards">
+			{{#each infoEscola.magias}}
+			<button type="button" class="cf-card" data-action="focarMagia" data-uuid="{{uuid}}">
+				<img src="{{img}}" alt=""><span class="cf-card-texto"><span class="cf-card-nome">{{nome}}</span></span>
+			</button>
+			{{/each}}
+		</div>
+		{{/if}}
+
+		{{else if infoMagia}}
+		<h3><img src="{{infoMagia.img}}" alt=""> {{infoMagia.nome}}</h3>
+		<p class="cf-destaque">{{infoMagia.escola}} · {{infoMagia.tipo}} · 1º círculo</p>
+		{{#if infoMagia.selecionado}}
+		<button type="button" class="cf-escolher" data-action="alternar" data-campo="magias" data-valor="{{infoMagia.uuid}}" data-limite="{{qtd}}">
+			<i class="fa-solid fa-xmark"></i> Remover magia
+		</button>
+		{{/if}}
+		{{#if infoMagia.escolaDescricao}}<p class="cf-nota">{{infoMagia.escolaDescricao}}</p>{{/if}}
+		{{#if infoMagia.stats.length}}
+		<dl class="cf-dados">{{#each infoMagia.stats}}<dt>{{rotulo}}</dt><dd>{{valor}}</dd>{{/each}}</dl>
+		{{/if}}
+		<div class="cf-descricao">{{{infoMagia.descricao}}}</div>
+		{{> "modules/t20-construtor-ficha/templates/partes/aprimoramentos.hbs" infoMagia}}
+
+		{{else}}
+		<p class="cf-vazio">{{#if escolas}}Clique em uma escola para ver a descrição e escolhê-la. {{/if}}Use “Escolher magia” para abrir a lista de magias disponíveis.</p>
 		{{/if}}
 	</aside>
 </div>
-{{/if}}

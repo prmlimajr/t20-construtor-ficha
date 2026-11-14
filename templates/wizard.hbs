@@ -94,6 +94,7 @@
 					<dl class="cf-dados">{{#each stats}}<dt>{{rotulo}}</dt><dd>{{valor}}</dd>{{/each}}</dl>
 					{{/if}}
 					{{#if descricao}}<div class="cf-descricao">{{{descricao}}}</div>{{/if}}
+					{{> "modules/t20-construtor-ficha/templates/partes/aprimoramentos.hbs" this}}
 					{{else}}
 					<p class="cf-vazio">Clique em uma opção para ver os detalhes.</p>
 					{{/with}}

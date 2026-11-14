@@ -1,0 +1,12 @@
+{{#if aprimoramentos.length}}
+<h4>Aprimoramentos</h4>
+<ul class="cf-aprimoramentos">
+	{{#each aprimoramentos}}
+	<li class="{{#if bloqueado}}bloqueado{{/if}}">
+		<span class="cf-custo">{{custo}}</span>
+		<div class="cf-descricao">{{{texto}}}</div>
+		{{#if bloqueado}}<span class="cf-requer" title="Disponível a partir do {{circulo}}º círculo">{{circulo}}º círculo</span>{{/if}}
+	</li>
+	{{/each}}
+</ul>
+{{/if}}
