@@ -1536,7 +1536,10 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				: ConstrutorFicha.formatarTibares(plano.dinheiro),
 			classeNome: plano.classe?.name ?? "—",
 			listaPericias: plano.pericias.map(rotuloPericia).join(", "),
-			listaPoderes: plano.poderes.map((p) => p.name).join(", "),
+			gruposPoderes: plano.gruposPoderes.filter((g) => g.poderes.length).map((g) => ({
+				nome: g.nome,
+				lista: g.poderes.map((p) => `${g.prefixo} - ${p.name}`).join(", ")
+			})),
 			listaMagias: plano.magias.map((m) => m.name).join(", "),
 			listaItens: plano.itens.map((x) => (x.qtd > 1 ? `${x.nome} (×${x.qtd})` : x.nome)).join(", "),
 			atributos: ATRIBUTOS.map((k) => ({ nome: NOMES_ATRIBUTOS[k], valor: sinal(this.atributoFinal(k)) }))
@@ -1559,26 +1562,47 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			}
 		}
 
-		const poderes = [];
-		const add = (nome) => { const p = poder(this.dados, nome); if (p && !poderes.includes(p)) poderes.push(p); };
-		(r.habilidades ?? []).forEach(add);
-		for (const esc of this.escolhasAtivas()) if (e.escolhasClasse[esc.id]) add(e.escolhasClasse[esc.id]);
+		// Poderes separados pela fonte (ordem e prefixo usados na ficha)
+		const vistos = new Set(poderesRaciais);
+		const adicionar = (lista) => (nome) => {
+			const p = poder(this.dados, nome);
+			if (p && !vistos.has(p)) {
+				vistos.add(p);
+				lista.push(p);
+			}
+		};
+		const poderesOrigem = [];
+		const poderesConcedidos = [];
+		const poderesClasse = [];
 
 		const itens = [];
+		const addOrigem = adicionar(poderesOrigem);
 		for (const o of this.origensAtivas()) {
 			for (const b of o.estado.beneficios) {
-				if (b.startsWith("poder:")) add(b.slice(6));
-				if (b.startsWith("grupo:") && o.estado.grupos[b.slice(6)]) add(o.estado.grupos[b.slice(6)]);
+				if (b.startsWith("poder:")) addOrigem(b.slice(6));
+				if (b.startsWith("grupo:") && o.estado.grupos[b.slice(6)]) addOrigem(o.estado.grupos[b.slice(6)]);
 			}
 			if (o.def.especial === "amnesico") {
-				(o.def.poderes ?? []).forEach(add);
-				if (o.estado.amnPoder) add(o.estado.amnPoder);
+				(o.def.poderes ?? []).forEach(addOrigem);
+				if (o.estado.amnPoder) addOrigem(o.estado.amnPoder);
 			}
 			itens.push(...this.#itensDaOrigem(o.def, o.estado));
 		}
 
 		const devoto = this.ehDevoto;
-		if (devoto) e.poderesConcedidos.forEach(add);
+		if (devoto) e.poderesConcedidos.forEach(adicionar(poderesConcedidos));
+
+		const addClasse = adicionar(poderesClasse);
+		(r.habilidades ?? []).forEach(addClasse);
+		for (const esc of this.escolhasAtivas()) if (e.escolhasClasse[esc.id]) addClasse(e.escolhasClasse[esc.id]);
+
+		const gruposPoderes = [
+			{ prefixo: "R", nome: "Raciais", poderes: poderesRaciais, raciais: true },
+			{ prefixo: "O", nome: "Origem", poderes: poderesOrigem },
+			{ prefixo: "D", nome: "Concedidos", poderes: poderesConcedidos },
+			{ prefixo: "1", nome: "Classe", poderes: poderesClasse }
+		];
+		const poderes = [...poderesOrigem, ...poderesConcedidos, ...poderesClasse];
 
 		itens.unshift(
 			...(this.dados.equipamento.kitBase ?? []).map((n) => ({ nome: n, qtd: 1 })),
@@ -1606,7 +1630,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		}
 
 		return {
-			raca, classe, poderesRaciais, poderes, magias, itens,
+			raca, classe, poderesRaciais, poderes, gruposPoderes, magias, itens,
 			pericias: ordenarPericias([...this.periciasTreinadas()]),
 			atributos: Object.fromEntries(ATRIBUTOS.map((k) => [k, { base: this.base(k) ?? 0, racial: this.racial(k) }])),
 			origem: this.origensAtivas().map((o) => o.def.nome).join(" / "),

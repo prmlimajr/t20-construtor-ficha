@@ -56,11 +56,20 @@ export async function aplicarNaFicha(actor, plano, dados) {
 	foundry.utils.setProperty(dadosClasse, "system.inicial", true);
 	itens.push(dadosClasse);
 
-	const inicioRaciais = itens.length;
-	for (const p of plano.poderesRaciais) itens.push(doCompendio(p));
-	const fimRaciais = itens.length;
-
-	for (const p of plano.poderes) itens.push(doCompendio(p));
+	// Poderes em grupos (raciais, origem, concedidos, classe): prefixo no nome e "sort" crescente,
+	// que é a ordem usada pela lista de poderes da ficha do sistema.
+	let inicioRaciais = itens.length;
+	let fimRaciais = itens.length;
+	plano.gruposPoderes.forEach((grupo, g) => {
+		if (grupo.raciais) inicioRaciais = itens.length;
+		grupo.poderes.forEach((p, i) => {
+			const data = doCompendio(p);
+			data.name = `${grupo.prefixo} - ${p.name}`;
+			data.sort = (g + 1) * 100000 + i * 100;
+			itens.push(data);
+		});
+		if (grupo.raciais) fimRaciais = itens.length;
+	});
 	for (const m of plano.magias) itens.push(doCompendio(m));
 	for (const it of plano.itens) itens.push(await itemPorNome(dados, it));
 
