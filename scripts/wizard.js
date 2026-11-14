@@ -101,6 +101,14 @@ function ehTruque(custo, html) {
 	return custo === null || /^muda\b/i.test(texto) || /em vez d[oae]/i.test(texto);
 }
 
+/**
+ * Círculo da magia como número. Magias de suplementos feitos para o Tormenta20 1.5 (ex.: Heróis de
+ * Arton) guardam o círculo como texto ("1"); sem converter, elas sumiriam das listas por círculo.
+ */
+function circuloMagia(m) {
+	return Number(m?.system?.circulo);
+}
+
 function rotuloPericia(k) {
 	const label = CONFIG.T20?.pericias?.[k]?.label ?? k;
 	return game.i18n.localize(label);
@@ -544,22 +552,15 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	/**
 	 * Motivo pelo qual o personagem não pode ser devoto da divindade (null = pode).
-	 * Regra do livro: a raça OU a classe precisa estar entre os devotos; humanos e clérigos podem
-	 * seguir qualquer divindade. Druidas só seguem as divindades listadas em classes.json.
+	 * Só as listas fixas de algumas classes restringem (Druida e Paladino, em classes.json).
+	 * A lista de devotos de cada deus (raças e classes) é apenas informativa: não bloqueia.
 	 */
 	impedimentoDivindade(d) {
 		const r = this.regrasClasse;
-		const raca = this.raca?.name;
-		const classe = this.classe?.name;
 		if (r?.devocao?.divindades && !r.devocao.divindades.includes(d.nome)) {
-			return `${classe}s só podem ser devotos de ${r.devocao.divindades.join(", ")}.`;
+			return `${this.classe?.name}s só podem ser devotos de ${r.devocao.divindades.join(", ")}.`;
 		}
-		if (raca === "Humano" || classe === "Clérigo") return null;
-		const dev = d.devotos ?? {};
-		const temLista = dev.racas?.length || dev.classes?.length;
-		if (!temLista) return null;
-		if (dev.racas?.includes(raca) || dev.classes?.includes(classe)) return null;
-		return "Sua raça e sua classe não estão entre os devotos desta divindade.";
+		return null;
 	}
 
 	divindadesDisponiveis() {
@@ -1090,7 +1091,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				if (!regra) return [];
 				const lista = regra.nomes
 					? regra.nomes.map((n) => magiaPorNome(this.dados, n)).filter(Boolean)
-					: this.dados.magias.filter((m) => m.system.circulo === regra.circulo
+					: this.dados.magias.filter((m) => circuloMagia(m) === Number(regra.circulo)
 						&& (!regra.escolas || regra.escolas.includes(m.system.escola)));
 				return lista.map((m) => ({
 					valor: m.uuid, nome: m.name, img: m.img,
@@ -1592,7 +1593,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const tipos = c.tipo === "arc" ? ["arc", "uni"] : ["div", "uni"];
 		const escolas = this.estado.magiasEscolas;
 		return this.dados.magias.filter((m) =>
-			m.system.circulo === 1
+			circuloMagia(m) === 1
 			&& tipos.includes(m.system.tipo)
 			&& (!c.escolas || escolas.includes(m.system.escola)));
 	}
@@ -1616,7 +1617,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const e = this.estado;
 		const c = this.conjurador;
 		const tipos = c.tipo === "arc" ? ["arc", "uni"] : ["div", "uni"];
-		const daClasse = (k) => this.dados.magias.filter((m) => m.system.circulo === 1 && m.system.escola === k && tipos.includes(m.system.tipo));
+		const daClasse = (k) => this.dados.magias.filter((m) => circuloMagia(m) === 1 && m.system.escola === k && tipos.includes(m.system.tipo));
 		const cheioEscolas = e.magiasEscolas.length >= c.escolas;
 
 		const escolas = c.escolas ? Object.keys(CONFIG.T20?.spellSchools ?? {}).map((k) => {
