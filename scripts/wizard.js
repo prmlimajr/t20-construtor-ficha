@@ -83,6 +83,16 @@ function tipoMelhoria(doc) {
 	return { leve: "armor", pesada: "armor", escudo: "shield", esoterico: "esoteric", ferramenta: "tool", traje: "clothing" }[doc.system?.tipo] ?? null;
 }
 
+/**
+ * Aprimoramento sem custo em PM: é um truque (custo vazio no compêndio, ou texto "em vez do normal"),
+ * exceto as automações "Maximiza..." e as variantes de efeito (ex.: formas de Animar Objetos, "+2 em Força").
+ */
+function ehTruque(custo, html) {
+	const texto = String(html ?? "").replace(/<[^>]+>/g, " ").trim();
+	if (/^maximiza/i.test(texto)) return false;
+	return custo === null || /^muda\b/i.test(texto) || /em vez d[oae]/i.test(texto);
+}
+
 function rotuloPericia(k) {
 	const label = CONFIG.T20?.pericias?.[k]?.label ?? k;
 	return game.i18n.localize(label);
@@ -1430,10 +1440,10 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const out = [];
 		for (const { ef } of efeitos) {
 			const html = ef.description || ef.system.abilityUse.description;
-			const custo = ef.system.abilityUse?.custo ?? 0;
+			const custo = ef.system.abilityUse?.custo ?? null;
 			const texto = await this.#html(`${m.uuid}.${ef.id ?? ef._id}`, html);
 			const circulo = /Requer (\d)º círculo/i.exec(html)?.[1] ?? null;
-			out.push({ custo: custo ? `+${custo} PM` : "Especial", texto, circulo, bloqueado: circulo && Number(circulo) > 1 });
+			out.push({ custo: custo ? `+${custo} PM` : (ehTruque(custo, html) ? "Truque" : "Variante"), texto, circulo, bloqueado: circulo && Number(circulo) > 1 });
 		}
 		return out;
 	}
