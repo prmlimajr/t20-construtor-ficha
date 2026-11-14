@@ -6,7 +6,7 @@ import {
 	MODULE_ID, ATRIBUTOS, NOMES_ATRIBUTOS, OFICIOS, PONTOS_TOTAIS, MIN_PONTOS, MAX_PONTOS,
 	ARRANJOS_FIXOS, custoAtributo, pontosGastos, converterRolagem, expandirPericias, normalizar, sinal
 } from "./regras.js";
-import { carregarDados, poder, poderesDoGrupo, equipamento, magiaPorNome, poderSelecionavel, fonteDe } from "./dados.js";
+import { carregarDados, dadosCarregados, poder, poderesDoGrupo, equipamento, magiaPorNome, poderSelecionavel, fonteDe } from "./dados.js";
 import { atributosDinamicosRaca } from "./suplementos.js";
 import { aplicarNaFicha } from "./aplicar.js";
 
@@ -187,7 +187,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			escolherEquip: ConstrutorFicha.#escolherEquip,
 			rolarDinheiro: ConstrutorFicha.#rolarDinheiro,
 			finalizar: ConstrutorFicha.#finalizar,
-			recomecar: ConstrutorFicha.#recomecar
+			recomecar: ConstrutorFicha.#recomecar,
+			tentarDeNovo: ConstrutorFicha.#tentarDeNovo
 		}
 	};
 
@@ -769,6 +770,24 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	}
 
 	async _prepareContext(options) {
+		// primeira abertura: mostra a tela de carregamento na hora e carrega os compêndios em segundo plano
+		if (!this.dados || !this.estado) {
+			// depois de uma falha, não tenta de novo sozinho (evita repetir o erro em loop): espera o botão
+			if (this._erroCarregamento) return { carregando: true, erro: this._erroCarregamento };
+			if (!dadosCarregados()) {
+				this._carregando ??= this.#inicializar()
+					.then(() => { this._erroCarregamento = null; })
+					.catch((err) => {
+						console.error(`${MODULE_ID} |`, err);
+						this._erroCarregamento = err.message ?? String(err);
+					})
+					.finally(() => {
+						this._carregando = null;
+						if (this.rendered) this.render();
+					});
+				return { carregando: true, erro: this._erroCarregamento };
+			}
+		}
 		await this.#inicializar();
 		const passos = this.passos();
 		this.indice = Math.min(this.indice, passos.length - 1);
@@ -795,6 +814,11 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	_onRender(context, options) {
 		super._onRender(context, options);
+		// a tela de carregamento foi desenhada depois de os dados ficarem prontos: desenha o construtor
+		if (context.carregando) {
+			if (!this._carregando && !context.erro) this.render();
+			return;
+		}
 		this.#ativarArrastar();
 		const filtro = this.element.querySelector(".cf-slideout .cf-filtro");
 		if (filtro) {
@@ -2963,6 +2987,12 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		});
 		this.estado.dinheiro = roll.total;
 		this.#mudou();
+	}
+
+	/** Tela de carregamento com erro: limpa o erro e tenta carregar de novo. */
+	static #tentarDeNovo() {
+		this._erroCarregamento = null;
+		this.render();
 	}
 
 	static async #recomecar() {

@@ -328,14 +328,13 @@ export async function carregarSuplementos(base, config) {
 	const fonte = new Map();
 	const pastas = new Map();
 	const docs = [];
-	for (const pack of packs) {
-		let lista = [];
-		try {
-			lista = await pack.getDocuments();
-		} catch (err) {
-			console.warn(`${MODULE_ID} | não foi possível ler ${pack.collection}:`, err);
-			continue;
-		}
+	// os compêndios do suplemento em paralelo
+	const listas = await Promise.all(packs.map((pack) => pack.getDocuments().catch((err) => {
+		console.warn(`${MODULE_ID} | não foi possível ler ${pack.collection}:`, err);
+		return [];
+	})));
+	for (const [i, pack] of packs.entries()) {
+		const lista = listas[i];
 		for (const d of lista) {
 			fonte.set(d.uuid, pack.metadata.label);
 			pastas.set(d.uuid, cadeiaPastas(d, pack));

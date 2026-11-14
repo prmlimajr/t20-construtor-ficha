@@ -1,3 +1,18 @@
+{{#if carregando}}
+<div class="cf-carregando" role="status" aria-live="polite">
+	{{#if erro}}
+	<i class="fa-solid fa-triangle-exclamation"></i>
+	<p>Não foi possível carregar os dados do construtor.</p>
+	<p class="cf-nota">{{erro}}</p>
+	<button type="button" class="cf-primario" data-action="tentarDeNovo"><i class="fa-solid fa-rotate-right"></i> Tentar de novo</button>
+	{{else}}
+	<i class="fa-solid fa-hat-wizard cf-carregando-icone"></i>
+	<p>Preparando o construtor…</p>
+	<p class="cf-nota">Carregando raças, classes, poderes, magias e equipamentos dos compêndios. Só na primeira abertura.</p>
+	<div class="cf-carregando-barra"><span></span></div>
+	{{/if}}
+</div>
+{{else}}
 <div class="cf-layout">
 	<nav class="cf-lateral">
 		<img class="cf-logo" src="modules/t20-construtor-ficha/assets/logo.webp" alt="Tormenta 20"
@@ -115,3 +130,4 @@
 		{{/if}}
 	</section>
 </div>
+{{/if}}

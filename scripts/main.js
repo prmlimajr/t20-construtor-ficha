@@ -10,7 +10,7 @@
  */
 import { MODULE_ID } from "./regras.js";
 import { ConstrutorFicha, TEMPLATES_PASSOS } from "./wizard.js";
-import { invalidarDados } from "./dados.js";
+import { invalidarDados, carregarDados } from "./dados.js";
 import { CONTEUDOS_SUPLEMENTO, SUPLEMENTO_ID } from "./suplementos.js";
 
 const L = (k) => game.i18n.localize(`T20CF.${k}`);
@@ -93,6 +93,16 @@ function envolverRacaDoSistema() {
 Hooks.once("init", () => {
 	registrarConfiguracoes();
 	foundry.applications.handlebars.loadTemplates(TEMPLATES_PASSOS);
+});
+
+// Pré-carregamento: alguns segundos depois de o mundo abrir, carrega os compêndios em segundo
+// plano para que a primeira abertura do construtor já encontre tudo pronto. Só para quem pode
+// criar personagens.
+Hooks.once("ready", () => {
+	if (!game.user.can("ACTOR_CREATE")) return;
+	setTimeout(() => {
+		carregarDados().catch((err) => console.warn(`${MODULE_ID} | pré-carregamento falhou (o construtor tenta de novo ao abrir):`, err));
+	}, 5000);
 });
 
 // Aviso ao mestre: integração ligada, mas o módulo Suplementos de Arton não está ativo

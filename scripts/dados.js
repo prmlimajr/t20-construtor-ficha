@@ -14,10 +14,18 @@ const PACKS = {
 };
 
 let cache = null;
+/** Carregamento em andamento (evita carregar duas vezes se o construtor abrir durante o pré-carregamento). */
+let emAndamento = null;
 
 /** Descarta os dados carregados (ex.: quando o mestre muda as configurações dos suplementos). */
 export function invalidarDados() {
 	cache = null;
+	emAndamento = null;
+}
+
+/** Os dados já estão em memória? (o construtor abre direto, sem tela de carregamento) */
+export function dadosCarregados() {
+	return !!cache;
 }
 
 /** Melhorias que exigem outra melhoria (ou material especial), impossíveis num item com uma só. */
@@ -96,13 +104,26 @@ function porNome(docs) {
 
 export async function carregarDados() {
 	if (cache) return cache;
+	if (!emAndamento) {
+		const promessa = carregar();
+		emAndamento = promessa;
+		promessa.then((dados) => {
+			// só guarda se ninguém invalidou no meio do caminho (ex.: o mestre mudou uma configuração)
+			if (emAndamento === promessa) cache = dados;
+		}, () => {
+			// a falha é tratada por quem chamou (tela de carregamento); aqui só não guarda nada
+		}).finally(() => {
+			if (emAndamento === promessa) emAndamento = null;
+		});
+	}
+	return emAndamento;
+}
 
-	const [racas, classes, poderes, magias, regrasClasses, origens, regionais, divindades, equipamento, escolas, regrasRacas, regrasPoderesClasse, configSuplementos] =
+async function carregar() {
+	const inicio = performance.now();
+	// arquivos JSON do módulo (pequenos) primeiro: o suplemento precisa das regras de classe
+	const [regrasClasses, origens, regionais, divindades, equipamento, escolas, regrasRacas, regrasPoderesClasse, configSuplementos] =
 		await Promise.all([
-			documentos("racas"),
-			documentos("classes"),
-			documentos("poderes"),
-			documentos("magias"),
 			lerJson("classes.json"),
 			lerJson("origens.json"),
 			lerJson("origens-regionais.json"),
@@ -113,19 +134,26 @@ export async function carregarDados() {
 			lerJson("poderes-classe.json"),
 			lerJson("suplementos.json")
 		]);
-	const sup = await carregarSuplementos({
-		regrasClasses, divindades: divindades.divindades ?? [], origensRegionais: regionais.origens ?? []
-	}, configSuplementos);
+
+	// todos os compêndios ao mesmo tempo (é a parte demorada)
+	const packEfeitos = game.packs.get("tormenta20.efeitos");
+	const packEquip = game.packs.get(PACKS.equipamentos);
+	const [racas, classes, poderes, magias, efeitos, indiceEquip, sup] = await Promise.all([
+		documentos("racas"),
+		documentos("classes"),
+		documentos("poderes"),
+		documentos("magias"),
+		packEfeitos ? packEfeitos.getDocuments() : [],
+		packEquip ? packEquip.getDocuments() : [],
+		carregarSuplementos({
+			regrasClasses, divindades: divindades.divindades ?? [], origensRegionais: regionais.origens ?? []
+		}, configSuplementos)
+	]);
 
 	// Melhorias de itens superiores (efeitos do compêndio tormenta20.efeitos), para o Protótipo
-	const packEfeitos = game.packs.get("tormenta20.efeitos");
-	const efeitos = packEfeitos ? await packEfeitos.getDocuments() : [];
 	const melhorias = [...efeitos]
 		.filter((e) => e.system?.upgrade?.type === "improvement" && !MELHORIAS_COM_PRE_REQUISITO.has(e.name))
 		.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
-
-	const packEquip = game.packs.get(PACKS.equipamentos);
-	const indiceEquip = packEquip ? await packEquip.getDocuments() : [];
 
 	const ordenar = (a, b) => a.name.localeCompare(b.name, "pt-BR");
 	const comCategoria = ({ doc, categoria }) => ({
@@ -137,7 +165,7 @@ export async function carregarDados() {
 	const equipPorNome = new Map([...indiceEquip].map((e) => [normalizar(e.name), e]));
 	for (const { doc } of sup.itens) if (!equipPorNome.has(normalizar(doc.name))) equipPorNome.set(normalizar(doc.name), doc);
 
-	cache = {
+	const dados = {
 		racas: [...racas, ...sup.racas].sort(ordenar),
 		classes: [...classes, ...sup.classes].sort(ordenar),
 		magias: [...magias, ...sup.magias].sort(ordenar),
@@ -175,8 +203,9 @@ export async function carregarDados() {
 		regrasPoderesClasse: regrasPoderesClasse.poderes ?? {},
 		melhorias
 	};
-	verificarReferencias(cache);
-	return cache;
+	verificarReferencias(dados);
+	console.info(`${MODULE_ID} | dados carregados em ${Math.round(performance.now() - inicio)} ms`);
+	return dados;
 }
 
 /** O poder pode aparecer nas listas de escolha? (do sistema, ou do suplemento com a chave "Poderes" ligada) */
