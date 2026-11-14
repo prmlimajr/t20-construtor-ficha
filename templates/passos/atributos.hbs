@@ -22,9 +22,6 @@
 {{#if ehRolagem}}
 <div class="cf-bloco">
 	{{#if rolagem}}
-	<div class="cf-rolagens">
-		{{#each rolagem.brutos}}<span class="cf-dado"><small>{{total}}</small><strong>{{valor}}</strong></span>{{/each}}
-	</div>
 	<p class="cf-nota">Soma dos atributos: {{rolagem.soma}}.
 		{{#if rolagem.podeRerrolar}}Como a soma é menor que +6, você pode rolar novamente o menor valor.{{/if}}</p>
 	{{#if rolagem.podeRerrolar}}
@@ -48,8 +45,24 @@
 </div>
 {{/if}}
 
+{{#if dnd}}
+<div class="cf-dnd">
+	<div class="cf-monte {{#if poolVazio}}vazio{{/if}}" data-soltar="" data-action="colocarDado">
+		{{#each pool}}
+		<div class="cf-dado {{#if selecionado}}selecionado{{/if}}" draggable="true" data-dado="{{indice}}" data-action="selecionarDado"
+			title="Arraste até um atributo (ou clique aqui e depois no atributo)">
+			{{#if bruto}}<small>{{bruto}}</small>{{/if}}<strong>{{valor}}</strong>
+		</div>
+		{{else}}
+		<span class="cf-nota">Todos os valores foram distribuídos. Arraste um valor de volta para cá para removê-lo.</span>
+		{{/each}}
+	</div>
+	<p class="cf-nota">Arraste cada valor até um atributo. Soltar sobre um atributo já preenchido troca os valores.</p>
+</div>
+{{/if}}
+
 {{#if modo}}
-<table class="cf-tabela-atributos">
+<table class="cf-tabela-atributos {{#if dnd}}cf-dnd{{/if}}">
 	<thead><tr><th>Atributo</th><th>Base</th><th>Raça</th><th>Total</th></tr></thead>
 	<tbody>
 		{{#each linhas}}
@@ -61,11 +74,14 @@
 				<strong>{{base}}</strong>
 				<button type="button" class="cf-mini" data-action="ajustarPonto" data-atributo="{{chave}}" data-delta="1" {{#unless podeAumentar}}disabled{{/unless}}>+</button>
 				<small>({{custo}} pts)</small>
-				{{else if opcoes}}
-				<select data-campo="{{campo}}">
-					<option value="">—</option>
-					{{#each opcoes}}<option value="{{indice}}" {{#if selecionado}}selected{{/if}}>{{texto}}</option>{{/each}}
-				</select>
+				{{else if dnd}}
+				<div class="cf-slot {{#if alvo}}alvo{{/if}}" data-soltar="{{chave}}" data-action="colocarDado">
+					{{#if slot}}
+					<div class="cf-dado {{#if slot.selecionado}}selecionado{{/if}}" draggable="true" data-dado="{{slot.indice}}" data-action="selecionarDado">
+						{{#if slot.bruto}}<small>{{slot.bruto}}</small>{{/if}}<strong>{{slot.valor}}</strong>
+					</div>
+					{{else}}<span class="cf-slot-vazio">solte aqui</span>{{/if}}
+				</div>
 				{{else}}—{{/if}}
 			</td>
 			<td>{{racial}}</td>

@@ -45,7 +45,8 @@ function estadoInicial(actor) {
 		divindade: "",
 		poderesConcedidos: [],
 		equip: { arma: "", armadura: "", escudo: false },
-		dinheiro: null
+		dinheiro: null,
+		compras: {}
 	};
 }
 
@@ -80,6 +81,11 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		this.focoPericia = "";
 		/** Slideout aberto: { campo, lista, titulo, foco, animar, filtro } */
 		this.slideout = null;
+		/** Dado escolhido por clique (alternativa ao arrastar). */
+		this.dadoSelecionado = null;
+		this.lojaCategoria = "Armas";
+		this.focoLoja = "";
+		this.lojaFiltro = "";
 		this._cacheHtml = new Map();
 		this._salvarRascunho = foundry.utils.debounce(() => this.#salvarRascunho(), 500);
 	}
@@ -102,6 +108,11 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			focarEquip: ConstrutorFicha.#focarEquip,
 			escolherPericia: ConstrutorFicha.#escolherPericia,
 			abrirSlideout: ConstrutorFicha.#abrirSlideout,
+			selecionarDado: ConstrutorFicha.#selecionarDado,
+			lojaCategoria: ConstrutorFicha.#lojaCategoria,
+			focarLoja: ConstrutorFicha.#focarLoja,
+			comprar: ConstrutorFicha.#comprar,
+			colocarDado: ConstrutorFicha.#colocarDado,
 			fecharSlideout: ConstrutorFicha.#fecharSlideout,
 			focarSlideout: ConstrutorFicha.#focarSlideout,
 			confirmarSlideout: ConstrutorFicha.#confirmarSlideout,
@@ -116,7 +127,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	static PARTS = {
 		main: {
 			template: `${TPL}/wizard.hbs`,
-			scrollable: [".cf-lista", ".cf-info", ".cf-conteudo", ".cf-slideout .cf-lista", ".cf-slideout .cf-info"]
+			scrollable: [".cf-lista", ".cf-info", ".cf-conteudo", ".cf-slideout .cf-lista", ".cf-slideout .cf-info", ".cf-loja .cf-lista", ".cf-loja .cf-info"]
 		}
 	};
 
@@ -434,6 +445,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	_onRender(context, options) {
 		super._onRender(context, options);
+		this.#ativarArrastar();
 		const filtro = this.element.querySelector(".cf-slideout .cf-filtro");
 		if (filtro) {
 			const aplicar = () => {
@@ -446,6 +458,18 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			filtro.addEventListener("input", aplicar);
 			aplicar();
 			if (context.slideout?.animar) filtro.focus();
+		}
+		const filtroLoja = this.element.querySelector(".cf-loja .cf-filtro");
+		if (filtroLoja) {
+			const aplicar = () => {
+				const termo = normalizar(filtroLoja.value);
+				this.lojaFiltro = filtroLoja.value;
+				for (const card of this.element.querySelectorAll(".cf-loja .cf-card")) {
+					card.hidden = !!termo && !normalizar(card.dataset.busca).includes(termo);
+				}
+			};
+			filtroLoja.addEventListener("input", aplicar);
+			aplicar();
 		}
 		const slide = this.element.querySelector(".cf-slideout");
 		slide?.addEventListener("keydown", (ev) => {
@@ -468,6 +492,153 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	#mudou() {
 		this._salvarRascunho();
 		this.render();
+	}
+
+	/* ---------------- Loja ---------------- */
+
+	itemLoja(nome) {
+		return this.dados.loja.find((x) => x.doc.name === nome) ?? null;
+	}
+
+	/** Total gasto nas compras (T$), arredondado em centavos. */
+	get gastoCompras() {
+		let total = 0;
+		for (const [nome, n] of Object.entries(this.estado.compras ?? {})) {
+			const it = this.itemLoja(nome);
+			if (it) total += Number(it.doc.system.preco) * n;
+		}
+		return Math.round(total * 100) / 100;
+	}
+
+	get saldo() {
+		return Math.round(((this.estado.dinheiro ?? 0) - this.gastoCompras) * 100) / 100;
+	}
+
+	static formatarTibares(v) {
+		const n = Math.round(Number(v) * 100) / 100;
+		return `T$ ${Number.isInteger(n) ? n : n.toFixed(2).replace(".", ",")}`;
+	}
+
+	async #ctxDinheiro() {
+		const e = this.estado;
+		const fmt = ConstrutorFicha.formatarTibares;
+		const ctx = { dinheiro: e.dinheiro, rolado: e.dinheiro !== null };
+		if (!ctx.rolado) return ctx;
+		const saldo = this.saldo;
+		const presentes = new Set(this.dados.loja.map((x) => x.categoria));
+		const ordem = [...this.dados.categoriasLoja.filter((c) => presentes.has(c)), ...[...presentes].filter((c) => !this.dados.categoriasLoja.includes(c))];
+		if (!presentes.has(this.lojaCategoria)) this.lojaCategoria = ordem[0];
+		const cards = this.dados.loja.filter((x) => x.categoria === this.lojaCategoria).map(({ doc }) => {
+			const f = this.#fichaEquip(doc.name);
+			const preco = Number(doc.system.preco);
+			const n = e.compras[doc.name] ?? 0;
+			return {
+				nome: doc.name, img: doc.img,
+				preco: fmt(preco),
+				sub: [fmt(preco), f.sub].filter(Boolean).join(" · "),
+				qtd: n,
+				caro: preco > saldo && !n,
+				foco: doc.name === this.focoLoja,
+				busca: `${doc.name} ${f.sub}`
+			};
+		});
+		const carrinho = Object.entries(e.compras).filter(([, n]) => n > 0).map(([nome, n]) => {
+			const it = this.itemLoja(nome);
+			const preco = Number(it?.doc.system.preco ?? 0);
+			return { nome, qtd: n, multiplo: n > 1, total: fmt(preco * n) };
+		});
+		let info = null;
+		const foco = this.itemLoja(this.focoLoja);
+		if (foco) {
+			const f = this.#fichaEquip(foco.doc.name);
+			const preco = Number(foco.doc.system.preco);
+			const n = e.compras[foco.doc.name] ?? 0;
+			const pacote = Number(foco.doc.system.qtd) > 1 ? Number(foco.doc.system.qtd) : null;
+			info = {
+				nome: f.nome, img: f.img,
+				preco: fmt(preco),
+				pacote,
+				stats: f.stats.map(([rotulo, valor]) => ({ rotulo, valor })),
+				descricao: await this.#html(foco.doc.uuid, foco.doc.system?.description?.value),
+				qtd: n,
+				podeComprar: preco <= saldo,
+				podeRemover: n > 0
+			};
+		}
+		return {
+			...ctx,
+			fmtRolado: fmt(e.dinheiro),
+			fmtGasto: fmt(this.gastoCompras),
+			fmtSaldo: fmt(saldo),
+			categorias: ordem.map((c) => ({ nome: c, selecionado: c === this.lojaCategoria })),
+			cards,
+			carrinho,
+			info,
+			filtro: this.lojaFiltro
+		};
+	}
+
+	/* ---------------- Distribuição de atributos (arrastar e soltar) ---------------- */
+
+	#dado(i, valores) {
+		const brutos = this.estado.atrModo === "rolagem" ? this.estado.atrRolagem.brutos : null;
+		return {
+			indice: i,
+			valor: sinal(valores[i]),
+			bruto: brutos?.[i] ?? null,
+			selecionado: this.dadoSelecionado === i
+		};
+	}
+
+	get #atribuicao() {
+		const e = this.estado;
+		if (e.atrModo === "rolagem") return e.atrRolagem.atribuicao;
+		if (e.atrModo === "fixo") return e.atrFixo.atribuicao;
+		return null;
+	}
+
+	/** Coloca o dado `indice` no atributo `alvo` (troca com o que estava lá). alvo vazio = devolve ao monte. */
+	#moverDado(indice, alvo) {
+		const atr = this.#atribuicao;
+		if (!atr || !Number.isInteger(indice)) return;
+		const origem = ATRIBUTOS.find((k) => atr[k] !== "" && Number(atr[k]) === indice) ?? null;
+		if (!alvo) {
+			if (origem) atr[origem] = "";
+		} else if (origem !== alvo) {
+			const anterior = atr[alvo];
+			atr[alvo] = String(indice);
+			if (origem) atr[origem] = anterior ?? "";
+		}
+		this.dadoSelecionado = null;
+		this.#mudou();
+	}
+
+	#ativarArrastar() {
+		const root = this.element;
+		const dados = root.querySelectorAll(".cf-dnd [data-dado]");
+		if (!dados.length) return;
+		for (const el of dados) {
+			el.addEventListener("dragstart", (ev) => {
+				ev.dataTransfer.setData("text/plain", el.dataset.dado);
+				ev.dataTransfer.effectAllowed = "move";
+				el.classList.add("arrastando");
+			});
+			el.addEventListener("dragend", () => el.classList.remove("arrastando"));
+		}
+		for (const alvo of root.querySelectorAll(".cf-dnd [data-soltar]")) {
+			alvo.addEventListener("dragover", (ev) => {
+				ev.preventDefault();
+				ev.dataTransfer.dropEffect = "move";
+				alvo.classList.add("sobre");
+			});
+			alvo.addEventListener("dragleave", () => alvo.classList.remove("sobre"));
+			alvo.addEventListener("drop", (ev) => {
+				ev.preventDefault();
+				alvo.classList.remove("sobre");
+				const indice = Number(ev.dataTransfer.getData("text/plain"));
+				this.#moverDado(indice, alvo.dataset.soltar);
+			});
+		}
 	}
 
 	/* ---------------- Slideout (submenus de escolha) ---------------- */
@@ -578,7 +749,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const origens = this.origensAtivas().map((o) => o.def.nome);
 		if (origens.length) linhas.push(["Origem", origens.join(" / ")]);
 		if (e.devoto && e.divindade) linhas.push(["Divindade", e.divindade]);
-		if (e.dinheiro !== null) linhas.push(["Tibares", `T$ ${e.dinheiro}`]);
+		if (e.dinheiro !== null) linhas.push(["Tibares", ConstrutorFicha.formatarTibares(this.saldo)]);
 		const atributos = e.atrModo
 			? ATRIBUTOS.map((k) => ({ sigla: k.toUpperCase(), valor: sinal(this.atributoFinal(k)) }))
 			: null;
@@ -595,7 +766,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			case "origem": return this.#ctxOrigem(passo.sub);
 			case "devocao": return this.#ctxDevocao();
 			case "equipamento": return this.#ctxEquipamento();
-			case "dinheiro": return { dinheiro: this.estado.dinheiro, rolado: this.estado.dinheiro !== null };
+			case "dinheiro": return this.#ctxDinheiro();
 			case "revisao": return this.#ctxRevisao();
 		}
 		return {};
@@ -679,7 +850,6 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				indice: i, texto: a.map(sinal).join(", "), selecionado: i === e.atrFixo.arranjo
 			}));
 		}
-		const campoAtr = e.atrModo === "rolagem" ? "atrRolagem.atribuicao" : "atrFixo.atribuicao";
 		ctx.linhas = ATRIBUTOS.map((k) => {
 			const base = this.base(k);
 			const linha = {
@@ -696,13 +866,19 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				linha.podeAumentar = v < MAX_PONTOS;
 			}
 			if (valores) {
-				linha.campo = `${campoAtr}.${k}`;
-				linha.opcoes = valores.map((v, i) => ({
-					indice: String(i), texto: sinal(v), selecionado: String(atribuicao[k]) === String(i)
-				}));
+				const i = atribuicao[k];
+				linha.dnd = true;
+				linha.alvo = this.dadoSelecionado !== null;
+				linha.slot = i === "" || i === undefined ? null : this.#dado(Number(i), valores);
 			}
 			return linha;
 		});
+		if (valores) {
+			const usados = new Set(ATRIBUTOS.map((k) => atribuicao[k]).filter((v) => v !== "").map(Number));
+			ctx.dnd = true;
+			ctx.pool = valores.map((_, i) => i).filter((i) => !usados.has(i)).map((i) => this.#dado(i, valores));
+			ctx.poolVazio = !ctx.pool.length;
+		}
 		if (e.atrModo === "pontos") {
 			const gastos = pontosGastos(e.atrPontos);
 			ctx.gastos = gastos;
@@ -798,10 +974,53 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				nome: foco.name, img: foco.img,
 				escola: rotuloEscola(foco.system.escola),
 				selecionado: e.magias.includes(foco.uuid),
-				descricao: await this.#html(foco.uuid, foco.system.description?.value)
+				stats: this.#statsMagia(foco),
+				descricao: await this.#html(foco.uuid, foco.system.description?.value),
+				aprimoramentos: await this.#aprimoramentos(foco)
 			} : null,
 			precisaEscolas: filtrarEscola && e.magiasEscolas.length !== c.escolas
 		};
+	}
+
+	/** Ficha resumida de uma magia (execução, alcance, alvo, duração, resistência). */
+	#statsMagia(m) {
+		const s = m.system;
+		const T = CONFIG.T20 ?? {};
+		const loc = (mapa, k) => (k && mapa?.[k] ? game.i18n.localize(mapa[k]) : "");
+		const stats = [];
+		const custo = s.ativacao?.custo;
+		if (custo) stats.push(["Custo", `${custo} PM`]);
+		const exec = loc(T.abilityActivationTypes, s.ativacao?.execucao);
+		if (exec) stats.push(["Execução", exec]);
+		const alcance = loc(T.distanceUnits, s.alcance);
+		if (alcance && s.alcance !== "none") stats.push(["Alcance", alcance]);
+		if (s.alvo) stats.push(["Alvo", s.alvo]);
+		if (s.area) stats.push(["Área", s.area]);
+		if (s.efeito) stats.push(["Efeito", s.efeito]);
+		const u = s.duracao?.units;
+		let dur = loc(T.timePeriods, u);
+		if (["round", "turn", "minute", "hour", "day"].includes(u) && s.duracao?.value) dur = `${s.duracao.value} ${dur.toLowerCase()}`;
+		if (s.duracao?.special) dur = dur ? `${dur} (${s.duracao.special})` : s.duracao.special;
+		if (dur) stats.push(["Duração", dur]);
+		if (s.resistencia?.txt) stats.push(["Resistência", s.resistencia.txt]);
+		return stats.map(([rotulo, valor]) => ({ rotulo, valor }));
+	}
+
+	/** Aprimoramentos da magia: efeitos "ao usar" com custo em PM e descrição. */
+	async #aprimoramentos(m) {
+		const efeitos = [...(m.effects ?? [])]
+			.map((ef, ordem) => ({ ef, ordem }))
+			.filter(({ ef }) => ef.system?.onuse && (ef.description || ef.system?.abilityUse?.description));
+		efeitos.sort((a, b) => (a.ef.system.abilityUse?.custo ?? 0) - (b.ef.system.abilityUse?.custo ?? 0) || a.ordem - b.ordem);
+		const out = [];
+		for (const { ef } of efeitos) {
+			const html = ef.description || ef.system.abilityUse.description;
+			const custo = ef.system.abilityUse?.custo ?? 0;
+			const texto = await this.#html(`${m.uuid}.${ef.id ?? ef._id}`, html);
+			const circulo = /Requer (\d)º círculo/i.exec(html)?.[1] ?? null;
+			out.push({ custo: custo ? `+${custo} PM` : "Especial", texto, circulo, bloqueado: circulo && Number(circulo) > 1 });
+		}
+		return out;
 	}
 
 	/** Descrição da perícia vinda do diário "Perícias" do sistema (Ofícios usam a página "Ofício"). */
@@ -907,10 +1126,16 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			const beneficios = [];
 			for (const k of ordenarPericias(expandirPericias(def.pericias))) {
 				const id = `pericia:${k}`;
+				const c = this.#cardPericia(k);
+				const sel = est.beneficios.includes(id);
+				const bloqueado = treinadas.has(k) && !sel;
 				beneficios.push({
-					id, tipo: "Perícia", nome: rotuloPericia(k),
-					selecionado: est.beneficios.includes(id),
-					bloqueado: treinadas.has(k) && !est.beneficios.includes(id)
+					id, tipo: "Perícia", nome: c.nome,
+					atributo: c.atributo,
+					detalhe: bloqueado ? "Já treinada" : c.tags,
+					selecionado: sel,
+					bloqueado,
+					info: sel ? { nome: `${c.nome} (${c.atributo})`, descricao: await this.#descricaoPericia(k) } : null
 				});
 			}
 			for (const nome of def.poderes ?? []) {
@@ -1143,6 +1368,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			nome: this.estado.nome,
 			plano,
 			racaNome: plano.raca?.name ?? "—",
+			dinheiroTexto: plano.gasto
+				? `${ConstrutorFicha.formatarTibares(plano.dinheiroRolado)} rolados − ${ConstrutorFicha.formatarTibares(plano.gasto)} em compras = ${ConstrutorFicha.formatarTibares(plano.dinheiro)}`
+				: ConstrutorFicha.formatarTibares(plano.dinheiro),
 			classeNome: plano.classe?.name ?? "—",
 			listaPericias: plano.pericias.map(rotuloPericia).join(", "),
 			listaPoderes: plano.poderes.map((p) => p.name).join(", "),
@@ -1199,6 +1427,13 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			itens.push({ nome: this.dados.equipamento.escudo, qtd: 1 });
 		}
 
+		for (const [nome, n] of Object.entries(e.compras ?? {})) {
+			const it = this.itemLoja(nome);
+			if (!it || n <= 0) continue;
+			const pacote = Number(it.doc.system.qtd) > 1 ? Number(it.doc.system.qtd) : 1;
+			itens.push({ nome, qtd: n * pacote, comprado: true });
+		}
+
 		const magias = this.conjurador ? this.dados.magias.filter((m) => e.magias.includes(m.uuid)) : [];
 
 		let conjuracao = this.conjurador?.atributo ?? null;
@@ -1213,7 +1448,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			atributos: Object.fromEntries(ATRIBUTOS.map((k) => [k, { base: this.base(k) ?? 0, racial: this.racial(k) }])),
 			origem: this.origensAtivas().map((o) => o.def.nome).join(" / "),
 			divindade: devoto ? e.divindade : "",
-			dinheiro: e.dinheiro ?? 0,
+			dinheiro: this.saldo,
+			dinheiroRolado: e.dinheiro ?? 0,
+			gasto: this.gastoCompras,
 			conjuracao,
 			nome: e.nome?.trim() || this.actor.name
 		};
@@ -1262,6 +1499,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			}
 			if (campo === "divindade") e.poderesConcedidos = [];
 			if (campo === "atrModo" || campo === "atrFixo.arranjo") {
+				this.dadoSelecionado = null;
 				for (const k of ATRIBUTOS) e.atrFixo.atribuicao[k] = "";
 			}
 		}
@@ -1272,6 +1510,53 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	}
 
 	/* ---------------- Ações ---------------- */
+
+	static #lojaCategoria(event, target) {
+		this.lojaCategoria = target.dataset.valor;
+		this.render();
+	}
+
+	static #focarLoja(event, target) {
+		this.focoLoja = target.dataset.nome;
+		this.render();
+	}
+
+	/** Compra (+1) ou devolve (−1) um item da loja, respeitando o saldo. */
+	static #comprar(event, target) {
+		const nome = target.dataset.nome;
+		const delta = Number(target.dataset.delta);
+		const it = this.itemLoja(nome);
+		if (!it) return;
+		const compras = { ...(this.estado.compras ?? {}) };
+		const atual = compras[nome] ?? 0;
+		if (delta > 0 && Number(it.doc.system.preco) > this.saldo) {
+			return ui.notifications.warn(`Tibares insuficientes para comprar ${nome}.`);
+		}
+		const novo = Math.max(0, atual + delta);
+		if (novo) compras[nome] = novo;
+		else delete compras[nome];
+		this.focoLoja = nome;
+		this.estado.compras = compras;
+		this.#mudou();
+	}
+
+	/** Clique num dado: seleciona (ou desseleciona) para depois clicar no atributo. */
+	static #selecionarDado(event, target) {
+		const i = Number(target.dataset.dado);
+		const slot = target.closest("[data-soltar]")?.dataset.soltar;
+		// outro dado já selecionado + clique num dado que está num atributo = troca
+		if (this.dadoSelecionado !== null && this.dadoSelecionado !== i && slot) {
+			return this.#moverDado(this.dadoSelecionado, slot);
+		}
+		this.dadoSelecionado = this.dadoSelecionado === i ? null : i;
+		this.render();
+	}
+
+	/** Clique num atributo/monte com um dado selecionado. */
+	static #colocarDado(event, target) {
+		if (this.dadoSelecionado === null) return;
+		this.#moverDado(this.dadoSelecionado, target.dataset.soltar);
+	}
 
 	static #abrirSlideout(event, target) {
 		const { campo, lista, titulo } = target.dataset;

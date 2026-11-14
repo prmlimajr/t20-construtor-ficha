@@ -30,7 +30,9 @@ export async function aplicarNaFicha(actor, plano, dados) {
 		"system.detalhes.raca": raca?.name ?? "",
 		"system.detalhes.origem": plano.origem,
 		"system.detalhes.divindade": plano.divindade,
-		"system.dinheiro.tp": plano.dinheiro
+		// T$ inteiros em prata; a fração vira cobre (T$ 1 = 10 TC)
+		"system.dinheiro.tp": Math.floor(plano.dinheiro),
+		"system.dinheiro.tc": Math.round((plano.dinheiro - Math.floor(plano.dinheiro)) * 10)
 	};
 	for (const k of ATRIBUTOS) {
 		update[`system.atributos.${k}.base`] = plano.atributos[k].base;

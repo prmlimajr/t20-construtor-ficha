@@ -524,3 +524,152 @@
 .t20-construtor .cf-abrir-linha { margin: 4px 0 2px 24px; }
 .t20-construtor .cf-rotulo-abrir { margin-right: 6px; }
 .t20-construtor .cf-itens li { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+
+/* ---------- Atributos: arrastar e soltar ---------- */
+.t20-construtor .cf-monte {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	min-height: 64px;
+	padding: 8px;
+	border: 1px dashed var(--cf-borda);
+	border-radius: 6px;
+	background: rgba(0, 0, 0, 0.2);
+}
+.t20-construtor .cf-dnd .cf-dado {
+	cursor: grab;
+	user-select: none;
+	background: var(--cf-fundo-card);
+	border-color: var(--cf-marrom);
+	transition: transform 80ms ease, box-shadow 80ms ease;
+}
+.t20-construtor .cf-dnd .cf-dado:hover { border-color: var(--cf-ouro); transform: translateY(-1px); }
+.t20-construtor .cf-dnd .cf-dado:active { cursor: grabbing; }
+.t20-construtor .cf-dnd .cf-dado.selecionado {
+	border-color: var(--cf-ouro);
+	box-shadow: 0 0 0 2px var(--cf-ouro);
+}
+.t20-construtor .cf-dnd .cf-dado.arrastando { opacity: 0.4; }
+.t20-construtor .cf-slot {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 64px;
+	min-height: 48px;
+	border: 1px dashed var(--cf-borda);
+	border-radius: 6px;
+	vertical-align: middle;
+}
+.t20-construtor .cf-slot .cf-dado { width: 56px; padding: 2px; }
+.t20-construtor .cf-slot-vazio { font-size: 11px; color: var(--cf-texto-suave); padding: 0 6px; }
+.t20-construtor .cf-slot.alvo { border-color: var(--cf-ouro); cursor: pointer; }
+.t20-construtor .cf-slot.sobre,
+.t20-construtor .cf-monte.sobre {
+	border-style: solid;
+	border-color: var(--cf-ouro);
+	background: var(--cf-ouro-claro);
+}
+.t20-construtor .cf-tabela-atributos.cf-dnd td { padding: 4px; }
+
+/* ---------- Magias: aprimoramentos ---------- */
+.t20-construtor .cf-aprimoramentos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.t20-construtor .cf-aprimoramentos li {
+	display: grid;
+	grid-template-columns: 64px 1fr auto;
+	align-items: start;
+	gap: 8px;
+	padding: 6px 8px;
+	border: 1px solid var(--cf-borda);
+	border-radius: 4px;
+	background: rgba(0, 0, 0, 0.2);
+}
+.t20-construtor .cf-aprimoramentos .cf-descricao p { margin: 0; }
+.t20-construtor .cf-custo {
+	text-align: center;
+	font-weight: bold;
+	color: var(--cf-marrom);
+	background: var(--cf-ouro);
+	border-radius: 10px;
+	padding: 1px 6px;
+	white-space: nowrap;
+}
+.t20-construtor .cf-aprimoramentos li.bloqueado { opacity: 0.6; }
+.t20-construtor .cf-requer {
+	font-size: 11px;
+	color: var(--cf-texto-suave);
+	border: 1px solid var(--cf-borda);
+	border-radius: 10px;
+	padding: 1px 6px;
+	white-space: nowrap;
+}
+
+/* Atributo da perícia nos benefícios */
+.t20-construtor .cf-atr {
+	display: inline-block;
+	min-width: 34px;
+	margin-right: 6px;
+	padding: 0 6px;
+	border: 1px solid var(--cf-ouro);
+	border-radius: 10px;
+	color: var(--cf-ouro);
+	font-size: 11px;
+	font-weight: bold;
+	text-align: center;
+	text-transform: uppercase;
+}
+.t20-construtor .cf-detalhe { font-size: 11px; color: var(--cf-texto-suave); }
+
+/* ---------- Loja ---------- */
+.t20-construtor .cf-loja { display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 0; }
+.t20-construtor .cf-conteudo > .cf-loja { flex-shrink: 1; }
+.t20-construtor .cf-loja .cf-duas { flex: 1; min-height: 260px; }
+.t20-construtor .cf-bolsa {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 20px;
+	padding: 8px 12px;
+	border: 1px solid var(--cf-borda);
+	border-radius: 6px;
+	background: var(--cf-ouro-claro);
+}
+.t20-construtor .cf-bolsa-valor { display: flex; flex-direction: column; }
+.t20-construtor .cf-bolsa-valor small { color: var(--cf-texto-suave); font-size: 11px; }
+.t20-construtor .cf-bolsa-valor strong { font-size: 16px; }
+.t20-construtor .cf-saldo strong { font-size: 22px; color: var(--cf-ouro); }
+.t20-construtor .cf-carrinho { flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 6px; }
+.t20-construtor .cf-carrinho-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 4px 2px 10px;
+	border: 1px solid var(--cf-marrom);
+	border-radius: 14px;
+	background: rgba(0, 0, 0, 0.25);
+}
+.t20-construtor .cf-carrinho-item small { color: var(--cf-texto-suave); }
+.t20-construtor button.cf-link {
+	width: auto;
+	padding: 0;
+	border: none;
+	background: none;
+	color: inherit;
+	text-decoration: underline dotted;
+}
+.t20-construtor .cf-loja-filtros { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.t20-construtor .cf-loja-filtros .cf-chips { flex: 1; }
+.t20-construtor .cf-badge {
+	display: inline-block;
+	padding: 0 6px;
+	border-radius: 10px;
+	background: var(--cf-ouro);
+	color: var(--cf-marrom);
+	font-size: 11px;
+}
+.t20-construtor .cf-card.caro { opacity: 0.45; }
+.t20-construtor .cf-compra { display: flex; align-items: center; gap: 8px; margin: 6px 0 10px; }
+.t20-construtor .cf-preco { flex: 1; font-size: 18px; font-weight: bold; color: var(--cf-ouro); }
+.t20-construtor .cf-preco small { font-size: 11px; color: var(--cf-texto-suave); font-weight: normal; }
+.t20-construtor .cf-qtd { min-width: 20px; text-align: center; }
+.t20-construtor button.cf-comprar { width: auto; flex: none; }

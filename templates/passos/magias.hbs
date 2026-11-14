@@ -33,7 +33,22 @@
 		<button type="button" class="{{#if foco.selecionado}}{{else}}cf-primario{{/if}}" data-action="alternar" data-campo="magias" data-valor="{{foco.uuid}}" data-limite="{{qtd}}">
 			{{#if foco.selecionado}}Remover{{else}}Escolher esta magia{{/if}}
 		</button>
+		{{#if foco.stats.length}}
+		<dl class="cf-dados">{{#each foco.stats}}<dt>{{rotulo}}</dt><dd>{{valor}}</dd>{{/each}}</dl>
+		{{/if}}
 		<div class="cf-descricao">{{{foco.descricao}}}</div>
+		{{#if foco.aprimoramentos.length}}
+		<h4>Aprimoramentos</h4>
+		<ul class="cf-aprimoramentos">
+			{{#each foco.aprimoramentos}}
+			<li class="{{#if bloqueado}}bloqueado{{/if}}">
+				<span class="cf-custo">{{custo}}</span>
+				<div class="cf-descricao">{{{texto}}}</div>
+				{{#if bloqueado}}<span class="cf-requer" title="Disponível a partir do {{circulo}}º círculo">{{circulo}}º círculo</span>{{/if}}
+			</li>
+			{{/each}}
+		</ul>
+		{{/if}}
 		{{else}}
 		<p class="cf-vazio">Clique no nome de uma magia para ler a descrição.</p>
 		{{/if}}

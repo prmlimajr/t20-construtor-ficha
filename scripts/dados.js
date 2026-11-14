@@ -14,6 +14,18 @@ const PACKS = {
 
 let cache = null;
 
+/** Pastas do compêndio de equipamentos que não entram na loja. */
+const FORA_DA_LOJA = new Set(["Tesouro", "Itens de Origem"]);
+const ORDEM_LOJA = ["Armas", "Armaduras & Escudos", "Equipamento de Aventura", "Ferramentas", "Vestuários", "Consumíveis", "Animais", "Esotérico", "Veículos"];
+
+/** Nome da pasta de primeiro nível de um documento de compêndio. */
+function pastaRaiz(doc, pack) {
+	let f = doc.folder ?? null;
+	if (typeof f === "string") f = pack?.folders?.get(f) ?? null;
+	while (f?.folder) f = typeof f.folder === "string" ? pack?.folders?.get(f.folder) : f.folder;
+	return f?.name ?? "Outros";
+}
+
 async function lerJson(arquivo) {
 	const resp = await fetch(`modules/${MODULE_ID}/data/${arquivo}`);
 	if (!resp.ok) throw new Error(`${MODULE_ID} | não foi possível ler data/${arquivo}`);
@@ -68,6 +80,11 @@ export async function carregarDados() {
 		equipPorNome: new Map([...indiceEquip].map((e) => [normalizar(e.name), e])),
 		armas: [...indiceEquip].filter((e) => e.type === "arma" && e.system?.proficiencia).sort(ordenar),
 		packEquip,
+		loja: [...indiceEquip]
+			.map((d) => ({ doc: d, categoria: pastaRaiz(d, packEquip) }))
+			.filter(({ doc, categoria }) => !FORA_DA_LOJA.has(categoria) && Number(doc.system?.preco) > 0)
+			.sort((a, b) => ordenar(a.doc, b.doc)),
+		categoriasLoja: ORDEM_LOJA,
 		regrasClasses,
 		origens: origens.origens ?? [],
 		origensRegionais: regionais.origens ?? [],

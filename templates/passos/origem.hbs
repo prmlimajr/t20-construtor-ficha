@@ -47,7 +47,7 @@
 			<div class="cf-beneficio {{#if selecionado}}selecionado{{/if}}">
 				<button type="button" class="cf-check" data-action="alternar" data-campo="{{../info.campoBeneficios}}" data-valor="{{id}}" data-limite="{{../info.qtdBeneficios}}" {{#if bloqueado}}disabled title="Já treinada"{{/if}}>
 					<i class="fa-{{#if selecionado}}solid fa-square-check{{else}}regular fa-square{{/if}}"></i>
-					<small>{{tipo}}</small> {{nome}}
+					<small>{{tipo}}</small> {{#if atributo}}<span class="cf-atr">{{atributo}}</span>{{/if}}{{nome}}{{#if detalhe}} <span class="cf-detalhe">· {{detalhe}}</span>{{/if}}
 				</button>
 				{{#if grupo}}
 				<div class="cf-abrir-linha">{{> "modules/t20-construtor-ficha/templates/partes/abrir.hbs" grupo}}</div>

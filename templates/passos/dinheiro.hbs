@@ -1,9 +1,70 @@
+{{#unless rolado}}
 <div class="cf-centro">
-	{{#unless rolado}}
 	<p>Todo personagem começa com <strong>4d6 tibares (T$)</strong>. A rolagem aparece no chat e só pode ser feita uma vez.</p>
 	<button type="button" class="cf-primario cf-grande" data-action="rolarDinheiro"><i class="fa-solid fa-coins"></i> Rolar 4d6</button>
-	{{else}}
-	<p class="cf-moedas"><i class="fa-solid fa-coins"></i> T$ {{dinheiro}}</p>
-	<p class="cf-nota">Esse valor irá para as moedas de prata (T$) da ficha.</p>
-	{{/unless}}
 </div>
+{{else}}
+<div class="cf-loja">
+	<div class="cf-bolsa">
+		<div class="cf-bolsa-valor"><small>Rolados</small><strong>{{fmtRolado}}</strong></div>
+		<div class="cf-bolsa-valor"><small>Em compras</small><strong>{{fmtGasto}}</strong></div>
+		<div class="cf-bolsa-valor cf-saldo"><small>Restante</small><strong><i class="fa-solid fa-coins"></i> {{fmtSaldo}}</strong></div>
+		{{#if carrinho.length}}
+		<div class="cf-carrinho">
+			{{#each carrinho}}
+			<span class="cf-carrinho-item">
+				<button type="button" class="cf-link" data-action="focarLoja" data-nome="{{nome}}">{{nome}}{{#if multiplo}} ×{{qtd}}{{/if}}</button>
+				<small>{{total}}</small>
+				<button type="button" class="cf-mini" data-action="comprar" data-nome="{{nome}}" data-delta="-1" title="Devolver um">−</button>
+			</span>
+			{{/each}}
+		</div>
+		{{else}}
+		<p class="cf-nota">Use o restante para comprar equipamentos. O que sobrar vai para a ficha (frações em moedas de cobre).</p>
+		{{/if}}
+	</div>
+
+	<div class="cf-loja-filtros">
+		<div class="cf-chips">
+			{{#each categorias}}
+			<button type="button" class="cf-chip {{#if selecionado}}selecionado{{/if}}" data-action="lojaCategoria" data-valor="{{nome}}">{{nome}}</button>
+			{{/each}}
+		</div>
+		<input type="search" class="cf-filtro" placeholder="Filtrar…" value="{{filtro}}">
+	</div>
+
+	<div class="cf-duas">
+		<div class="cf-lista cf-cards">
+			{{#each cards}}
+			<button type="button" class="cf-card {{#if qtd}}selecionado{{/if}} {{#if foco}}foco{{/if}} {{#if caro}}caro{{/if}}"
+				data-action="focarLoja" data-nome="{{nome}}" data-busca="{{busca}}">
+				<img src="{{img}}" alt="">
+				<span class="cf-card-texto">
+					<span class="cf-card-nome">{{nome}}{{#if qtd}} <span class="cf-badge">×{{qtd}}</span>{{/if}}</span>
+					<span class="cf-card-sub">{{sub}}</span>
+				</span>
+			</button>
+			{{/each}}
+		</div>
+		<aside class="cf-info">
+			{{#if info}}
+			<h3><img src="{{info.img}}" alt=""> {{info.nome}}</h3>
+			<div class="cf-compra">
+				<span class="cf-preco">{{info.preco}}{{#if info.pacote}} <small>(pacote com {{info.pacote}})</small>{{/if}}</span>
+				<button type="button" class="cf-mini" data-action="comprar" data-nome="{{info.nome}}" data-delta="-1" {{#unless info.podeRemover}}disabled{{/unless}} title="Devolver um">−</button>
+				<strong class="cf-qtd">{{info.qtd}}</strong>
+				<button type="button" class="cf-primario cf-comprar" data-action="comprar" data-nome="{{info.nome}}" data-delta="1" {{#unless info.podeComprar}}disabled title="Tibares insuficientes"{{/unless}}>
+					<i class="fa-solid fa-cart-plus"></i> Comprar
+				</button>
+			</div>
+			{{#if info.stats.length}}
+			<dl class="cf-dados">{{#each info.stats}}<dt>{{rotulo}}</dt><dd>{{valor}}</dd>{{/each}}</dl>
+			{{/if}}
+			{{#if info.descricao}}<div class="cf-descricao">{{{info.descricao}}}</div>{{/if}}
+			{{else}}
+			<p class="cf-vazio">Clique em um item para ver os detalhes e comprar.</p>
+			{{/if}}
+		</aside>
+	</div>
+</div>
+{{/unless}}
