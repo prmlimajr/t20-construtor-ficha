@@ -54,7 +54,7 @@
 				{{#if grupo}}
 				<div class="cf-abrir-linha">{{> "modules/t20-construtor-ficha/templates/partes/abrir.hbs" grupo}}</div>
 				{{/if}}
-				{{#if info}}{{> "modules/t20-construtor-ficha/templates/partes/poder.hbs" info}}{{/if}}
+				{{#if info}}{{> "modules/t20-construtor-ficha/templates/partes/poder.hbs" info aberto=selecionado}}{{/if}}
 			</div>
 			{{/each}}
 		</div>

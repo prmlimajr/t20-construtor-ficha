@@ -66,7 +66,7 @@
 				<i class="fa-{{#if selecionado}}solid fa-square-check{{else}}regular fa-square{{/if}}"></i> {{nome}}
 			</button>
 			{{/if}}
-			{{#if info}}{{> "modules/t20-construtor-ficha/templates/partes/poder.hbs" info}}{{/if}}
+			{{#if info}}{{> "modules/t20-construtor-ficha/templates/partes/poder.hbs" info aberto=selecionado}}{{/if}}
 		</div>
 		{{/each}}
 		{{else}}

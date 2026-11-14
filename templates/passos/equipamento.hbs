@@ -1,11 +1,10 @@
 <div class="cf-duas">
 	<div class="cf-lista">
-		<h4>Arma</h4>
 		{{#each armas}}
-		<p class="cf-subtitulo">{{titulo}}</p>
+		<h4>{{titulo}}</h4>
 		<div class="cf-cards">
 			{{#each cards}}
-			<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if foco}}foco{{/if}}"
+			<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if vendido}}vendido{{/if}} {{#if foco}}foco{{/if}}"
 				data-action="escolherEquip" data-campo="{{campo}}" data-valor="{{valor}}" data-nome="{{nome}}">
 				<img src="{{img}}" alt="">
 				<span class="cf-card-texto">
@@ -20,7 +19,7 @@
 		<h4>Armadura</h4>
 		<div class="cf-cards">
 			{{#each armaduras}}
-			<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if foco}}foco{{/if}}"
+			<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if vendido}}vendido{{/if}} {{#if foco}}foco{{/if}}"
 				data-action="escolherEquip" data-campo="{{campo}}" data-valor="{{valor}}" data-nome="{{nome}}">
 				<img src="{{img}}" alt="">
 				<span class="cf-card-texto">
@@ -31,19 +30,6 @@
 			{{/each}}
 		</div>
 
-		{{#if escudo}}
-		<h4>Escudo</h4>
-		<div class="cf-cards">
-			<button type="button" class="cf-card {{#if escudo.selecionado}}selecionado{{/if}} {{#if escudo.foco}}foco{{/if}}"
-				data-action="escolherEquip" data-campo="{{escudo.campo}}" data-valor="{{escudo.valor}}" data-tipo="bool" data-nome="{{escudo.nome}}">
-				<img src="{{escudo.img}}" alt="">
-				<span class="cf-card-texto">
-					<span class="cf-card-nome">{{escudo.nome}}</span>
-					<span class="cf-card-sub">{{#if escudo.selecionado}}Levando{{else}}Clique para levar{{/if}}{{#if escudo.sub}} · {{escudo.sub}}{{/if}}</span>
-				</span>
-			</button>
-		</div>
-		{{/if}}
 
 		{{#each itensClasse}}
 		<h4>{{titulo}}</h4>

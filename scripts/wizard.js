@@ -48,7 +48,7 @@ function estadoInicial(actor) {
 		devoto: null,
 		divindade: "",
 		poderesConcedidos: [],
-		equip: { arma: "", armadura: "", escudo: false },
+		equip: { arma: "", armaMarcial: "", armadura: "" },
 		dinheiro: null,
 		compras: {},
 		/** Nomes dos itens iniciais vendidos (um por entrada; metade do preço vira tibares). */
@@ -205,6 +205,11 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	get regrasClasse() {
 		const c = this.classe;
 		return c ? this.dados.regrasClasses[c.name] ?? null : null;
+	}
+
+	/** A classe tem a proficiência (marcial, pesada, escudo)? */
+	temProficiencia(p) {
+		return (this.regrasClasse?.proficiencias ?? []).includes(p);
 	}
 
 	get conjurador() {
@@ -618,7 +623,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				return null;
 			}
 			case "equipamento":
-				if (!e.equip.arma) return "Escolha sua arma inicial.";
+				if (!e.equip.arma) return "Escolha sua arma simples.";
+				if (this.temProficiencia("marcial") && !e.equip.armaMarcial) return "Escolha sua arma marcial.";
 				return this.#pendenciaEscolhas(this.escolhasDeClasse(["item", "prototipo"]));
 			case "dinheiro":
 				if (e.dinheiro === null) return "Role seus tibares iniciais.";
@@ -1895,35 +1901,46 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		};
 
 		// Arma
-		const cats = ["simples", ...(prof.includes("marcial") ? ["marcial"] : [])];
-		const nomesCat = { simples: "Armas simples", marcial: "Armas marciais" };
-		const armas = cats.map((c) => ({
-			titulo: nomesCat[c],
-			cards: this.dados.armas.filter((a) => a.system.proficiencia === c)
-				.map((a) => card(a.name, { campo: "equip.arma", valor: a.name, selecionado: e.equip.arma === a.name }))
-		}));
+		// Uma arma simples; quem tem proficiência com armas marciais escolhe também uma marcial
+		const vendidosNomes = this.#nomesVendidos();
+		const cardEscolha = (nome, campo, atual) => {
+			const vendido = atual === nome && vendidosNomes.has(nome);
+			return card(nome, { campo, valor: nome, selecionado: atual === nome, vendido, ...(vendido ? { sub: "Vendida" } : {}) });
+		};
+		const armas = [{ titulo: "Arma simples", campo: "equip.arma", cat: "simples" }];
+		if (prof.includes("marcial")) armas.push({ titulo: "Arma marcial", campo: "equip.armaMarcial", cat: "marcial" });
+		for (const g of armas) {
+			const atual = foundry.utils.getProperty(e, g.campo);
+			g.cards = this.dados.armas.filter((a) => a.system.proficiencia === g.cat).map((a) => cardEscolha(a.name, g.campo, atual));
+		}
 
 		// Armadura
 		const arm = this.dados.equipamento.armaduras ?? {};
 		const armaduras = [
 			{ nome: "Nenhuma", img: "icons/svg/cancel.svg", sub: "", campo: "equip.armadura", valor: "", selecionado: !e.equip.armadura },
 			...[...(arm.leve ?? []), ...(prof.includes("pesada") ? arm.pesada ?? [] : [])]
-				.map((n) => card(n, { campo: "equip.armadura", valor: n, selecionado: e.equip.armadura === n }))
+				.map((n) => cardEscolha(n, "equip.armadura", e.equip.armadura))
 		];
 
-		// Escudo
-		const nomeEscudo = this.dados.equipamento.escudo;
-		const escudo = prof.includes("escudo") && nomeEscudo
-			? card(nomeEscudo, { campo: "equip.escudo", valor: String(!e.equip.escudo), tipo: "bool", selecionado: !!e.equip.escudo })
-			: null;
 
 		// Itens que já recebe
 		const recebidos = [];
-		const grupo = (titulo, itens) => {
+		// itens vendidos saem da lista (uma ocorrência por venda)
+		const aRemover = this.#nomesVendidos({ lista: true });
+		const grupo = (titulo, todos) => {
+			const itens = todos.filter((x) => {
+				const i = aRemover.indexOf(x.nome);
+				if (i < 0) return true;
+				aRemover.splice(i, 1);
+				return false;
+			});
 			if (itens.length) recebidos.push({ titulo, cards: itens.map((x) => card(x.nome, { qtd: x.qtd > 1 ? x.qtd : null })) });
 		};
 		grupo("Todo aventureiro", (this.dados.equipamento.kitBase ?? []).map((n) => ({ nome: n, qtd: 1 })));
-		grupo(`Classe (${this.classe?.name ?? ""})`, (r.equipamentoExtra ?? []).map((n) => ({ nome: n, qtd: 1 })));
+		grupo(`Classe (${this.classe?.name ?? ""})`, [
+			...(r.equipamentoExtra ?? []).map((n) => ({ nome: n, qtd: 1 })),
+			...(prof.includes("escudo") && this.dados.equipamento.escudo ? [{ nome: this.dados.equipamento.escudo, qtd: 1 }] : [])
+		]);
 		for (const o of this.origensAtivas()) grupo(`Origem (${o.def.nome})`, this.#itensDaOrigem(o.def, o.estado));
 
 		// Painel de detalhes
@@ -1936,7 +1953,25 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				descricao: f.doc ? await this.#html(f.doc.uuid, f.doc.system?.description?.value) : ""
 			};
 		}
-		return { armas, armaduras, escudo, recebidos, info, itensClasse: this.#ctxItensClasse(), venda: this.#ctxVenda() };
+		const venda = this.#ctxVenda();
+		venda.bloqueado = !!this.pendencia({ id: "equipamento" });
+		return { armas, armaduras, recebidos, info, itensClasse: this.#ctxItensClasse(), venda };
+	}
+
+	/**
+	 * Nomes dos itens vendidos. `lista: true` devolve um nome por venda, sem os das escolhas
+	 * (arma, armadura), que ficam marcadas como vendidas na própria seção.
+	 */
+	#nomesVendidos({ lista = false } = {}) {
+		const iniciais = this.plano({ semVendas: true }).itens;
+		const nomes = this.#vendas(iniciais).indices.map((i) => iniciais[i].nome);
+		if (!lista) return new Set(nomes);
+		const out = [...nomes];
+		for (const n of Object.values(this.estado.equip ?? {})) {
+			const i = typeof n === "string" && n ? out.indexOf(n) : -1;
+			if (i >= 0) out.splice(i, 1);
+		}
+		return out;
 	}
 
 	/** Venda de itens iniciais: botão para o slideout e lista do que já foi vendido. */
@@ -2138,8 +2173,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			...(r.equipamentoExtra ?? []).map((n) => ({ nome: n, qtd: 1 }))
 		);
 		if (e.equip.arma) itens.push({ nome: e.equip.arma, qtd: 1 });
+		if (e.equip.armaMarcial && (r.proficiencias ?? []).includes("marcial")) itens.push({ nome: e.equip.armaMarcial, qtd: 1 });
 		if (e.equip.armadura) itens.push({ nome: e.equip.armadura, qtd: 1 });
-		if (e.equip.escudo && (r.proficiencias ?? []).includes("escudo") && this.dados.equipamento.escudo) {
+		if ((r.proficiencias ?? []).includes("escudo") && this.dados.equipamento.escudo) {
 			itens.push({ nome: this.dados.equipamento.escudo, qtd: 1 });
 		}
 		itens.push(...daClasse.itens);
@@ -2312,7 +2348,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				e.poderesConcedidos = [];
 				e.divindade = "";
 				e.devoto = null;
-				e.equip = { arma: "", armadura: "", escudo: false };
+				e.equip = { arma: "", armaMarcial: "", armadura: "" };
 			}
 			if (campo.startsWith("escolhasClasse.")) {
 				// trocar o caminho limpa subescolhas que deixaram de existir
@@ -2426,6 +2462,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	/** Abre o slideout de venda com os itens já vendidos marcados. */
 	static #abrirVenda() {
+		const pend = this.pendencia({ id: "equipamento" });
+		if (pend) return ui.notifications.warn(`Antes de vender: ${pend}`);
 		const iniciais = this.plano({ semVendas: true }).itens;
 		this.vendaRascunho = new Set(this.#vendas(iniciais).indices);
 		this.slideout = { tipo: "venda", titulo: "Vender itens", foco: null, animar: true, filtro: "" };

@@ -162,6 +162,15 @@ export async function aplicarNaFicha(actor, plano, dados) {
 		await criados[indice]?.update({ "system.upgrades.improvement": [uuid] });
 	}
 
+	// PV e PM atuais = máximos, que o sistema calcula com raça, classe, atributos e poderes já na ficha
+	actor.prepareData?.();
+	const pv = actor.system?.attributes?.pv?.max;
+	const pm = actor.system?.attributes?.pm?.max;
+	const recursos = {};
+	if (Number.isFinite(pv)) recursos["system.attributes.pv.value"] = pv;
+	if (Number.isFinite(pm)) recursos["system.attributes.pm.value"] = pm;
+	if (Object.keys(recursos).length) await actor.update(recursos);
+
 	await actor.unsetFlag(MODULE_ID, "rascunho");
 	await actor.setFlag(MODULE_ID, "concluido", true);
 }
