@@ -1,29 +1,78 @@
-<div class="cf-bloco">
-	<h4>Itens que você já recebe</h4>
-	<p><strong>Todo aventureiro:</strong> {{kit}}</p>
-	{{#if extras}}<p><strong>Classe:</strong> {{extras}}</p>{{/if}}
-	{{#each origens}}<p><strong>{{nome}}:</strong> {{itens}}</p>{{/each}}
-</div>
-
-<div class="cf-bloco">
-	<h4>Escolhas</h4>
-	<label class="cf-campo">Arma:
-		<select data-campo="equip.arma">
-			<option value="">— escolha —</option>
-			{{#each grupos}}
-			<optgroup label="{{nome}}">
-				{{#each opcoes}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{nome}}</option>{{/each}}
-			</optgroup>
+<div class="cf-duas">
+	<div class="cf-lista">
+		<h4>Arma</h4>
+		{{#each armas}}
+		<p class="cf-subtitulo">{{titulo}}</p>
+		<div class="cf-cards">
+			{{#each cards}}
+			<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if foco}}foco{{/if}}"
+				data-action="escolherEquip" data-campo="{{campo}}" data-valor="{{valor}}" data-nome="{{nome}}">
+				<img src="{{img}}" alt="">
+				<span class="cf-card-texto">
+					<span class="cf-card-nome">{{nome}}</span>
+					{{#if sub}}<span class="cf-card-sub">{{sub}}</span>{{/if}}
+				</span>
+			</button>
 			{{/each}}
-		</select>
-	</label>
-	<label class="cf-campo">Armadura:
-		<select data-campo="equip.armadura">
-			<option value="" {{#if semArmadura}}selected{{/if}}>Nenhuma</option>
-			{{#each armaduras}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{nome}}</option>{{/each}}
-		</select>
-	</label>
-	{{#if podeEscudo}}
-	<label class="cf-campo"><input type="checkbox" data-campo="equip.escudo" {{#if escudo}}checked{{/if}}> {{nomeEscudo}}</label>
-	{{/if}}
+		</div>
+		{{/each}}
+
+		<h4>Armadura</h4>
+		<div class="cf-cards">
+			{{#each armaduras}}
+			<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if foco}}foco{{/if}}"
+				data-action="escolherEquip" data-campo="{{campo}}" data-valor="{{valor}}" data-nome="{{nome}}">
+				<img src="{{img}}" alt="">
+				<span class="cf-card-texto">
+					<span class="cf-card-nome">{{nome}}</span>
+					{{#if sub}}<span class="cf-card-sub">{{sub}}</span>{{/if}}
+				</span>
+			</button>
+			{{/each}}
+		</div>
+
+		{{#if escudo}}
+		<h4>Escudo</h4>
+		<div class="cf-cards">
+			<button type="button" class="cf-card {{#if escudo.selecionado}}selecionado{{/if}} {{#if escudo.foco}}foco{{/if}}"
+				data-action="escolherEquip" data-campo="{{escudo.campo}}" data-valor="{{escudo.valor}}" data-tipo="bool" data-nome="{{escudo.nome}}">
+				<img src="{{escudo.img}}" alt="">
+				<span class="cf-card-texto">
+					<span class="cf-card-nome">{{escudo.nome}}</span>
+					<span class="cf-card-sub">{{#if escudo.selecionado}}Levando{{else}}Clique para levar{{/if}}{{#if escudo.sub}} · {{escudo.sub}}{{/if}}</span>
+				</span>
+			</button>
+		</div>
+		{{/if}}
+
+		<h4>Itens que você já recebe</h4>
+		{{#each recebidos}}
+		<p class="cf-subtitulo">{{titulo}}</p>
+		<div class="cf-cards">
+			{{#each cards}}
+			<button type="button" class="cf-card cf-card-fixo {{#if foco}}foco{{/if}}" data-action="focarEquip" data-nome="{{nome}}">
+				<img src="{{img}}" alt="">
+				<span class="cf-card-texto">
+					<span class="cf-card-nome">{{nome}}{{#if qtd}} <small>×{{qtd}}</small>{{/if}}</span>
+					{{#if sub}}<span class="cf-card-sub">{{sub}}</span>{{/if}}
+				</span>
+			</button>
+			{{/each}}
+		</div>
+		{{/each}}
+	</div>
+
+	<aside class="cf-info">
+		{{#if info}}
+		<h3><img src="{{info.img}}" alt=""> {{info.nome}}</h3>
+		{{#if info.stats.length}}
+		<dl class="cf-dados">
+			{{#each info.stats}}<dt>{{rotulo}}</dt><dd>{{valor}}</dd>{{/each}}
+		</dl>
+		{{/if}}
+		{{#if info.descricao}}<div class="cf-descricao">{{{info.descricao}}}</div>{{/if}}
+		{{else}}
+		<p class="cf-vazio">Clique em um equipamento para ver os detalhes.</p>
+		{{/if}}
+	</aside>
 </div>

@@ -75,6 +75,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		this.estado = null;
 		this.indice = 0;
 		this.focoMagia = "";
+		this.focoEquip = "";
 		this._cacheHtml = new Map();
 		this._salvarRascunho = foundry.utils.debounce(() => this.#salvarRascunho(), 500);
 	}
@@ -94,6 +95,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			rolarAtributos: ConstrutorFicha.#rolarAtributos,
 			rerrolarMenor: ConstrutorFicha.#rerrolarMenor,
 			focarMagia: ConstrutorFicha.#focarMagia,
+			focarEquip: ConstrutorFicha.#focarEquip,
+			escolherEquip: ConstrutorFicha.#escolherEquip,
 			rolarDinheiro: ConstrutorFicha.#rolarDinheiro,
 			finalizar: ConstrutorFicha.#finalizar,
 			recomecar: ConstrutorFicha.#recomecar
@@ -861,38 +864,88 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		};
 	}
 
-	#ctxEquipamento() {
+	/** Dados resumidos de um equipamento do compêndio (para card e painel de detalhes). */
+	#fichaEquip(nome) {
+		const doc = equipamento(this.dados, nome);
+		if (!doc) return { nome, img: "icons/svg/item-bag.svg", sub: "", stats: [] };
+		const s = doc.system ?? {};
+		const stats = [];
+		const nomesProf = { simples: "Simples", marcial: "Marcial", exotica: "Exótica", fogo: "Fogo" };
+		const nomesEmp = { leve: "Leve", uma: "Uma mão", duas: "Duas mãos" };
+		if (doc.type === "arma") {
+			const dano = s.rolls?.find((r) => r.type === "dano")?.parts?.[0];
+			if (dano?.[0]) {
+				const tipo = dano[1] ? game.i18n.localize(CONFIG.T20?.damageTypes?.[dano[1]] ?? dano[1]).toLowerCase() : "";
+				stats.push(["Dano", `${dano[0]}${tipo ? ` ${tipo}` : ""}`]);
+			}
+			if (s.criticoM || s.criticoX) stats.push(["Crítico", `${s.criticoM && s.criticoM < 20 ? `${s.criticoM}/` : ""}x${s.criticoX ?? 2}`]);
+			if (s.alcance && s.alcance !== "-") stats.push(["Alcance", s.alcance]);
+			if (s.proficiencia) stats.push(["Proficiência", nomesProf[s.proficiencia] ?? s.proficiencia]);
+			if (s.empunhadura) stats.push(["Empunhadura", nomesEmp[s.empunhadura] ?? s.empunhadura]);
+		}
+		if (s.armadura?.value) {
+			stats.push(["Defesa", `+${s.armadura.value}`]);
+			if (s.armadura.penalidade) stats.push(["Penalidade", `${s.armadura.penalidade}`]);
+		}
+		if (s.preco) stats.push(["Preço", `T$ ${s.preco}`]);
+		if (s.espacos) stats.push(["Espaços", `${s.espacos}`]);
+		const sub = stats.filter(([k]) => ["Dano", "Crítico", "Defesa", "Penalidade"].includes(k)).map(([, v]) => v).join(" · ");
+		return { nome: doc.name, img: doc.img, sub, stats, doc };
+	}
+
+	async #ctxEquipamento() {
 		const e = this.estado;
 		const r = this.regrasClasse ?? {};
 		const prof = r.proficiencias ?? [];
+		const foco = this.focoEquip;
+		const card = (nome, extra = {}) => {
+			const f = this.#fichaEquip(nome);
+			return { nome: f.nome, img: f.img, sub: f.sub, foco: nome === foco, ...extra };
+		};
+
+		// Arma
 		const cats = ["simples", ...(prof.includes("marcial") ? ["marcial"] : [])];
 		const nomesCat = { simples: "Armas simples", marcial: "Armas marciais" };
-		const grupos = cats.map((c) => ({
-			nome: nomesCat[c],
-			opcoes: this.dados.armas.filter((a) => a.system.proficiencia === c)
-				.map((a) => ({ valor: a.name, nome: a.name, selecionado: e.equip.arma === a.name }))
+		const armas = cats.map((c) => ({
+			titulo: nomesCat[c],
+			cards: this.dados.armas.filter((a) => a.system.proficiencia === c)
+				.map((a) => card(a.name, { campo: "equip.arma", valor: a.name, selecionado: e.equip.arma === a.name }))
 		}));
+
+		// Armadura
 		const arm = this.dados.equipamento.armaduras ?? {};
 		const armaduras = [
-			...(arm.leve ?? []),
-			...(prof.includes("pesada") ? arm.pesada ?? [] : [])
-		].map((n) => ({ valor: n, nome: n, selecionado: e.equip.armadura === n }));
-		const origens = [];
-		for (const o of this.origensAtivas()) {
-			const itens = this.#itensDaOrigem(o.def, o.estado).map((x) => (x.qtd > 1 ? `${x.nome} (×${x.qtd})` : x.nome));
-			if (itens.length) origens.push({ nome: o.def.nome, itens: itens.join(", ") });
-		}
-		return {
-			kit: (this.dados.equipamento.kitBase ?? []).join(", "),
-			extras: (r.equipamentoExtra ?? []).join(", "),
-			grupos,
-			armaduras,
-			semArmadura: !e.equip.armadura,
-			podeEscudo: prof.includes("escudo"),
-			escudo: e.equip.escudo,
-			nomeEscudo: this.dados.equipamento.escudo,
-			origens
+			{ nome: "Nenhuma", img: "icons/svg/cancel.svg", sub: "", campo: "equip.armadura", valor: "", selecionado: !e.equip.armadura },
+			...[...(arm.leve ?? []), ...(prof.includes("pesada") ? arm.pesada ?? [] : [])]
+				.map((n) => card(n, { campo: "equip.armadura", valor: n, selecionado: e.equip.armadura === n }))
+		];
+
+		// Escudo
+		const nomeEscudo = this.dados.equipamento.escudo;
+		const escudo = prof.includes("escudo") && nomeEscudo
+			? card(nomeEscudo, { campo: "equip.escudo", valor: String(!e.equip.escudo), tipo: "bool", selecionado: !!e.equip.escudo })
+			: null;
+
+		// Itens que já recebe
+		const recebidos = [];
+		const grupo = (titulo, itens) => {
+			if (itens.length) recebidos.push({ titulo, cards: itens.map((x) => card(x.nome, { qtd: x.qtd > 1 ? x.qtd : null })) });
 		};
+		grupo("Todo aventureiro", (this.dados.equipamento.kitBase ?? []).map((n) => ({ nome: n, qtd: 1 })));
+		grupo(`Classe (${this.classe?.name ?? ""})`, (r.equipamentoExtra ?? []).map((n) => ({ nome: n, qtd: 1 })));
+		for (const o of this.origensAtivas()) grupo(`Origem (${o.def.nome})`, this.#itensDaOrigem(o.def, o.estado));
+
+		// Painel de detalhes
+		let info = null;
+		if (foco) {
+			const f = this.#fichaEquip(foco);
+			info = {
+				nome: f.nome, img: f.img,
+				stats: f.stats.map(([rotulo, valor]) => ({ rotulo, valor })),
+				descricao: f.doc ? await this.#html(f.doc.uuid, f.doc.system?.description?.value) : ""
+			};
+		}
+		return { armas, armaduras, escudo, recebidos, info };
 	}
 
 	/** Lista final de itens de uma origem: [{nome, qtd, texto?}] */
@@ -1131,6 +1184,20 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			flavor: "Construtor de Personagem — nova rolagem do menor atributo"
 		});
 		this.#mudou();
+	}
+
+	static #focarEquip(event, target) {
+		this.focoEquip = target.dataset.nome;
+		this.render();
+	}
+
+	/** Escolhe um equipamento e mostra os detalhes dele no painel. */
+	static #escolherEquip(event, target) {
+		const { campo, nome } = target.dataset;
+		let valor = target.dataset.valor;
+		if (target.dataset.tipo === "bool") valor = valor === "true";
+		if (nome && nome !== "Nenhuma") this.focoEquip = nome;
+		this.#definirCampo(campo, valor);
 	}
 
 	static #focarMagia(event, target) {

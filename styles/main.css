@@ -1,12 +1,45 @@
 /* T20 — Construtor de Ficha */
-.t20-construtor {
-	--cf-vermelho: #b72a2b;
-	--cf-vermelho-claro: rgba(183, 42, 43, 0.12);
-	--cf-borda: rgba(128, 128, 128, 0.35);
-	--cf-fundo-card: rgba(128, 128, 128, 0.08);
-	--cf-texto-suave: rgba(128, 128, 128, 0.95);
-	--cf-ok: #2e7d32;
+
+/* Fonte dos títulos: coloque o arquivo em fonts/Tormenta20.ttf (ou .otf/.woff2).
+   Se não existir, usa a fonte "Tormenta 20"/"Tormenta20" instalada no computador. */
+@font-face {
+	font-family: "T20CF Tormenta";
+	src: url("../fonts/Tormenta20.woff2") format("woff2"),
+		url("../fonts/Tormenta20.ttf") format("truetype"),
+		url("../fonts/Tormenta20.otf") format("opentype");
+	font-display: swap;
 }
+
+.t20-construtor {
+	/* Paleta */
+	--cf-marrom: #6f3c27;
+	--cf-ouro: #f0dc82;
+	--cf-vermelho: #b02b2e;
+	--cf-titulo-cor: #ffffff;
+	--cf-titulo-borda: #3f0f12;
+	--cf-fonte-titulo: "T20CF Tormenta", "Tormenta 20", "Tormenta20", "Modesto Condensed", serif;
+
+	/* Derivadas */
+	--cf-vermelho-claro: rgba(176, 43, 46, 0.18);
+	--cf-ouro-claro: rgba(240, 220, 130, 0.12);
+	--cf-borda: rgba(111, 60, 39, 0.75);
+	--cf-fundo-card: rgba(111, 60, 39, 0.22);
+	--cf-texto-suave: rgba(240, 220, 130, 0.7);
+	--cf-ok: #f0dc82;
+}
+
+/* ---------- Títulos ---------- */
+.t20-construtor .cf-cabecalho h2,
+.t20-construtor .cf-info h3,
+.t20-construtor h4 {
+	font-family: var(--cf-fonte-titulo);
+	color: var(--cf-titulo-cor);
+	-webkit-text-stroke: 2px var(--cf-titulo-borda);
+	paint-order: stroke fill;
+	text-shadow: 0 1px 2px var(--cf-titulo-borda);
+	letter-spacing: 0.02em;
+}
+.t20-construtor h4 { -webkit-text-stroke-width: 1.5px; }
 
 .t20-construtor .window-content {
 	padding: 0;
@@ -58,13 +91,14 @@
 	flex: none;
 }
 .t20-construtor .cf-passo.feito .cf-num {
-	background: var(--cf-ok);
-	border-color: var(--cf-ok);
-	color: #fff;
+	background: var(--cf-ouro);
+	border-color: var(--cf-ouro);
+	color: var(--cf-marrom);
 }
 .t20-construtor .cf-passo.atual {
 	border-color: var(--cf-vermelho);
 	background: var(--cf-vermelho-claro);
+	color: var(--cf-ouro);
 	font-weight: bold;
 }
 .t20-construtor .cf-passo:disabled { opacity: 0.45; }
@@ -106,9 +140,11 @@
 	padding: 10px 16px 6px;
 	border-bottom: 1px solid var(--cf-borda);
 }
-.t20-construtor .cf-cabecalho h2 { margin: 0; border: none; color: var(--cf-vermelho); }
+.t20-construtor .cf-cabecalho h2 { margin: 0; border: none; font-size: 30px; }
 .t20-construtor .cf-cabecalho p { margin: 2px 0 0; color: var(--cf-texto-suave); }
 
+.t20-construtor .cf-conteudo > * { flex-shrink: 0; }
+.t20-construtor .cf-conteudo > .cf-duas { flex-shrink: 1; }
 .t20-construtor .cf-conteudo {
 	flex: 1;
 	min-height: 0;
@@ -164,7 +200,8 @@
 	border: none;
 }
 .t20-construtor .cf-info h3 img { width: 36px; height: 36px; border: none; }
-.t20-construtor h4 { margin: 10px 0 6px; border-bottom: 1px solid var(--cf-borda); }
+.t20-construtor h4 { margin: 10px 0 6px; border-bottom: 1px solid var(--cf-borda); font-size: 16px; }
+.t20-construtor h4 small { -webkit-text-stroke: 0; font-family: var(--font-primary); }
 .t20-construtor h4 small { font-weight: normal; color: var(--cf-texto-suave); }
 
 .t20-construtor .cf-cards {
@@ -176,6 +213,7 @@
 .t20-construtor .cf-card {
 	display: flex;
 	align-items: center;
+	justify-content: flex-start;
 	gap: 8px;
 	text-align: left;
 	height: auto;
@@ -274,8 +312,10 @@
 .t20-construtor .cf-descricao p { margin: 4px 0; }
 
 /* ---------- Atributos ---------- */
+.t20-construtor .cf-placar strong { color: var(--cf-ouro); }
 .t20-construtor .cf-placar {
 	display: flex;
+	background: var(--cf-ouro-claro);
 	gap: 24px;
 	padding: 8px 12px;
 	border: 1px solid var(--cf-borda);
@@ -289,11 +329,13 @@
 .t20-construtor .cf-tabela-atributos td:first-child,
 .t20-construtor .cf-tabela-atributos th:first-child { text-align: left; }
 .t20-construtor .cf-base { white-space: nowrap; }
+.t20-construtor td.cf-base > * { vertical-align: middle; }
+.t20-construtor .cf-base .cf-mini { display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; margin: 0 4px; }
 .t20-construtor .cf-base strong { display: inline-block; min-width: 26px; }
 .t20-construtor .cf-base small { color: var(--cf-texto-suave); }
 .t20-construtor .cf-base select { width: 70px; }
-.t20-construtor .cf-total { font-weight: bold; font-size: 16px; }
-.t20-construtor .cf-mini { width: 24px; height: 24px; line-height: 1; padding: 0; }
+.t20-construtor .cf-total { font-weight: bold; font-size: 16px; color: var(--cf-ouro); }
+.t20-construtor .cf-mini { flex: none; width: 24px; min-width: 24px; height: 24px; line-height: 1; padding: 0; margin: 0; }
 .t20-construtor .cf-rolagens { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
 .t20-construtor .cf-dado {
 	display: flex;
@@ -305,7 +347,7 @@
 	border-radius: 6px;
 }
 .t20-construtor .cf-dado small { color: var(--cf-texto-suave); }
-.t20-construtor .cf-dado strong { font-size: 18px; }
+.t20-construtor .cf-dado strong { font-size: 18px; color: var(--cf-ouro); }
 
 /* ---------- Diversos ---------- */
 .t20-construtor .cf-vazio { color: var(--cf-texto-suave); font-style: italic; }
@@ -333,7 +375,7 @@
 	gap: 4px 12px;
 	margin: 6px 0;
 }
-.t20-construtor .cf-dados dt { font-weight: bold; }
+.t20-construtor .cf-dados dt { font-weight: bold; color: var(--cf-ouro); }
 .t20-construtor .cf-dados dd { margin: 0; }
 .t20-construtor .cf-centro {
 	display: flex;
@@ -345,7 +387,44 @@
 	text-align: center;
 }
 .t20-construtor .cf-grande { width: auto; font-size: 18px; padding: 8px 24px; height: auto; }
-.t20-construtor .cf-moedas { font-size: 32px; font-weight: bold; color: var(--cf-vermelho); }
+.t20-construtor .cf-moedas { font-size: 32px; font-weight: bold; color: var(--cf-ouro); }
 
 /* Botão no diretório de atores */
 .t20cf-criar { flex: 1 0 100%; }
+
+/* Detalhes da paleta */
+.t20-construtor .cf-chip:not(.selecionado):hover,
+.t20-construtor .cf-card:not(.selecionado):hover { border-color: var(--cf-ouro); }
+.t20-construtor .cf-info { background: var(--cf-ouro-claro); }
+.t20-construtor .cf-linha.foco { outline-color: var(--cf-ouro); }
+.t20-construtor .cf-resumo-atributos strong { color: var(--cf-ouro); }
+.t20-construtor .cf-check .fa-square-check { color: var(--cf-ouro); }
+.t20-construtor .cf-aviso { border-left-color: var(--cf-ouro); background: var(--cf-fundo-card); }
+.t20-construtor .cf-tabela-atributos thead th { background: var(--cf-marrom); color: var(--cf-ouro); }
+
+/* Botões de lista sempre alinhados à esquerda (o Foundry centraliza por padrão) */
+.t20-construtor button.cf-card,
+.t20-construtor button.cf-passo,
+.t20-construtor button.cf-check,
+.t20-construtor button.cf-linha-nome {
+	justify-content: flex-start;
+	text-align: left;
+}
+.t20-construtor button.cf-card .cf-card-texto {
+	flex: 1;
+	align-items: flex-start;
+	text-align: left;
+}
+.t20-construtor .cf-beneficio button.cf-check { width: 100%; }
+
+/* Equipamento */
+.t20-construtor .cf-subtitulo {
+	margin: 8px 0 4px;
+	font-size: 12px;
+	font-weight: bold;
+	color: var(--cf-texto-suave);
+	text-transform: uppercase;
+}
+.t20-construtor .cf-card.foco { outline: 1px dashed var(--cf-ouro); }
+.t20-construtor .cf-card-fixo { opacity: 0.85; }
+.t20-construtor .cf-lista > h4:first-child { margin-top: 0; }

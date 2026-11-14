@@ -12,9 +12,8 @@ function doCompendio(doc) {
 async function itemPorNome(dados, { nome, qtd = 1 }) {
 	const entrada = equipamento(dados, nome);
 	let data;
-	if (entrada && dados.packEquip) {
-		const doc = await dados.packEquip.getDocument(entrada._id);
-		data = doCompendio(doc);
+	if (entrada) {
+		data = doCompendio(entrada);
 	} else {
 		data = { name: nome, type: "tesouro" };
 	}

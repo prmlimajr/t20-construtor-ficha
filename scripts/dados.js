@@ -55,9 +55,7 @@ export async function carregarDados() {
 		]);
 
 	const packEquip = game.packs.get(PACKS.equipamentos);
-	const indiceEquip = packEquip
-		? await packEquip.getIndex({ fields: ["system.proficiencia", "system.tipo", "type", "img"] })
-		: [];
+	const indiceEquip = packEquip ? await packEquip.getDocuments() : [];
 
 	const ordenar = (a, b) => a.name.localeCompare(b.name, "pt-BR");
 
