@@ -861,3 +861,25 @@
 .t20-construtor .cf-card.vendido { opacity: 0.55; }
 .t20-construtor .cf-card.vendido .cf-card-nome { text-decoration: line-through; }
 .t20-construtor .cf-cabecalho button.cf-cabecalho-acao:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Cartão de poder selecionável: o cartão inteiro marca/desmarca, descrição sempre visível */
+.t20-construtor .cf-poder-card {
+	margin: 0 0 8px;
+	padding: 8px 10px;
+	border: 1px solid var(--cf-borda);
+	border-radius: 6px;
+	background: var(--cf-fundo-card);
+}
+.t20-construtor .cf-poder-card.clicavel { cursor: pointer; transition: border-color 120ms, background 120ms; }
+.t20-construtor .cf-poder-card.clicavel:hover { border-color: var(--cf-ouro); }
+.t20-construtor .cf-poder-card.clicavel:focus-visible { outline: 2px solid var(--cf-ouro); outline-offset: 1px; }
+.t20-construtor .cf-poder-card.selecionado { border-color: var(--cf-ouro); background: var(--cf-vermelho-claro); box-shadow: inset 3px 0 0 var(--cf-ouro); }
+.t20-construtor .cf-poder-card.bloqueado { opacity: 0.45; cursor: not-allowed; }
+.t20-construtor .cf-poder-card-topo { display: flex; align-items: center; gap: 8px; }
+.t20-construtor .cf-poder-card-topo img { width: 26px; height: 26px; border: none; flex: none; }
+.t20-construtor .cf-poder-card-nome { flex: 1; font-weight: bold; min-width: 0; }
+.t20-construtor .cf-poder-card-rotulo { flex: none; opacity: 0.75; text-transform: uppercase; font-size: 10px; letter-spacing: 0.04em; }
+.t20-construtor .cf-poder-card .cf-marca { flex: none; font-size: 18px; color: var(--cf-ouro); }
+.t20-construtor .cf-poder-card:not(.selecionado) .cf-marca { opacity: 0.55; }
+.t20-construtor .cf-poder-card .cf-descricao { margin-top: 6px; }
+.t20-construtor .cf-poder-card .cf-abrir-linha { margin: 6px 0 0; }

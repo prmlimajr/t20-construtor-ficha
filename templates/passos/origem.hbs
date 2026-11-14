@@ -46,16 +46,7 @@
 		<div class="cf-bloco">
 			<h4>Escolha {{info.qtdBeneficios}} benefícios <small>({{info.escolhidos}}/{{info.qtdBeneficios}})</small></h4>
 			{{#each info.beneficios}}
-			<div class="cf-beneficio {{#if selecionado}}selecionado{{/if}}">
-				<button type="button" class="cf-check" data-action="alternar" data-campo="{{../info.campoBeneficios}}" data-valor="{{id}}" data-limite="{{../info.qtdBeneficios}}" {{#if bloqueado}}disabled title="Já treinada"{{/if}}>
-					<i class="fa-{{#if selecionado}}solid fa-square-check{{else}}regular fa-square{{/if}}"></i>
-					<small>{{tipo}}</small> {{#if atributo}}<span class="cf-atr">{{atributo}}</span>{{/if}}{{nome}}{{#if detalhe}} <span class="cf-detalhe">· {{detalhe}}</span>{{/if}}
-				</button>
-				{{#if grupo}}
-				<div class="cf-abrir-linha">{{> "modules/t20-construtor-ficha/templates/partes/abrir.hbs" grupo}}</div>
-				{{/if}}
-				{{#if info}}{{> "modules/t20-construtor-ficha/templates/partes/poder.hbs" info aberto=selecionado}}{{/if}}
-			</div>
+			{{> "modules/t20-construtor-ficha/templates/partes/poder-selecionavel.hbs" nome=nome rotulo=tipo atributo=atributo detalhe=detalhe img=info.img descricao=info.descricao grupo=grupo selecionado=selecionado bloqueado=bloqueado motivo="Já treinada" campo=../info.campoBeneficios valor=id limite=../info.qtdBeneficios}}
 			{{/each}}
 		</div>
 		{{/if}}

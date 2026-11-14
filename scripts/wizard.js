@@ -14,7 +14,7 @@ const TPL = `modules/${MODULE_ID}/templates`;
 
 export const TEMPLATES_PASSOS = [
 	"raca", "atributos", "classe", "magias", "pericias", "origem", "devocao", "equipamento", "dinheiro", "revisao"
-].map((p) => `${TPL}/passos/${p}.hbs`).concat(`${TPL}/partes/poder.hbs`, `${TPL}/partes/abrir.hbs`, `${TPL}/partes/aprimoramentos.hbs`, `${TPL}/partes/escolha-racial.hbs`, `${TPL}/partes/poder-escolha.hbs`, `${TPL}/partes/venda.hbs`);
+].map((p) => `${TPL}/passos/${p}.hbs`).concat(`${TPL}/partes/poder.hbs`, `${TPL}/partes/abrir.hbs`, `${TPL}/partes/aprimoramentos.hbs`, `${TPL}/partes/escolha-racial.hbs`, `${TPL}/partes/poder-escolha.hbs`, `${TPL}/partes/venda.hbs`, `${TPL}/partes/poder-selecionavel.hbs`);
 
 const ATRIBUTOS_DINAMICOS = 3;
 
@@ -739,6 +739,15 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				this.render();
 			}
 		});
+		// cartões selecionáveis: Enter/Espaço marcam; links dentro da descrição não marcam o cartão
+		for (const card of this.element.querySelectorAll(".cf-poder-card[data-action]")) {
+			card.addEventListener("keydown", (ev) => {
+				if (ev.target !== card || !["Enter", " "].includes(ev.key)) return;
+				ev.preventDefault();
+				card.click();
+			});
+			for (const link of card.querySelectorAll(".cf-descricao a")) link.addEventListener("click", (ev) => ev.stopPropagation());
+		}
 		for (const el of this.element.querySelectorAll("input[data-campo], select[data-campo]")) {
 			el.addEventListener("change", (ev) => this.#aoAlterarCampo(ev.currentTarget));
 		}
@@ -1705,7 +1714,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				beneficios.push({
 					id, tipo: p?.system.tipo === "origem" ? "Poder único" : "Poder", nome,
 					selecionado: est.beneficios.includes(id),
-					info: est.beneficios.includes(id) ? await this.#infoPoder(p) : null
+					info: await this.#infoPoder(p)
 				});
 			}
 			for (const g of def.grupos ?? []) {

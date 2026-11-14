@@ -60,14 +60,11 @@
 		<h4>Poderes concedidos</h4>
 		{{/if}}
 		{{#each info.poderes}}
-		<div class="cf-beneficio {{#if selecionado}}selecionado{{/if}}">
-			{{#if ../info.escolhida}}
-			<button type="button" class="cf-check" data-action="alternar" data-campo="poderesConcedidos" data-valor="{{nome}}" data-limite="{{../info.qtd}}">
-				<i class="fa-{{#if selecionado}}solid fa-square-check{{else}}regular fa-square{{/if}}"></i> {{nome}}
-			</button>
-			{{/if}}
-			{{#if info}}{{> "modules/t20-construtor-ficha/templates/partes/poder.hbs" info aberto=selecionado}}{{/if}}
-		</div>
+		{{#if ../info.escolhida}}
+		{{> "modules/t20-construtor-ficha/templates/partes/poder-selecionavel.hbs" nome=nome img=info.img descricao=info.descricao selecionado=selecionado campo="poderesConcedidos" valor=nome limite=../info.qtd}}
+		{{else}}
+		{{> "modules/t20-construtor-ficha/templates/partes/poder-selecionavel.hbs" nome=nome img=info.img descricao=info.descricao}}
+		{{/if}}
 		{{/each}}
 		{{else}}
 		<p class="cf-vazio">Selecione uma divindade para ver seus dogmas e poderes concedidos.</p>

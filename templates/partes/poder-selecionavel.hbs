@@ -1,0 +1,18 @@
+{{!--
+	Cartão selecionável (poder ou benefício): clicar no cartão marca/desmarca; a descrição fica sempre visível.
+	Contexto: nome, img, rotulo, atributo, detalhe, descricao, selecionado, bloqueado, motivo, grupo,
+	e para a ação: campo, valor, limite (sem campo = só exibição).
+--}}
+<div class="cf-poder-card {{#if selecionado}}selecionado{{/if}} {{#if bloqueado}}bloqueado{{/if}} {{#if campo}}clicavel{{/if}}"
+	{{#if campo}}{{#unless bloqueado}}data-action="alternar" data-campo="{{campo}}" data-valor="{{valor}}" data-limite="{{limite}}" role="button" tabindex="0" aria-pressed="{{#if selecionado}}true{{else}}false{{/if}}"{{/unless}}{{/if}}
+	{{#if bloqueado}}title="{{motivo}}"{{/if}}>
+	<div class="cf-poder-card-topo">
+		{{#if img}}<img src="{{img}}" alt="">{{/if}}
+		{{#if rotulo}}<small class="cf-poder-card-rotulo">{{rotulo}}</small>{{/if}}
+		{{#if atributo}}<span class="cf-atr">{{atributo}}</span>{{/if}}
+		<span class="cf-poder-card-nome">{{nome}}{{#if detalhe}} <span class="cf-detalhe">· {{detalhe}}</span>{{/if}}</span>
+		{{#if campo}}<i class="cf-marca fa-{{#if selecionado}}solid fa-circle-check{{else}}regular fa-circle{{/if}}"></i>{{/if}}
+	</div>
+	{{#if descricao}}<div class="cf-descricao">{{{descricao}}}</div>{{/if}}
+	{{#if grupo}}<div class="cf-abrir-linha">{{> "modules/t20-construtor-ficha/templates/partes/abrir.hbs" grupo}}</div>{{/if}}
+</div>
