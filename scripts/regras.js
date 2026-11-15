@@ -99,9 +99,24 @@ const PERICIAS_POR_NOME = {
 	reflexos: "refl", religiao: "reli", sobrevivencia: "sobr", vontade: "vont"
 };
 
-/** Chave da perícia a partir do nome do livro ("Ofício (Int)" → "oficio"); null se não reconhecer. */
-function chavePericia(nome) {
-	return PERICIAS_POR_NOME[normalizar(nome.replace(/\([^)]*\)/g, "")).replace(/[^a-z]/g, "")] ?? null;
+/** Ofícios que o sistema tem como perícia própria. */
+const OFICIOS_POR_NOME = { alfaiate: "alfa", alquimista: "alqu", armeiro: "arme", artesao: "arte", cozinheiro: "cozi", engenhoqueiro: "enge" };
+const SIGLAS_ATRIBUTO = new Set(["for", "des", "con", "int", "sab", "car"]);
+
+/**
+ * Chave da perícia a partir do nome do livro; null se não reconhecer.
+ * "Ofício (Int)" ou "Ofício" → "oficio" (um Ofício à escolha); "Ofício (alquimista)" → "alqu".
+ */
+function chavePericia(nome, naoReconhecidas = []) {
+	const entre = /\(([^)]*)\)/.exec(nome)?.[1]?.trim() ?? "";
+	const base = PERICIAS_POR_NOME[normalizar(nome.replace(/\([^)]*\)/g, "")).replace(/[^a-z]/g, "")] ?? null;
+	if (base === "oficio" && entre && !SIGLAS_ATRIBUTO.has(normalizar(entre))) {
+		const k = OFICIOS_POR_NOME[normalizar(entre)];
+		if (k) return k;
+		// Ofício que o sistema não tem como perícia (ex.: barbeiro): vira um Ofício à escolha, com aviso
+		naoReconhecidas.push(nome);
+	}
+	return base;
 }
 
 /** Separa uma lista do livro: "A, B e C" → ["A", "B", "C"]. */
@@ -124,7 +139,7 @@ export function interpretarPericiasClasse(texto) {
 	const numero = Number(m[2]) || ({ um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, cinco: 5, seis: 6, oito: 8 })[normalizar(m[2])] || 0;
 	const naoReconhecidas = [];
 	const chave = (nome) => {
-		const k = chavePericia(nome);
+		const k = chavePericia(nome, naoReconhecidas);
 		if (!k) naoReconhecidas.push(nome);
 		return k;
 	};
