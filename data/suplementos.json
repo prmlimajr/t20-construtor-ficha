@@ -1,5 +1,5 @@
 {
-  "_comentario": "Ajustes para o módulo Suplementos de Arton (suplementos-de-arton). 'variantes': classe do suplemento → classe básica da qual herda perícias e proficiências (identificadas por habilidades em comum e mesmo PV/PM; conferir com o livro). 'classes': regras completas no formato de classes.json, que substituem a dedução automática. 'ignorarClasses': itens de classe que não são classes jogáveis. 'origensMundanas': origens mundanas do Heróis de Arton (cada uma é um único poder, sem itens nem escolha de benefícios): 'pericias' treinadas automaticamente (chaves do sistema), 'oficiosSemPericia' (Ofícios que o sistema não tem como perícia; ficam como anotação), 'poderesExtras', 'escolhaPericia'/'escolhaPoder' quando o texto pede uma escolha. 'periciasClasses': texto de perícias da classe como no livro (\"X e Y, mais N a sua escolha entre ...\"); o construtor interpreta o texto e usa no lugar do campo manual. Em 'classes', além do formato de classes.json: 'periciasTexto' (texto do livro), 'variante' (classe básica de onde vêm as proficiências quando 'proficiencias' não é informado), 'nomeExibicao' (nome mostrado no construtor) e 'aviso'.",
+  "_comentario": "Ajustes para o módulo Suplementos de Arton (suplementos-de-arton). 'variantes': classe do suplemento → classe básica da qual herda perícias e proficiências (identificadas por habilidades em comum e mesmo PV/PM; conferir com o livro). 'classes': regras completas no formato de classes.json, que substituem a dedução automática. 'ignorarClasses': itens de classe que não são classes jogáveis. 'origensMundanas': origens mundanas do Heróis de Arton (cada uma é um único poder, sem itens nem escolha de benefícios): 'pericias' treinadas automaticamente (chaves do sistema), 'oficiosSemPericia' (Ofícios que o sistema não tem como perícia; ficam como anotação), 'poderesExtras', 'escolhaPericia'/'escolhaPoder' quando o texto pede uma escolha. 'periciasClasses': texto de perícias da classe como no livro (\"X e Y, mais N a sua escolha entre ...\"); o construtor interpreta o texto e usa no lugar do campo manual. Em 'classes', além do formato de classes.json: 'periciasTexto' (texto do livro), 'variante' (classe básica de onde vêm as proficiências quando 'proficiencias' não é informado), 'nomeExibicao' (nome mostrado no construtor) e 'aviso'. 'loja': ajustes da loja para itens dos suplementos: 'categorias' (nome do item → categoria da loja) e 'incluir' (itens que entram mesmo sem preço no compêndio).",
   "ignorarClasses": [
     "Melhor Amigo"
   ],
@@ -226,5 +226,16 @@
     "Seteiro": "Pontaria (Des) e Sobrevivência (Sab), mais 6 a sua escolha entre Adestramento (Car), Atletismo (For), Cavalgar (Des), Cura (Sab), Fortitude (Con), Furtividade (Des), Iniciativa (Des), Investigação (Int), Luta (For), Ofício (Int), Percepção (Sab) e Reflexos (Des).",
     "Usurpador": "Enganação (Car) e Vontade (Sab), mais 2 a sua escolha entre Atuação (Car), Conhecimento (Int), Cura (Sab), Diplomacia (Car), Furtividade (Des), Iniciativa (Des), Intimidação (Car), Intuição (Sab), Misticismo (Int), Nobreza (Int), Ofício (Int), Percepção (Sab), Reflexos (Des) e Religião (Sab).",
     "Vassalo": "Fortitude (Con) e Luta (For), mais 2 a sua escolha entre Adestramento (Car), Atletismo (For), Cavalgar (Des), Diplomacia (Car), Guerra (Int), Iniciativa (Des), Intimidação (Car), Nobreza (Int), Percepção (Sab) e Vontade (Sab)."
+  },
+  "loja": {
+    "categorias": {
+      "Água Benta Concentrada": "Equipamento de aventura",
+      "Colar do Suplicante": "Equipamento de aventura",
+      "Patuá": "Equipamento de aventura",
+      "Trombeta do Cruzado": "Ferramentas"
+    },
+    "incluir": [
+      "Trombeta do Cruzado"
+    ]
   }
 }

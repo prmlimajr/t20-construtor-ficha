@@ -193,7 +193,7 @@ async function carregar() {
 		loja: [...indiceEquip]
 			.map((d) => ({ doc: d, pasta: pastaRaiz(d, packEquip) }))
 			.filter(({ doc, pasta }) => !FORA_DA_LOJA.has(pasta) && Number(doc.system?.preco) > 0)
-			.map(({ doc, pasta }) => comCategoria({ doc, categoria: categoriaLoja(doc, pasta) }))
+			.map(({ doc, pasta }) => comCategoria({ doc, categoria: configSuplementos.loja?.categorias?.[doc.name] ?? categoriaLoja(doc, pasta) }))
 			.concat(sup.itens.map(comCategoria))
 			.sort((a, b) => ordenar(a.doc, b.doc)),
 		estruturaLoja: ESTRUTURA_LOJA,

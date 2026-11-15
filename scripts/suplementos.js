@@ -434,9 +434,11 @@ export async function carregarSuplementos(base, config) {
 		for (const d of docs) {
 			if (!["arma", "equipamento", "consumivel", "tesouro"].includes(d.type)) continue;
 			const pasta = pastas.get(d.uuid) ?? "";
-			if (PASTAS_FORA_DA_LOJA.test(pasta) || /distin/i.test(fonte.get(d.uuid) ?? "")) continue;
-			if (!(Number(d.system?.preco) > 0)) continue;
-			const categoria = categoriaSuplemento(d, pasta);
+			// ajustes manuais da loja (data/suplementos.json → loja): categoria e itens sem preço no compêndio
+			const incluir = (config.loja?.incluir ?? []).includes(d.name);
+			if (!incluir && (PASTAS_FORA_DA_LOJA.test(pasta) || /distin/i.test(fonte.get(d.uuid) ?? ""))) continue;
+			if (!incluir && !(Number(d.system?.preco) > 0)) continue;
+			const categoria = config.loja?.categorias?.[d.name] ?? categoriaSuplemento(d, pasta);
 			if (categoria) out.itens.push({ doc: d, categoria });
 		}
 	}
