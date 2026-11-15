@@ -9,6 +9,21 @@
 </div>
 {{/if}}
 
+{{#if variado}}
+<div class="cf-bloco cf-variado">
+	<h4>{{variado.nome}}</h4>
+	<p class="cf-nota">{{variado.descricao}}</p>
+	{{#if variado.emOrdem}}<p class="cf-nota"><i class="fa-solid fa-lock"></i> Em ordem (configuração do mestre): a 1ª rolagem é Força, a 2ª Destreza e assim por diante; os valores não podem ser trocados.</p>{{/if}}
+	{{#if variado.rolavel}}
+	{{#unless variado.rolado}}
+	<p class="cf-nota">O resultado vai para o chat e só pode ser rolado uma vez.</p>
+	<button type="button" class="cf-primario" data-action="rolarVariado"><i class="fa-solid fa-dice"></i> {{variado.botao}}</button>
+	{{/unless}}
+	{{/if}}
+	{{#if variado.brutos}}<p class="cf-nota">{{variado.brutos}}</p>{{/if}}
+</div>
+{{/if}}
+
 {{#if ehPontos}}
 <div class="cf-placar {{#if estourou}}erro{{/if}}">
 	<span>Pontos gastos <strong>{{gastos}}</strong> de
@@ -57,7 +72,11 @@
 		<span class="cf-nota">Todos os valores foram distribuídos. Arraste um valor de volta para cá para removê-lo.</span>
 		{{/each}}
 	</div>
+	{{#if ehValkaria}}
+	<p class="cf-nota">Arraste cada dado até um atributo (vários dados podem ir no mesmo). Arraste de volta para cá para tirar.</p>
+	{{else}}
 	<p class="cf-nota">Arraste cada valor até um atributo. Soltar sobre um atributo já preenchido troca os valores.</p>
+	{{/if}}
 </div>
 {{/if}}
 
@@ -82,7 +101,14 @@
 					</div>
 					{{else}}<span class="cf-slot-vazio">solte aqui</span>{{/if}}
 				</div>
-				{{else}}—{{/if}}
+				{{else if valkaria}}
+				<div class="cf-slot cf-slot-multi {{#if valkaria.alvo}}alvo{{/if}}" data-soltar="{{chave}}" data-action="colocarDado">
+					{{#each valkaria.dados}}
+					<div class="cf-dado {{#if selecionado}}selecionado{{/if}}" draggable="true" data-dado="{{indice}}" data-action="selecionarDado"><strong>{{valor}}</strong></div>
+					{{/each}}
+					<small class="cf-valkaria-conta">{{valkaria.conta}} → <strong>{{base}}</strong></small>
+				</div>
+				{{else}}<strong>{{base}}</strong>{{/if}}
 			</td>
 			<td>{{racial}}</td>
 			<td class="cf-total">{{total}}</td>

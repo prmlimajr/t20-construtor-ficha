@@ -29,6 +29,8 @@ function registrarConfiguracoes() {
 	s("modoPontos", { type: Boolean, default: true });
 	s("modoRolagem", { type: Boolean, default: true });
 	s("modoFixo", { type: Boolean, default: true });
+	s("atributosVariados", { type: Boolean, default: false });
+	s("atributosClassicaEmOrdem", { type: Boolean, default: false });
 	s("origemDupla", { type: Boolean, default: false });
 	s("beneficiosOrigemDupla", {
 		type: Number, default: 1,

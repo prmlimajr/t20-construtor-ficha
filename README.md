@@ -41,6 +41,7 @@ Jogadores precisam da permissão **"Criar novos atores"** (Configurações → P
 ## Regras opcionais do sistema
 
 - **Raças Abertas** (configuração do sistema Tormenta20): quando ligada, cada modificador de atributo da raça pode ir para qualquer atributo, no máximo um modificador por atributo (um anão distribui +2, +1 e −1; um aggelus, +2 e +1). Raças com +1 flexível entram com seus +1 nessa mesma distribuição (o lefou distribui +1, +1, +1 e −1). O construtor lê a configuração do sistema; nada a ligar no módulo.
+- **Atributos Variados** (configuração do construtor, desligada por padrão): acrescenta às modalidades de atributos os métodos Clássica (3d6 por atributo), Épica (3d6, descarta o menor, +6), Valkaria (atributos começam em 8; 7d6 aplicados como o jogador quiser, vários dados no mesmo atributo), Khalmyr (3, 3, 2, 1, 0, −1) e Nimb (7d20 descartando o menor; 1–3 → −3, 18–19 → +4, 20 → +5). Todos convertem pela tabela de Tormenta20, p. 17, e as rolagens vão para o chat, uma vez só. A configuração **Clássica em ordem** faz a Clássica cair direto em For, Des, Con, Int, Sab, Car, sem distribuir.
 
 ## Dados
 

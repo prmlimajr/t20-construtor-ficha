@@ -64,6 +64,14 @@
 			"supOrigensMundanas": {
 				"Nome": "Suplementos de Arton: mundane origins (Heróis de Arton)",
 				"Dica": "The 30 mundane origins from Heróis de Arton in the Origin step. Each grants a single power (with the skills it trains), no items or benefit choices."
+			},
+			"atributosVariados": {
+				"Nome": "Attributes: use Varied Attributes",
+				"Dica": "Optional rule: adds the Classic (3d6), Epic (3d6 − lowest + 6), Valkaria (7d6 distributed), Khalmyr (3, 3, 2, 1, 0, −1) and Nimb (7d20 − lowest) methods to the allowed modes."
+			},
+			"atributosClassicaEmOrdem": {
+				"Nome": "Varied Attributes: Classic in order",
+				"Dica": "In the Classic method, the 1st roll is Strength, the 2nd Dexterity and so on, with no distribution."
 			}
 		},
 		"SuplementoInativo": "Character Builder: \"Use Suplementos de Arton\" is enabled, but the Suplementos de Arton module is not active. Only the core book is used."

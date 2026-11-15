@@ -4,7 +4,7 @@
  */
 import {
 	MODULE_ID, ATRIBUTOS, NOMES_ATRIBUTOS, OFICIOS, PONTOS_TOTAIS, MIN_PONTOS, MAX_PONTOS,
-	ARRANJOS_FIXOS, custoAtributo, pontosGastos, converterRolagem, expandirPericias, normalizar, sinal
+	ARRANJOS_FIXOS, MODOS_VARIADOS, VALKARIA_INICIAL, converterNimb, custoAtributo, pontosGastos, converterRolagem, expandirPericias, normalizar, sinal
 } from "./regras.js";
 import { carregarDados, dadosCarregados, poder, poderesDoGrupo, equipamento, magiaPorNome, poderSelecionavel, fonteDe } from "./dados.js";
 import { atributosDinamicosRaca } from "./suplementos.js";
@@ -39,6 +39,15 @@ function estadoInicial(actor) {
 		atrPontosTotal: PONTOS_TOTAIS,
 		atrRolagem: { brutos: null, valores: null, rerrolou: false, atribuicao: { ...vazio } },
 		atrFixo: { arranjo: 0, atribuicao: { ...vazio } },
+		/** Atributos Variados (regra opcional): estado de cada método. */
+		atrVariados: {
+			classica: { brutos: null, valores: null, atribuicao: { ...vazio } },
+			epica: { brutos: null, valores: null, atribuicao: { ...vazio } },
+			nimb: { brutos: null, descartado: null, valores: null, atribuicao: { ...vazio } },
+			khalmyr: { atribuicao: { ...vazio } },
+			// 7 dados; atribuicao[i] = atributo que recebeu o dado i ("" = ainda no monte)
+			valkaria: { dados: null, atribuicao: ["", "", "", "", "", "", ""] }
+		},
 		classe: "",
 		escolhasClasse: {},
 		magiasEscolas: [],
@@ -163,6 +172,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			alternar: ConstrutorFicha.#alternar,
 			ajustarPonto: ConstrutorFicha.#ajustarPonto,
 			rolarAtributos: ConstrutorFicha.#rolarAtributos,
+			rolarVariado: ConstrutorFicha.#rolarVariado,
 			rerrolarMenor: ConstrutorFicha.#rerrolarMenor,
 			focarMagia: ConstrutorFicha.#focarMagia,
 			focarEquip: ConstrutorFicha.#focarEquip,
@@ -268,7 +278,51 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		if (game.settings.get(MODULE_ID, "modoPontos")) modos.push("pontos");
 		if (game.settings.get(MODULE_ID, "modoRolagem")) modos.push("rolagem");
 		if (game.settings.get(MODULE_ID, "modoFixo")) modos.push("fixo");
+		if (this.atributosVariados) modos.push(...Object.keys(MODOS_VARIADOS));
 		return modos.length ? modos : ["pontos"];
+	}
+
+	/** Regra opcional "Atributos Variados" ligada pelo mestre. */
+	get atributosVariados() {
+		try {
+			return !!game.settings.get(MODULE_ID, "atributosVariados");
+		} catch (err) {
+			return false;
+		}
+	}
+
+	/** Método Clássica com os valores rolados em ordem (For, Des, Con, Int, Sab, Car), sem distribuir. */
+	get classicaEmOrdem() {
+		try {
+			return !!game.settings.get(MODULE_ID, "atributosClassicaEmOrdem");
+		} catch (err) {
+			return false;
+		}
+	}
+
+	/**
+	 * Valores do método atual que são distribuídos um por atributo (rolagem, arranjo fixo, Clássica,
+	 * Épica, Nimb, Khalmyr): {valores, brutos, atribuicao}. null = nada rolado ou método sem valores.
+	 */
+	fonteValores() {
+		const e = this.estado;
+		const v = e.atrVariados ?? {};
+		switch (e.atrModo) {
+			case "rolagem": return e.atrRolagem.valores ? { valores: e.atrRolagem.valores, brutos: e.atrRolagem.brutos, atribuicao: e.atrRolagem.atribuicao } : null;
+			case "fixo": return { valores: ARRANJOS_FIXOS[e.atrFixo.arranjo], brutos: null, atribuicao: e.atrFixo.atribuicao };
+			case "khalmyr": return { valores: MODOS_VARIADOS.khalmyr.valores, brutos: null, atribuicao: v.khalmyr.atribuicao };
+			case "classica":
+			case "epica":
+			case "nimb": return v[e.atrModo]?.valores ? { valores: v[e.atrModo].valores, brutos: v[e.atrModo].brutos, atribuicao: v[e.atrModo].atribuicao } : null;
+		}
+		return null;
+	}
+
+	/** Valkaria: valor bruto do atributo (8 + dados aplicados) e os dados aplicados nele. */
+	valkariaAtributo(k) {
+		const v = this.estado.atrVariados?.valkaria;
+		const dados = (v?.dados ?? []).map((d, i) => ({ indice: i, valor: d })).filter((x) => v.atribuicao[x.indice] === k);
+		return { dados, total: VALKARIA_INICIAL + dados.reduce((s, d) => s + d.valor, 0) };
 	}
 
 	/** Modificador racial final (fixo + escolhas de +1). */
@@ -537,6 +591,18 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				const i = e.atrFixo.atribuicao[k];
 				return i === "" ? null : ARRANJOS_FIXOS[e.atrFixo.arranjo][Number(i)];
 			}
+			case "valkaria": {
+				if (!e.atrVariados?.valkaria?.dados) return null;
+				return converterRolagem(this.valkariaAtributo(k).total);
+			}
+			case "classica":
+			case "epica":
+			case "nimb":
+			case "khalmyr": {
+				const f = this.fonteValores();
+				const i = f?.atribuicao[k];
+				return !f || i === "" || i === undefined ? null : f.valores[Number(i)];
+			}
 		}
 		return null;
 	}
@@ -678,7 +744,16 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 					return null;
 				}
 				if (e.atrModo === "rolagem" && !e.atrRolagem.valores) return "Role seus atributos.";
-				const atr = e.atrModo === "rolagem" ? e.atrRolagem.atribuicao : e.atrFixo.atribuicao;
+				if (e.atrModo === "valkaria") {
+					const v = e.atrVariados.valkaria;
+					if (!v.dados) return "Role os 7d6.";
+					const feitos = v.atribuicao.filter(Boolean).length;
+					if (feitos < v.dados.length) return `Aplique todos os dados nos atributos (${feitos}/${v.dados.length}).`;
+					return null;
+				}
+				const fonte = this.fonteValores();
+				if (!fonte) return "Role seus atributos.";
+				const atr = fonte.atribuicao;
 				const usados = ATRIBUTOS.map((k) => atr[k]);
 				if (usados.some((v) => v === "")) return "Atribua um valor a cada atributo.";
 				if (new Set(usados).size !== usados.length) return "Cada valor só pode ser usado uma vez.";
@@ -1068,7 +1143,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	/* ---------------- Distribuição de atributos (arrastar e soltar) ---------------- */
 
 	#dado(i, valores) {
-		const brutos = this.estado.atrModo === "rolagem" ? this.estado.atrRolagem.brutos : null;
+		const brutos = this.fonteValores()?.brutos ?? null;
 		return {
 			indice: i,
 			valor: sinal(valores[i]),
@@ -1078,14 +1153,19 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	}
 
 	get #atribuicao() {
-		const e = this.estado;
-		if (e.atrModo === "rolagem") return e.atrRolagem.atribuicao;
-		if (e.atrModo === "fixo") return e.atrFixo.atribuicao;
-		return null;
+		return this.fonteValores()?.atribuicao ?? null;
 	}
 
 	/** Coloca o dado `indice` no atributo `alvo` (troca com o que estava lá). alvo vazio = devolve ao monte. */
 	#moverDado(indice, alvo) {
+		// Valkaria: vários dados podem ir no mesmo atributo; o dado só muda de lugar (sem troca)
+		if (this.estado.atrModo === "valkaria") {
+			const v = this.estado.atrVariados.valkaria;
+			if (!v.dados || !Number.isInteger(indice) || indice < 0 || indice >= v.dados.length) return;
+			v.atribuicao[indice] = alvo || "";
+			this.dadoSelecionado = null;
+			return this.#mudou();
+		}
 		const atr = this.#atribuicao;
 		if (!atr || !Number.isInteger(indice)) return;
 		const origem = ATRIBUTOS.find((k) => atr[k] !== "" && Number(atr[k]) === indice) ?? null;
@@ -1534,7 +1614,10 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	#ctxAtributos() {
 		const e = this.estado;
 		const modos = this.modosPermitidos();
-		const nomesModos = { pontos: "Compra de pontos", rolagem: "Rolagem (4d6)", fixo: "Valores fixos" };
+		const nomesModos = {
+			pontos: "Compra de pontos", rolagem: "Rolagem (4d6)", fixo: "Valores fixos",
+			...Object.fromEntries(Object.entries(MODOS_VARIADOS).map(([k, m]) => [k, m.nome]))
+		};
 		const ctx = {
 			modos: modos.map((m) => ({ id: m, nome: nomesModos[m], selecionado: e.atrModo === m })),
 			variosModos: modos.length > 1,
@@ -1542,10 +1625,35 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			ehPontos: e.atrModo === "pontos",
 			ehRolagem: e.atrModo === "rolagem",
 			ehFixo: e.atrModo === "fixo",
-			pontosTotais: this.pontosTotais
+			pontosTotais: this.pontosTotais,
+			variados: this.atributosVariados
 		};
+		// Atributos Variados: descrição do método e, nos que rolam, o botão ou o resultado
+		const mv = MODOS_VARIADOS[e.atrModo];
+		const vEstado = e.atrVariados?.[e.atrModo];
+		if (mv) {
+			const rolavel = e.atrModo !== "khalmyr";
+			const rolado = e.atrModo === "valkaria" ? !!vEstado?.dados : !!vEstado?.valores;
+			ctx.variado = {
+				nome: mv.nome,
+				descricao: mv.descricao,
+				rolavel,
+				rolado,
+				emOrdem: e.atrModo === "classica" && this.classicaEmOrdem,
+				botao: { classica: "Rolar 3d6 seis vezes", epica: "Rolar 3d6 (−menor, +6) seis vezes", valkaria: "Rolar 7d6", nimb: "Rolar 7d20" }[e.atrModo],
+				brutos: e.atrModo === "nimb" && rolado
+					? `Rolados: ${[...vEstado.brutos, vEstado.descartado].join(", ")} (descartado: ${vEstado.descartado})` : null
+			};
+		}
 		let valores = null;
 		let atribuicao = null;
+		const fonte = this.fonteValores();
+		// Clássica em ordem (configuração do mestre): valores fixos nos atributos, sem distribuir
+		const travado = e.atrModo === "classica" && this.classicaEmOrdem;
+		if (fonte && e.atrModo !== "fixo" && e.atrModo !== "rolagem" && !travado) {
+			valores = fonte.valores;
+			atribuicao = fonte.atribuicao;
+		}
 		if (e.atrModo === "rolagem" && e.atrRolagem.valores) {
 			valores = e.atrRolagem.valores;
 			atribuicao = e.atrRolagem.atribuicao;
@@ -1578,6 +1686,14 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				linha.podeDiminuir = v > MIN_PONTOS;
 				linha.podeAumentar = v < MAX_PONTOS;
 			}
+			if (e.atrModo === "valkaria" && vEstado?.dados) {
+				const { dados, total } = this.valkariaAtributo(k);
+				linha.valkaria = {
+					dados: dados.map((d) => ({ indice: d.indice, valor: d.valor, selecionado: this.dadoSelecionado === d.indice })),
+					conta: `${[VALKARIA_INICIAL, ...dados.map((d) => d.valor)].join(" + ")} = ${total}`,
+					alvo: this.dadoSelecionado !== null
+				};
+			}
 			if (valores) {
 				const i = atribuicao[k];
 				linha.dnd = true;
@@ -1590,6 +1706,13 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			const usados = new Set(ATRIBUTOS.map((k) => atribuicao[k]).filter((v) => v !== "").map(Number));
 			ctx.dnd = true;
 			ctx.pool = valores.map((_, i) => i).filter((i) => !usados.has(i)).map((i) => this.#dado(i, valores));
+			ctx.poolVazio = !ctx.pool.length;
+		}
+		if (e.atrModo === "valkaria" && vEstado?.dados) {
+			ctx.dnd = true;
+			ctx.ehValkaria = true;
+			ctx.pool = vEstado.dados.map((d, i) => ({ indice: i, valor: d, bruto: null, selecionado: this.dadoSelecionado === i, valkaria: true }))
+				.filter((d) => !vEstado.atribuicao[d.indice]);
 			ctx.poolVazio = !ctx.pool.length;
 		}
 		if (e.atrModo === "pontos") {
@@ -2959,6 +3082,48 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const delta = Number(target.dataset.delta);
 		const v = Math.clamp((this.estado.atrPontos[k] ?? 0) + delta, MIN_PONTOS, MAX_PONTOS);
 		this.#definirCampo(`atrPontos.${k}`, v);
+	}
+
+	/** Atributos Variados: rola o método atual (Clássica, Épica, Valkaria ou Nimb) e envia ao chat. Uma vez só. */
+	static async #rolarVariado() {
+		const e = this.estado;
+		const modo = e.atrModo;
+		const v = e.atrVariados?.[modo];
+		const mv = MODOS_VARIADOS[modo];
+		if (!v || !mv) return;
+		if (v.valores || v.dados) return;
+		const falar = (rolls, conteudo) => ChatMessage.create({
+			speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+			flavor: `Construtor de Personagem — atributos, método ${mv.nome}`,
+			content: conteudo,
+			rolls
+		});
+		const resultados = (roll) => roll.dice.flatMap((d) => d.results.filter((r) => r.active !== false).map((r) => r.result));
+		if (modo === "classica" || modo === "epica") {
+			const rolls = [];
+			for (let i = 0; i < 6; i++) rolls.push(await new Roll(mv.rolagem).evaluate());
+			v.brutos = rolls.map((r) => r.total);
+			v.valores = v.brutos.map(converterRolagem);
+			if (modo === "classica" && this.classicaEmOrdem) {
+				ATRIBUTOS.forEach((k, i) => { v.atribuicao[k] = String(i); });
+			}
+			const nomes = modo === "classica" && this.classicaEmOrdem ? ATRIBUTOS.map((k) => `${NOMES_ATRIBUTOS[k]}: `) : ATRIBUTOS.map(() => "");
+			await falar(rolls, `<p>${v.brutos.map((b, i) => `${nomes[i]}${b} → <b>${sinal(v.valores[i])}</b>`).join("<br>")}</p>`);
+		} else if (modo === "valkaria") {
+			const roll = await new Roll("7d6").evaluate();
+			v.dados = resultados(roll).slice(0, 7);
+			v.atribuicao = v.dados.map(() => "");
+			await falar([roll], `<p>Dados: <b>${v.dados.join(", ")}</b>. Cada atributo começa em ${VALKARIA_INICIAL}; aplique os dados no construtor.</p>`);
+		} else if (modo === "nimb") {
+			const roll = await new Roll("7d20").evaluate();
+			const dados = resultados(roll).slice(0, 7);
+			const menor = dados.indexOf(Math.min(...dados));
+			v.descartado = dados[menor];
+			v.brutos = dados.filter((_, i) => i !== menor);
+			v.valores = v.brutos.map(converterNimb);
+			await falar([roll], `<p>${dados.join(", ")} (descarta ${v.descartado})<br>${v.brutos.map((b, i) => `${b} → <b>${sinal(v.valores[i])}</b>`).join("<br>")}</p>`);
+		}
+		this.#mudou();
 	}
 
 	static async #rolarAtributos() {

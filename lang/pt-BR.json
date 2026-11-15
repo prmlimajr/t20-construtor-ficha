@@ -64,6 +64,14 @@
 			"supOrigensMundanas": {
 				"Nome": "Suplementos de Arton: origens mundanas (Heróis de Arton)",
 				"Dica": "As 30 origens mundanas do Heróis de Arton no passo Origem. Cada uma concede um único poder (com as perícias que ele treina), sem itens nem escolha de benefícios."
+			},
+			"atributosVariados": {
+				"Nome": "Atributos: usar Atributos Variados",
+				"Dica": "Regra opcional: acrescenta os métodos Clássica (3d6), Épica (3d6 − menor + 6), Valkaria (7d6 distribuídos), Khalmyr (3, 3, 2, 1, 0, −1) e Nimb (7d20 − menor) às modalidades permitidas."
+			},
+			"atributosClassicaEmOrdem": {
+				"Nome": "Atributos Variados: Clássica em ordem",
+				"Dica": "No método Clássica, a 1ª rolagem é Força, a 2ª Destreza e assim por diante, sem distribuir (a variante “raiz”)."
 			}
 		},
 		"SuplementoInativo": "Construtor de Ficha: a opção \"Usar Suplementos de Arton\" está ligada, mas o módulo Suplementos de Arton não está ativo. O construtor usa só o livro básico."

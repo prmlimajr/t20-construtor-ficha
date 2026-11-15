@@ -981,3 +981,8 @@
 }
 .t20-construtor .cf-aberto-valor.negativo { background: rgba(0, 0, 0, 0.35); color: #fff; }
 .t20-construtor .cf-aberto-linha .cf-chips { flex: 1; }
+
+/* Atributos Variados */
+.t20-construtor .cf-variado h4 { margin-bottom: 2px; }
+.t20-construtor .cf-slot.cf-slot-multi { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-width: 160px; }
+.t20-construtor .cf-valkaria-conta { flex-basis: 100%; opacity: 0.85; }
