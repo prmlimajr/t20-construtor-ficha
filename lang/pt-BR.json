@@ -72,6 +72,10 @@
 			"atributosClassicaEmOrdem": {
 				"Nome": "Atributos Variados: Clássica em ordem",
 				"Dica": "No método Clássica, a 1ª rolagem é Força, a 2ª Destreza e assim por diante, sem distribuir (a variante “raiz”)."
+			},
+			"complicacoes": {
+				"Nome": "Usar Complicações",
+				"Dica": "Acrescenta a etapa Complicações: o jogador pode escolher uma complicação (gerais ou da classe) e, em troca, um poder geral. Na ficha, os dois recebem o prefixo “C - ”. Requer os Suplementos de Arton ligados (as complicações são do Heróis de Arton)."
 			}
 		},
 		"SuplementoInativo": "Construtor de Ficha: a opção \"Usar Suplementos de Arton\" está ligada, mas o módulo Suplementos de Arton não está ativo. O construtor usa só o livro básico."

@@ -197,6 +197,11 @@ async function carregar() {
 		suplementoLigado: sup.ligado,
 		/** Poderes do suplemento só aparecem nas listas de escolha com a chave "Poderes" ligada. */
 		poderesSuplementoSelecionaveis: conteudoLigado("Poderes"),
+		/** Complicações (Heróis de Arton): [{doc, classe}] (classe null = geral). */
+		complicacoes: sup.complicacoes ?? [],
+		uuidsComplicacoes: new Set((sup.complicacoes ?? []).map((c) => c.doc.uuid)),
+		/** Variantes de classes do suplemento → classe básica (para as complicações de classe). */
+		variantes: configSuplementos.variantes ?? {},
 		equipamento,
 		escolas: escolas.escolas ?? {},
 		regrasRacas: regrasRacas.poderes ?? {},
@@ -210,6 +215,8 @@ async function carregar() {
 
 /** O poder pode aparecer nas listas de escolha? (do sistema, ou do suplemento com a chave "Poderes" ligada) */
 export function poderSelecionavel(dados, p) {
+	// complicações nunca entram nas listas de poder geral (algumas vêm com tipo "geral" no suplemento)
+	if (dados.uuidsComplicacoes?.has(p.uuid)) return false;
 	return !dados.fonteSuplemento?.has(p.uuid) || dados.poderesSuplementoSelecionaveis;
 }
 

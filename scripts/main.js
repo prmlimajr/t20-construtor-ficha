@@ -31,6 +31,7 @@ function registrarConfiguracoes() {
 	s("modoFixo", { type: Boolean, default: true });
 	s("atributosVariados", { type: Boolean, default: false });
 	s("atributosClassicaEmOrdem", { type: Boolean, default: false });
+	s("complicacoes", { type: Boolean, default: false });
 	s("origemDupla", { type: Boolean, default: false });
 	s("beneficiosOrigemDupla", {
 		type: Number, default: 1,

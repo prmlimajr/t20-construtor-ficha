@@ -1,0 +1,17 @@
+<div class="cf-complicacoes">
+	<p class="cf-nota"><i class="fa-solid fa-circle-info"></i> Complicações são opcionais (Heróis de Arton). Se escolher uma, você recebe um poder geral à sua escolha. Clique numa complicação para escolhê-la; clique de novo para desistir.</p>
+
+	{{#if escolhida}}
+	<div class="cf-bloco cf-escolha-racial">
+		<div class="cf-escolha-titulo"><i class="fa-solid fa-scale-unbalanced"></i> <span>{{escolhida.nome}}: escolha seu poder geral</span></div>
+		<div class="cf-campo"><span class="cf-rotulo-abrir">Poder geral:</span> {{> "modules/t20-construtor-ficha/templates/partes/abrir.hbs" escolhida.poder}}</div>
+	</div>
+	{{/if}}
+
+	{{#each grupos}}
+	<h4>{{titulo}} <small>{{cards.length}}</small></h4>
+	{{#each cards}}
+	{{> "modules/t20-construtor-ficha/templates/partes/poder-selecionavel.hbs" nome=nome img=img descricao=descricao selecionado=selecionado campo="complicacoes" valor=uuid limite=1}}
+	{{/each}}
+	{{/each}}
+</div>

@@ -371,6 +371,14 @@ export async function carregarSuplementos(base, config) {
 		}
 	}
 	if (conteudoLigado("Divindades")) out.divindades = divindadesComSuplemento(base.divindades, poderesSup, fonte);
+	// Complicações (Heróis de Arton): pela pasta, "Complicações (Geral)" ou "Complicações (Classe) / <classe>"
+	out.complicacoes = [];
+	for (const p of poderesSup) {
+		const m = /Complica[cç][oõ]es \((Geral|Classe)\)(?: \/ (.+))?/i.exec(pastas.get(p.uuid) ?? "");
+		if (!m) continue;
+		out.complicacoes.push({ doc: p, classe: /classe/i.test(m[1]) ? (m[2] ?? "").trim() : null });
+	}
+	out.complicacoes.sort((a, b) => a.doc.name.localeCompare(b.doc.name, "pt-BR"));
 	if (conteudoLigado("OrigensMundanas")) out.origensMundanas = origensMundanas(poderesSup, fonte, config);
 	if (conteudoLigado("OrigensRegionais")) {
 		const atlas = origensRegionaisDoAtlas(poderesSup, fonte);
@@ -383,6 +391,7 @@ export async function carregarSuplementos(base, config) {
 		+ `${out.magias.length} magias, ${out.itens.length} itens na loja`
 		+ (out.divindades ? `, ${out.divindades.filter((d) => d.menor).length} deuses menores` : "")
 		+ (out.origensRegionais ? `, ${out.origensRegionais.length} origens regionais` : "")
-		+ (out.origensMundanas ? `, ${out.origensMundanas.length} origens mundanas` : ""));
+		+ (out.origensMundanas ? `, ${out.origensMundanas.length} origens mundanas` : "")
+		+ `, ${out.complicacoes.length} complicações`);
 	return out;
 }

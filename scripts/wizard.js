@@ -14,7 +14,7 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const TPL = `modules/${MODULE_ID}/templates`;
 
 export const TEMPLATES_PASSOS = [
-	"raca", "atributos", "classe", "magias", "pericias", "origem", "devocao", "equipamento", "dinheiro", "revisao"
+	"raca", "atributos", "classe", "magias", "pericias", "origem", "devocao", "complicacoes", "equipamento", "dinheiro", "revisao"
 ].map((p) => `${TPL}/passos/${p}.hbs`).concat(`${TPL}/partes/poder.hbs`, `${TPL}/partes/abrir.hbs`, `${TPL}/partes/aprimoramentos.hbs`, `${TPL}/partes/escolha-racial.hbs`, `${TPL}/partes/poder-escolha.hbs`, `${TPL}/partes/venda.hbs`, `${TPL}/partes/poder-selecionavel.hbs`);
 
 
@@ -61,6 +61,9 @@ function estadoInicial(actor) {
 		devoto: null,
 		divindade: "",
 		poderesConcedidos: [],
+		/** Complicação escolhida (uuid; no máximo uma) e o poder geral que ela concede. */
+		complicacoes: [],
+		complicacaoPoder: "",
 		equip: { arma: "", armaMarcial: "", armadura: "" },
 		dinheiro: null,
 		compras: {},
@@ -280,6 +283,28 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		if (game.settings.get(MODULE_ID, "modoFixo")) modos.push("fixo");
 		if (this.atributosVariados) modos.push(...Object.keys(MODOS_VARIADOS));
 		return modos.length ? modos : ["pontos"];
+	}
+
+	/** Regra opcional "Usar Complicações": precisa do mestre ligar e das complicações do Heróis de Arton carregadas. */
+	get usarComplicacoes() {
+		try {
+			return !!game.settings.get(MODULE_ID, "complicacoes") && !!this.dados?.complicacoes?.length;
+		} catch (err) {
+			return false;
+		}
+	}
+
+	/** Complicações disponíveis: as gerais e as da classe escolhida (ou da classe básica, se for variante). */
+	complicacoesDisponiveis() {
+		const classe = this.classe?.name;
+		const base = classe ? this.dados.variantes?.[classe] : null;
+		return (this.dados.complicacoes ?? []).filter((c) => !c.classe || c.classe === classe || (base && c.classe === base));
+	}
+
+	/** A complicação escolhida (documento), se ainda for válida para a classe atual. */
+	get complicacao() {
+		const uuid = this.estado.complicacoes?.[0];
+		return uuid ? this.complicacoesDisponiveis().find((c) => c.doc.uuid === uuid)?.doc ?? null : null;
 	}
 
 	/** Regra opcional "Atributos Variados" ligada pelo mestre. */
@@ -710,6 +735,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		}
 		lista.push(
 			{ id: "devocao", titulo: "Devoção", dica: "Seu personagem é devoto de algum deus?" },
+			...(this.usarComplicacoes ? [{ id: "complicacoes", titulo: "Complicações", dica: "Uma complicação opcional: em troca, você recebe um poder geral." }] : []),
 			{ id: "equipamento", titulo: "Equipamento", dica: "Escolha seu equipamento inicial." },
 			{ id: "dinheiro", titulo: "Dinheiro", dica: "Role 4d6 para definir seus tibares iniciais." },
 			{ id: "revisao", titulo: "Revisão", dica: "Confira tudo antes de criar a ficha." }
@@ -824,6 +850,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				if (e.poderesConcedidos.length !== n) return `Escolha ${n} poder(es) concedido(s).`;
 				return null;
 			}
+			case "complicacoes":
+				if (this.complicacao && !e.complicacaoPoder) return "Escolha o poder geral concedido pela complicação.";
+				return null;
 			case "equipamento":
 				if (!e.equip.arma) return "Escolha sua arma simples.";
 				if (this.temProficiencia("marcial") && !e.equip.armaMarcial) return "Escolha sua arma marcial.";
@@ -1284,6 +1313,13 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				return this.dados.poderes
 					.filter((p) => (p.system.tipo === "geral" && poderSelecionavel(this.dados, p)) || (p.system.tipo === "origem" && !fonteDe(this.dados, p)))
 					.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")).map(poderCard);
+			case "poderGeralComplicacao": {
+				// poder geral concedido pela complicação: tira os que o personagem já recebe por outras fontes
+				const atual = this.estado.complicacaoPoder;
+				const ja = new Set(this.plano({ semComplicacao: true }).gruposPoderes.flatMap((g) => g.poderes.map((p) => p.name)));
+				return this.dados.poderes.filter((p) => p.system.tipo === "geral" && poderSelecionavel(this.dados, p) && (!ja.has(p.name) || p.name === atual))
+					.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")).map(poderCard);
+			}
 			case "poderGeral":
 				return this.dados.poderes.filter((p) => p.system.tipo === "geral" && poderSelecionavel(this.dados, p))
 					.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")).map(poderCard);
@@ -1328,7 +1364,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				descricao: f.doc ? await this.#html(f.doc.uuid, f.doc.system?.description?.value) : ""
 			};
 		}
-		if (["grupo", "poderGeral", "poderes", "poderGeralOrigem"].includes(tipo)) {
+		if (["grupo", "poderGeral", "poderes", "poderGeralOrigem", "poderGeralComplicacao"].includes(tipo)) {
 			const p = poder(this.dados, valor);
 			if (!p) return null;
 			const i = await this.#infoPoder(p);
@@ -1456,6 +1492,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			case "pericias": return this.#ctxPericias();
 			case "origem": return this.#ctxOrigem(passo.sub);
 			case "devocao": return this.#ctxDevocao();
+			case "complicacoes": return this.#ctxComplicacoes();
 			case "equipamento": return this.#ctxEquipamento();
 			case "dinheiro": return this.#ctxDinheiro();
 			case "revisao": return this.#ctxRevisao();
@@ -2416,6 +2453,37 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		};
 	}
 
+	/** Complicações: gerais e da classe, com a descrição à vista; a escolhida pede um poder geral. */
+	async #ctxComplicacoes() {
+		const e = this.estado;
+		const escolhida = this.complicacao;
+		const card = async (c) => ({
+			nome: c.doc.name, img: c.doc.img, uuid: c.doc.uuid,
+			descricao: await this.#html(c.doc.uuid, c.doc.system?.description?.value),
+			selecionado: escolhida?.uuid === c.doc.uuid
+		});
+		const disponiveis = this.complicacoesDisponiveis();
+		const gerais = [];
+		const daClasse = [];
+		for (const c of disponiveis) (c.classe ? daClasse : gerais).push(await card(c));
+		const classe = this.classe?.name ?? "";
+		return {
+			escolhida: escolhida ? {
+				nome: escolhida.name,
+				poder: {
+					campo: "complicacaoPoder",
+					lista: "poderGeralComplicacao",
+					titulo: `Poder geral concedido por ${escolhida.name}`,
+					escolhido: e.complicacaoPoder ?? ""
+				}
+			} : null,
+			grupos: [
+				{ titulo: `Complicações de ${classe}`, cards: daClasse },
+				{ titulo: "Complicações gerais", cards: gerais }
+			].filter((g) => g.cards.length)
+		};
+	}
+
 	/** Espólio (Nobre) e Protótipo (Inventor). */
 	#ctxItensClasse() {
 		const out = [];
@@ -2531,7 +2599,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	/* ---------------- Plano final (usado na revisão e no aplicar) ---------------- */
 
-	plano({ semVendas = false } = {}) {
+	plano({ semVendas = false, semComplicacao = false } = {}) {
 		const e = this.estado;
 		const r = this.regrasClasse ?? {};
 		const raca = this.raca;
@@ -2592,11 +2660,21 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		for (const esc of this.escolhasAtivas()) if (e.escolhasClasse[esc.id]) addClasse(e.escolhasClasse[esc.id]);
 		daClasse.poderes.forEach((p) => addClasse(p.name));
 
+		// Complicação (regra opcional): a própria complicação e o poder geral que ela concede, prefixo "C"
+		const poderesComplicacao = [];
+		const complicacao = this.usarComplicacoes && !semComplicacao ? this.complicacao : null;
+		if (complicacao) {
+			poderesComplicacao.push(complicacao);
+			vistos.add(complicacao);
+			if (e.complicacaoPoder) adicionar(poderesComplicacao)(e.complicacaoPoder);
+		}
+
 		const gruposPoderes = [
 			{ prefixo: "R", nome: "Raciais", poderes: poderesRaciais, raciais: true },
 			{ prefixo: "O", nome: "Origem", poderes: poderesOrigem },
 			{ prefixo: "D", nome: "Concedidos", poderes: poderesConcedidos },
-			{ prefixo: "1", nome: "Classe", poderes: poderesClasse }
+			{ prefixo: "1", nome: "Classe", poderes: poderesClasse },
+			{ prefixo: "C", nome: "Complicação", poderes: poderesComplicacao }
 		];
 		const poderes = [...poderesOrigem, ...poderesConcedidos, ...poderesClasse];
 
@@ -2787,6 +2865,11 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				e.divindade = "";
 				e.devoto = null;
 				e.equip = { arma: "", armaMarcial: "", armadura: "" };
+				// complicação de outra classe deixa de valer (as gerais continuam)
+				if (e.complicacoes?.length && !this.complicacao) {
+					e.complicacoes = [];
+					e.complicacaoPoder = "";
+				}
 			}
 			if (campo.startsWith("escolhasClasse.")) {
 				// trocar o caminho limpa subescolhas que deixaram de existir
@@ -2819,6 +2902,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				Object.assign(e.origens[sub], { beneficios: [], grupos: {}, itens: {}, amnPericia: "", amnPoder: "" });
 			}
 			if (campo === "divindade") e.poderesConcedidos = [];
+			// trocar ou tirar a complicação zera o poder geral escolhido por ela
+			if (campo === "complicacoes") e.complicacaoPoder = "";
 			// Protótipo: trocar o item base invalida a melhoria
 			if (campo === "classePoderEscolhas.prototipo.item") e.classePoderEscolhas.prototipo.melhoria = "";
 			if (campo === "devoto" && valor === false) {

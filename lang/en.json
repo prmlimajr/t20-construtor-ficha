@@ -72,6 +72,10 @@
 			"atributosClassicaEmOrdem": {
 				"Nome": "Varied Attributes: Classic in order",
 				"Dica": "In the Classic method, the 1st roll is Strength, the 2nd Dexterity and so on, with no distribution."
+			},
+			"complicacoes": {
+				"Nome": "Use Complications",
+				"Dica": "Adds the Complications step: the player may pick one complication (general or class) and, in exchange, a general power. Both get the “C - ” prefix on the sheet. Requires Suplementos de Arton (complications come from Heróis de Arton)."
 			}
 		},
 		"SuplementoInativo": "Character Builder: \"Use Suplementos de Arton\" is enabled, but the Suplementos de Arton module is not active. Only the core book is used."
