@@ -1,5 +1,5 @@
 {
-  "_comentario": "Escolhas das habilidades de classe de 1º nível (T20 Jogo do Ano, cap. 2). Mesmo formato de racas.json. Tipos extras: 'especialista' (perícias treinadas, escolhidas no passo Perícias), 'item' (um item até 'precoMax', no passo Equipamento), 'prototipo' (item superior ou itens alquímicos, no passo Equipamento). 'periciasFixas' = perícias treinadas pelo poder; 'magiasExtra' = magias iniciais a mais.",
+  "_comentario": "Escolhas das habilidades de classe de 1º nível (T20 Jogo do Ano, cap. 2). Mesmo formato de racas.json. Tipos extras: 'especialista' (perícias treinadas, escolhidas no passo Perícias), 'item' (um item até 'precoMax', no passo Equipamento), 'prototipo' (item superior ou itens alquímicos, no passo Equipamento). 'periciasFixas' = perícias treinadas pelo poder; 'magiasExtra' = magias iniciais a mais. 'extras': escolhas adicionais do mesmo poder; 'opcoesDivindades': as opções são os deuses maiores; efeito 'nenhum': só registra a escolha; 'tiposMagia': filtra as magias da escolha por tipo (arc/div/uni); 'tiposMagiaExtras': tipos de magia que a classe passa a poder aprender.",
   "poderes": {
     "Linhagem Dracônica Básica": {
       "id": "linhagemDraconica",
@@ -8,10 +8,22 @@
       "valor": 5,
       "titulo": "Tipo de dano do dragão (redução 5)",
       "opcoes": [
-        { "valor": "acido", "nome": "Ácido" },
-        { "valor": "eletricidade", "nome": "Eletricidade" },
-        { "valor": "fogo", "nome": "Fogo" },
-        { "valor": "frio", "nome": "Frio" }
+        {
+          "valor": "acido",
+          "nome": "Ácido"
+        },
+        {
+          "valor": "eletricidade",
+          "nome": "Eletricidade"
+        },
+        {
+          "valor": "fogo",
+          "nome": "Fogo"
+        },
+        {
+          "valor": "frio",
+          "nome": "Frio"
+        }
       ]
     },
     "Linhagem Feérica Básica": {
@@ -20,17 +32,28 @@
       "titulo": "Magia feérica (encantamento ou ilusão)",
       "quantidade": 1,
       "circulo": 1,
-      "escolas": ["enc", "ilu"],
-      "periciasFixas": ["enga"]
+      "escolas": [
+        "enc",
+        "ilu"
+      ],
+      "periciasFixas": [
+        "enga"
+      ]
     },
     "Linhagem Rubra Básica": {
       "id": "linhagemRubra",
       "tipo": "beneficio",
       "titulo": "Poder da Tormenta",
       "quantidade": 1,
-      "poder": { "lista": "grupo:Tormenta", "nome": "poder da Tormenta", "maximo": 1 }
+      "poder": {
+        "lista": "grupo:Tormenta",
+        "nome": "poder da Tormenta",
+        "maximo": 1
+      }
     },
-    "Caminho do Arcanista: Mago": { "magiasExtra": 1 },
+    "Caminho do Arcanista: Mago": {
+      "magiasExtra": 1
+    },
     "Especialista": {
       "id": "especialista",
       "tipo": "especialista",
@@ -49,6 +72,29 @@
       "precoMax": 500,
       "maxAlquimicos": 10,
       "precoMelhoria": 300
+    },
+    "Linhagem Abençoada Básica": {
+      "id": "linhagemAbencoadaDeus",
+      "tipo": "opcao",
+      "efeito": "nenhum",
+      "opcoesDivindades": true,
+      "titulo": "Deus maior (não pode ser mudado)",
+      "tiposMagiaExtras": [
+        "div"
+      ],
+      "extras": [
+        {
+          "id": "linhagemAbencoadaMagia",
+          "tipo": "magias",
+          "titulo": "Magia divina de 1º círculo",
+          "quantidade": 1,
+          "circulo": 1,
+          "tiposMagia": [
+            "div",
+            "uni"
+          ]
+        }
+      ]
     }
   }
 }

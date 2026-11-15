@@ -24,7 +24,8 @@
         "opcoes": [
           { "poder": "Linhagem Dracônica Básica" },
           { "poder": "Linhagem Feérica Básica" },
-          { "poder": "Linhagem Rubra Básica" }
+          { "poder": "Linhagem Rubra Básica" },
+          { "poder": "Linhagem Abençoada Básica" }
         ]
       }
     ],
@@ -91,7 +92,7 @@
     "habilidades": ["Devoto Fiel (Clérigo)", "Magias (Clérigo)"],
     "escolhas": [],
     "conjurador": { "tipo": "div", "quantidade": 3, "escolas": 0, "atributo": "sab" },
-    "devocao": { "obrigatoria": true, "poderes": 2, "alternativa": { "nome": "Devoto do Panteão", "descricao": "Serve ao Panteão como um todo, sem ser devoto de uma divindade específica. Não recebe poderes concedidos." } },
+    "devocao": { "obrigatoria": true, "poderes": 2, "alternativa": { "nome": "Devoto do Panteão", "descricao": "Serve ao Panteão como um todo, sem ser devoto de uma divindade específica. Não recebe poderes concedidos; em compensação, recebe Devoção Ampla (+2 PM por patamar).", "poder": "Devoção Ampla" } },
     "equipamentoExtra": ["Símbolo Sagrado"]
   },
   "Druida": {
@@ -103,7 +104,7 @@
     "habilidades": ["Devoto Fiel (Druida)", "Empatia Selvagem (Druida)", "Magias (Druida)"],
     "escolhas": [],
     "conjurador": { "tipo": "div", "quantidade": 2, "escolas": 3, "atributo": "sab" },
-    "devocao": { "obrigatoria": true, "poderes": 2, "divindades": ["Aharadak", "Allihanna", "Megalokk", "Oceano", "Tenebra"], "alternativa": { "nome": "Druida de Arton", "descricao": "Serve à natureza do próprio mundo de Arton, sem ser devoto de uma divindade específica. Não recebe poderes concedidos." } },
+    "devocao": { "obrigatoria": true, "poderes": 2, "divindades": ["Aharadak", "Allihanna", "Megalokk", "Oceano", "Tenebra"], "alternativa": { "nome": "Druida de Arton", "descricao": "Serve à natureza do próprio mundo de Arton, sem ser devoto de uma divindade específica. Não recebe poderes concedidos; em compensação, recebe Devoção Ampla (+2 PM por patamar).", "poder": "Devoção Ampla" } },
     "equipamentoExtra": []
   },
   "Guerreiro": {
@@ -164,7 +165,7 @@
     "proficiencias": ["marcial", "pesada", "escudo"],
     "habilidades": ["Abençoado", "Código do Herói", "Golpe Divino"],
     "escolhas": [],
-    "devocao": { "obrigatoria": true, "poderes": 1, "divindades": ["Azgher", "Khalmyr", "Lena", "Lin-Wu", "Marah", "Tanna-Toh", "Thyatis", "Valkaria"], "alternativa": { "nome": "Paladino do Bem", "descricao": "Serve ao Bem como um todo, sem ser devoto de uma divindade específica. Não recebe poder concedido." } },
+    "devocao": { "obrigatoria": true, "poderes": 1, "divindades": ["Azgher", "Khalmyr", "Lena", "Lin-Wu", "Marah", "Tanna-Toh", "Thyatis", "Valkaria"], "alternativa": { "nome": "Paladino do Bem", "descricao": "Serve ao Bem como um todo, sem ser devoto de uma divindade específica. Não recebe poder concedido; em compensação, recebe Devoção Ampla (+2 PM por patamar).", "poder": "Devoção Ampla" } },
     "equipamentoExtra": []
   }
 }

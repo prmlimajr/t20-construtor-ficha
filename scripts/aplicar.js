@@ -7,7 +7,11 @@ import { equipamento } from "./dados.js";
 function doCompendio(doc) {
 	// poder que o suplemento não traz, definido pelo construtor (dados.js → PODERES_DO_CONSTRUTOR)
 	if (doc?.substituto) {
-		return { name: doc.name, type: doc.type, img: doc.img, system: foundry.utils.deepClone(doc.system), effects: foundry.utils.deepClone(doc.effects ?? []) };
+		const system = foundry.utils.deepClone(doc.system);
+		// raça variante do construtor: as habilidades já vão como itens próprios; os "grants" apontariam
+		// para poderes que não existem em compêndio nenhum
+		if (doc.type === "race") system.grants = [];
+		return { name: doc.name, type: doc.type, img: doc.img, system, effects: foundry.utils.deepClone(doc.effects ?? []) };
 	}
 	return game.items.fromCompendium(doc);
 }

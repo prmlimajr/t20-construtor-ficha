@@ -156,7 +156,7 @@ function devocaoDoTexto(t) {
 	const poderes = /dois poderes concedidos/.test(n) ? 2 : 1;
 	const devocao = { obrigatoria: true, poderes };
 	if (/panteao/.test(n)) {
-		devocao.alternativa = { nome: "Devoto do Panteão", descricao: "Serve ao Panteão como um todo, sem ser devoto de uma divindade específica. Não recebe poderes concedidos." };
+		devocao.alternativa = { nome: "Devoto do Panteão", descricao: "Serve ao Panteão como um todo, sem ser devoto de uma divindade específica. Não recebe poderes concedidos; em compensação, recebe Devoção Ampla (+2 PM por patamar).", poder: "Devoção Ampla" };
 	}
 	return devocao;
 }

@@ -9,6 +9,10 @@
 <div class="cf-info cf-alternativa">
 	<h3>{{alternativa.nome}}</h3>
 	<p class="cf-lore">{{alternativa.descricao}}</p>
+	{{#if alternativa.poder}}
+	<h4>Você recebe</h4>
+	{{> "modules/t20-construtor-ficha/templates/partes/poder.hbs" alternativa.poder aberto=true}}
+	{{/if}}
 </div>
 {{else}}
 <p class="cf-nota">{{alternativa.aviso}}</p>
@@ -64,6 +68,13 @@
 		{{/if}}
 
 		{{#if info.escolhida}}
+		<div class="cf-bloco cf-fundamentalista">
+			<button type="button" class="cf-chip {{#if info.fundamentalista}}selecionado{{/if}}" data-action="definir" data-campo="fundamentalista"
+				data-tipo="bool" data-valor="{{#if info.fundamentalista}}false{{else}}true{{/if}}" aria-pressed="{{#if info.fundamentalista}}true{{else}}false{{/if}}">
+				<i class="fa-{{#if info.fundamentalista}}solid fa-square-check{{else}}regular fa-square{{/if}}"></i> Devoto fundamentalista
+			</button>
+			<p class="cf-nota">Um fundamentalista escolhe um poder concedido extra. A ficha registra a devoção como “{{info.nome}} (fundamentalista)”.</p>
+		</div>
 		<h4>Escolha {{info.qtd}} poder(es) concedido(s) <small>({{info.escolhidos}}/{{info.qtd}})</small></h4>
 		{{else}}
 		<h4>Poderes concedidos</h4>

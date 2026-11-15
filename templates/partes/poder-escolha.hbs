@@ -2,3 +2,4 @@
 {{> "modules/t20-construtor-ficha/templates/partes/poder.hbs" this}}
 {{#if nota}}<p class="cf-nota cf-magias-fixas"><i class="fa-solid fa-circle-info"></i> {{nota}}</p>{{/if}}
 {{#if escolha}}{{> "modules/t20-construtor-ficha/templates/partes/escolha-racial.hbs" escolha}}{{/if}}
+{{#each escolhas}}{{> "modules/t20-construtor-ficha/templates/partes/escolha-racial.hbs" this}}{{/each}}

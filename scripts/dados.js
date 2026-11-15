@@ -169,7 +169,7 @@ async function carregar() {
 	for (const { doc } of sup.itens) if (!equipPorNome.has(normalizar(doc.name))) equipPorNome.set(normalizar(doc.name), doc);
 
 	const dados = {
-		racas: [...racas, ...sup.racas].sort(ordenar),
+		racas: [...racas, ...sup.racas, ...racasDoConstrutor(racas, todosPoderes)].sort(ordenar),
 		classes: [...classes, ...sup.classes].sort(ordenar),
 		magias: [...magias, ...sup.magias].sort(ordenar),
 		poderes: todosPoderes,
@@ -208,7 +208,7 @@ async function carregar() {
 		equipamento,
 		escolas: escolas.escolas ?? {},
 		regrasRacas: regrasRacas.poderes ?? {},
-		regrasPoderesClasse: regrasPoderesClasse.poderes ?? {},
+		regrasPoderesClasse: comOpcoesDivindades(regrasPoderesClasse.poderes ?? {}, divindades.divindades ?? []),
 		melhorias
 	};
 	verificarReferencias(dados);
@@ -350,6 +350,48 @@ const PODERES_DO_CONSTRUTOR = [
 			efeitoAoUsar("Nômade Ferani: dano contra desprevenidos", "icons/svg/upgrade.svg", [["dano", 2]])
 		]
 	},
+	// Recebido por quem segue uma alternativa sem deus (Devoto do Panteão, Druida de Arton, Paladino do Bem).
+	// Substitui o poder geral homônimo do suplemento, que apareceria nas listas de poder geral.
+	{
+		nome: "Devoção Ampla",
+		tipo: "concedido", subtipo: "", substituiSuplemento: true,
+		img: "systems/tormenta20/icons/poderes/concedidos.webp",
+		descricao: "<p>Clérigos e frades do Panteão, druidas de Arton e paladinos do bem não recebem poderes concedidos. Em compensação, por sua devoção ampla, recebem +2 PM por patamar.</p>"
+			+ "<h4>Patamares de Jogo</h4><p>As classificações abaixo fornecem uma noção da escala de poder dos personagens e afetam certas habilidades.</p><ul>"
+			+ "<li><strong>Iniciante (1º ao 4º nível).</strong> Aventureiro novato, envolvido em missões locais, como proteger vilas do ataque de bandidos e escoltar caravanas.</li>"
+			+ "<li><strong>Veterano (5º ao 10º nível).</strong> Neste patamar, o herói presta serviços importantes a nobres e líderes de guildas.</li>"
+			+ "<li><strong>Campeão (11º ao 16º nível).</strong> Já famoso por suas façanhas, o aventureiro trabalha para monarcas e enfrenta grandes vilões e monstros terríveis.</li>"
+			+ "<li><strong>Lenda (17º ao 20º nível).</strong> Entre os mais poderosos de Arton, o herói lida com perigos que ameaçam todo o mundo... Ou mesmo toda a realidade!</li></ul>",
+		// +2 PM por patamar (o sistema calcula @patamar a partir do nível: 1 a 4)
+		efeitos: (img) => [efeitoSomar("Devoção Ampla", img, [["system.attributes.pm.bonus.total", "2*@patamar"]])]
+	},
+	// Nova linhagem de feiticeiro
+	{
+		nome: "Linhagem Abençoada Básica",
+		tipo: "ability", subtipo: "Arcanista",
+		img: "systems/tormenta20/icons/poderes/classes/conjuradores/mao-divindade.webp",
+		descricao: "<p>Escolha um deus maior. Uma vez feita, essa escolha não pode ser mudada. Você aprende uma magia divina de 1º círculo e pode aprender magias divinas de 1º círculo como magias de feiticeiro. No 2º nível, você recebe um poder concedido do deus escolhido, aprovado pelo mestre, sem precisar ser devoto dele (mas você ainda pode ser devoto desse ou de outro deus).</p>"
+	},
+	// Sahiri (variante de dahllan): substituem Amiga das Plantas e Armadura da Natureza
+	{
+		nome: "Animar Rochas",
+		tipo: "racial", subtipo: "Sahiri",
+		img: "systems/tormenta20/icons/racas/dahllan.webp",
+		descricao: "<p>Você pode usar magia para transformar rochas em criaturas sob seu controle. Isso funciona como a magia <em>Conjurar Monstro</em>, exceto que você precisa ter acesso a uma porção de terra ou rocha equivalente a uma criatura Pequena. Caso aprenda essa magia, seu custo diminui em –1 PM. Efeito Mágico.</p>",
+		efeitos: () => [{
+			name: "Animar Rochas", img: "icons/svg/upgrade.svg", type: "base", transfer: true, disabled: true,
+			system: {
+				changes: [], onuse: true,
+				abilityUse: { description: "", automatic: false, aumenta: false, custo: -1, names: ["Conjurar Monstro"], types: ["spell"] }
+			}
+		}]
+	},
+	{
+		nome: "Proteção da Terra",
+		tipo: "racial", subtipo: "Sahiri",
+		img: "systems/tormenta20/icons/racas/dahllan.webp",
+		descricao: "<p>Quando sofre dano enquanto está em contato com terra ou pedra, você pode gastar 1 PM para reduzir esse dano em 5.</p>"
+	},
 	// Poder concedido de Allihanna e Megalokk (livro básico: funciona sem o suplemento)
 	{
 		nome: "Canção da Pedra",
@@ -393,6 +435,53 @@ function poderesSubstitutos(sup) {
 				...(x.ativacao ? { ativacao: x.ativacao } : {})
 			}
 		}));
+}
+
+/** Regras com "opcoesDivindades": as opções são os deuses maiores (os do livro básico). */
+function comOpcoesDivindades(regras, divindades) {
+	const opcoes = divindades.map((d) => ({ valor: d.nome, nome: d.nome }));
+	const preencher = (r) => (r?.opcoesDivindades ? { ...r, opcoes } : r);
+	return Object.fromEntries(Object.entries(regras).map(([k, r]) => [k, r && typeof r === "object"
+		? { ...preencher(r), ...(r.extras ? { extras: r.extras.map(preencher) } : {}) } : r]));
+}
+
+/**
+ * Raças variantes definidas pelo construtor: copiam uma raça do sistema (atributos, ícone e
+ * habilidades) trocando algumas habilidades por poderes de PODERES_DO_CONSTRUTOR.
+ */
+const RACAS_DO_CONSTRUTOR = [
+	{
+		nome: "Sahiri",
+		base: "Dahllan",
+		descricao: "<p>Sahiri é uma variante da raça dahllan. Usa as habilidades de dahllan, mas <em>Amiga das Plantas</em> e <em>Armadura de Allihanna</em> são substituídas por <em>Animar Rochas</em> e <em>Proteção da Terra</em>.</p>",
+		troca: { "Amiga das Plantas": "Animar Rochas", "Armadura da Natureza": "Proteção da Terra" }
+	}
+];
+
+function racasDoConstrutor(racas, poderes) {
+	const out = [];
+	for (const def of RACAS_DO_CONSTRUTOR) {
+		const base = racas.find((r) => r.name === def.base);
+		if (!base) continue;
+		const sistema = typeof base.system?.toObject === "function" ? base.system.toObject() : structuredClone(base.system);
+		const uuidDe = (nome) => poderes.find((p) => p.name === nome)?.uuid ?? null;
+		sistema.grants = (sistema.grants ?? []).map((g) => ({
+			...g,
+			choices: (g.choices ?? []).map((c) => {
+				const nome = poderes.find((p) => p.uuid === c.uuid)?.name;
+				const novo = def.troca[nome] ? uuidDe(def.troca[nome]) : null;
+				return novo ? { ...c, uuid: novo } : c;
+			})
+		}));
+		sistema.description = { ...(sistema.description ?? {}), value: def.descricao };
+		out.push({
+			name: def.nome, type: "race", img: base.img,
+			uuid: `${MODULE_ID}.raca.${def.nome}`, _id: null,
+			substituto: true, varianteDe: def.base,
+			effects: [], system: sistema
+		});
+	}
+	return out;
 }
 
 /**

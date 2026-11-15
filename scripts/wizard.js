@@ -61,6 +61,8 @@ function estadoInicial(actor) {
 		devoto: null,
 		divindade: "",
 		poderesConcedidos: [],
+		/** Devoto fundamentalista: um poder concedido a mais; a ficha registra "(fundamentalista)". */
+		fundamentalista: false,
 		/** Complicação escolhida (uuid; no máximo uma) e o poder geral que ela concede. */
 		complicacoes: [],
 		complicacaoPoder: "",
@@ -237,6 +239,14 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		// classe sem perícias cadastradas: as treinadas da classe são as que o jogador indicou
 		if (r?.periciasManuais) return { ...r, fixas: [...(this.estado.periciasFixasManuais ?? [])] };
 		return r;
+	}
+
+	/** Tipos de magia que a classe pode aprender: os do conjurador e os acrescentados por poderes (ex.: Linhagem Abençoada → divinas). */
+	tiposMagiaClasse() {
+		const c = this.conjurador;
+		const tipos = new Set(c?.tipo === "arc" ? ["arc", "uni"] : ["div", "uni"]);
+		for (const { regra } of this.poderesDaClasse()) (regra?.tiposMagiaExtras ?? []).forEach((t) => tipos.add(t));
+		return [...tipos];
 	}
 
 	/** A classe tem a proficiência (marcial, pesada, escudo)? */
@@ -431,7 +441,11 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const out = [];
 		for (const n of nomes) {
 			const p = poder(this.dados, n);
-			if (p) out.push({ poder: p, regra: this.#comFonte(this.dados.regrasPoderesClasse[p.name], "classe") });
+			if (!p) continue;
+			const regra = this.dados.regrasPoderesClasse[p.name];
+			// uma regra pode trazer escolhas extras (ex.: Linhagem Abençoada: deus maior + magia divina)
+			const regras = regra ? [regra, ...(regra.extras ?? [])] : [null];
+			for (const r of regras) out.push({ poder: p, regra: this.#comFonte(r, "classe") });
 		}
 		return out;
 	}
@@ -725,13 +739,17 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	/** Nome gravado em "divindade" na ficha. */
 	get textoDivindade() {
-		if (this.ehDevoto) return this.estado.divindade;
+		if (this.ehDevoto) {
+			const d = this.estado.divindade;
+			return d && this.estado.fundamentalista ? `${d} (fundamentalista)` : d;
+		}
 		if (this.estado.devoto === false && this.alternativaDevocao) return this.alternativaDevocao.nome;
 		return "";
 	}
 
 	poderesConcedidosPermitidos() {
-		return this.regrasClasse?.devocao?.poderes ?? 1;
+		// devoto fundamentalista escolhe um poder concedido a mais
+		return (this.regrasClasse?.devocao?.poderes ?? 1) + (this.ehDevoto && this.estado.fundamentalista ? 1 : 0);
 	}
 
 	/* ---------------- Passos ---------------- */
@@ -1281,7 +1299,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				const lista = regra.nomes
 					? regra.nomes.map((n) => magiaPorNome(this.dados, n)).filter(Boolean)
 					: this.dados.magias.filter((m) => circuloMagia(m) === Number(regra.circulo)
-						&& (!regra.escolas || regra.escolas.includes(m.system.escola)));
+						&& (!regra.escolas || regra.escolas.includes(m.system.escola))
+						&& (!regra.tiposMagia || regra.tiposMagia.includes(m.system.tipo)));
 				return lista.map((m) => ({
 					valor: m.uuid, nome: m.name, img: m.img,
 					sub: `${rotuloEscola(m.system.escola)} · ${m.system.tipo === "uni" ? "Universal" : (m.system.tipo === "arc" ? "Arcana" : "Divina")}`
@@ -1567,7 +1586,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 					info.aberto = !!info.escolha.pendente;
 				}
 				if (regra?.magiasFixas) {
-					info.magiasFixas = `${regra.magiasFixas.join(", ")} (atributo-chave ${NOMES_ATRIBUTOS[regra.atributo]})`;
+					info.magiasFixas = regra.atributo
+						? `${regra.magiasFixas.join(", ")} (atributo-chave ${NOMES_ATRIBUTOS[regra.atributo]})`
+						: regra.magiasFixas.join(", ");
 				}
 				poderes.push(info);
 			}
@@ -1796,18 +1817,25 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			const nomesProf = { marcial: "Armas marciais", pesada: "Armaduras pesadas", escudo: "Escudos" };
 			const prof = ["Armas simples", "Armaduras leves", ...(r.proficiencias ?? []).map((p) => nomesProf[p] ?? p)];
 			// Escolhas dos poderes de classe mostradas aqui (as de perícia e equipamento ficam nos passos delas)
-			const regras = new Map(this.poderesDaClasse().map((x) => [x.poder.name, x.regra]));
+			const regrasPorPoder = new Map();
+			for (const x of this.poderesDaClasse()) {
+				if (!regrasPorPoder.has(x.poder.name)) regrasPorPoder.set(x.poder.name, []);
+				if (x.regra) regrasPorPoder.get(x.poder.name).push(x.regra);
+			}
 			const comEscolha = async (p) => {
 				const info = await this.#infoPoder(p);
-				const regra = regras.get(p.name);
-				if (["opcao", "magias", "beneficio"].includes(regra?.tipo)) {
-					info.escolha = this.#ctxEscolhaRacial(p, regra);
-					info.aberto = true;
-				} else if (regra?.tipo) {
-					info.nota = { especialista: "Escolha as perícias no passo Perícias.", item: "Escolha o item no passo Equipamento.", prototipo: "Monte o protótipo no passo Equipamento." }[regra.tipo];
+				info.escolhas = [];
+				for (const regra of regrasPorPoder.get(p.name) ?? []) {
+					if (["opcao", "magias", "beneficio"].includes(regra.tipo)) {
+						info.escolhas.push(this.#ctxEscolhaRacial(p, regra));
+						info.aberto = true;
+					} else if (regra.tipo) {
+						info.nota = { especialista: "Escolha as perícias no passo Perícias.", item: "Escolha o item no passo Equipamento.", prototipo: "Monte o protótipo no passo Equipamento." }[regra.tipo];
+					}
+					if (regra.periciasFixas) info.nota = `Treinado em ${regra.periciasFixas.map(rotuloPericia).join(", ")} (já marcado na ficha).`;
+					if (regra.magiasExtra) info.nota = `+${regra.magiasExtra} magia inicial (total ${this.conjurador?.quantidade}).`;
+					if (regra.tiposMagiaExtras) info.nota = "Magias divinas de 1º círculo também aparecem na sua lista de magias de feiticeiro.";
 				}
-				if (regra?.periciasFixas) info.nota = `Treinado em ${regra.periciasFixas.map(rotuloPericia).join(", ")} (já marcado na ficha).`;
-				if (regra?.magiasExtra) info.nota = `+${regra.magiasExtra} magia inicial (total ${this.conjurador?.quantidade}).`;
 				return info;
 			};
 			const habilidades = [];
@@ -1857,7 +1885,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	magiasDisponiveis() {
 		const c = this.conjurador;
 		if (!c) return [];
-		const tipos = c.tipo === "arc" ? ["arc", "uni"] : ["div", "uni"];
+		const tipos = this.tiposMagiaClasse();
 		const escolas = this.estado.magiasEscolas;
 		return this.dados.magias.filter((m) =>
 			circuloMagia(m) === 1
@@ -1883,7 +1911,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	async #ctxMagias() {
 		const e = this.estado;
 		const c = this.conjurador;
-		const tipos = c.tipo === "arc" ? ["arc", "uni"] : ["div", "uni"];
+		const tipos = this.tiposMagiaClasse();
 		const daClasse = (k) => this.dados.magias.filter((m) => circuloMagia(m) === 1 && m.system.escola === k && tipos.includes(m.system.tipo));
 		const cheioEscolas = e.magiasEscolas.length >= c.escolas;
 
@@ -2326,7 +2354,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				energia: div.energia, arma: div.arma, devotosTexto: div.devotosTexto, obrigacoes: div.obrigacoes,
 				escolhida: div.nome === e.divindade,
 				impedimento,
-				poderes, qtd: this.poderesConcedidosPermitidos(), escolhidos: e.poderesConcedidos.length
+				poderes, qtd: this.poderesConcedidosPermitidos(), escolhidos: e.poderesConcedidos.length,
+				fundamentalista: !!e.fundamentalista
 			};
 		}
 		const lista = r?.devocao?.divindades ? ` de ${r.devocao.divindades.join(", ")}` : "";
@@ -2336,6 +2365,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			alternativa: alt ? {
 				nome: alt.nome,
 				descricao: alt.descricao,
+				poder: alt.poder ? await this.#infoPoder(poder(this.dados, alt.poder)) : null,
 				aviso: lista
 					? `Se for devoto de um deus, ${this.classe.name.toLowerCase()}s só podem seguir${lista.replace(/^ de/, "")}.`
 					: `Como devoto de um deus, você recebe ${this.poderesConcedidosPermitidos()} poder(es) concedido(s); como ${alt.nome}, nenhum.`
@@ -2704,6 +2734,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 		const devoto = this.ehDevoto;
 		if (devoto) e.poderesConcedidos.forEach(adicionar(poderesConcedidos));
+		// alternativa sem deus (Devoto do Panteão, Druida de Arton, Paladino do Bem): Devoção Ampla
+		else if (e.devoto === false && this.alternativaDevocao?.poder) adicionar(poderesConcedidos)(this.alternativaDevocao.poder);
 
 		const addClasse = adicionar(poderesClasse);
 		(r.habilidades ?? []).forEach(addClasse);
@@ -2821,7 +2853,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				case "opcao": {
 					const o = regra.opcoes.find((x) => x.valor === v);
 					if (!o) break;
-					if (regra.efeito === "imunidade") ajuste({ imunidade: o.valor });
+					if (regra.efeito === "nenhum") { /* só registra a escolha (ex.: deus da Linhagem Abençoada) */ }
+					else if (regra.efeito === "imunidade") ajuste({ imunidade: o.valor });
 					else if (regra.efeito === "pericia") ajuste({ bonusPericias: [o.valor], bonus: regra.valor });
 					else ajuste({ resistencia: o.valor, valor: regra.valor });
 					resumo = o.nome;
@@ -2879,7 +2912,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			}
 			if (resumo) {
 				out.texto.push(`${rotulo}: ${resumo}`);
-				ajuste({ anotacao: resumo });
+				// várias escolhas no mesmo poder (ex.: deus e magia da Linhagem Abençoada): junta as anotações
+				const anterior = out.ajustes[p.uuid]?.anotacao;
+				ajuste({ anotacao: anterior ? `${anterior}; ${resumo}` : resumo });
 			}
 		}
 		return out;
@@ -2919,6 +2954,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				e.poderesConcedidos = [];
 				e.divindade = "";
 				e.devoto = null;
+				e.fundamentalista = false;
 				e.equip = { arma: "", armaMarcial: "", armadura: "" };
 				// complicação de outra classe deixa de valer (as gerais continuam)
 				if (e.complicacoes?.length && !this.complicacao) {
@@ -2964,6 +3000,11 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			if (campo === "devoto" && valor === false) {
 				e.divindade = "";
 				e.poderesConcedidos = [];
+				e.fundamentalista = false;
+			}
+			// deixar de ser fundamentalista devolve o poder concedido extra
+			if (campo === "fundamentalista" && !valor) {
+				e.poderesConcedidos = e.poderesConcedidos.slice(0, this.poderesConcedidosPermitidos());
 			}
 			if (campo === "atrModo" || campo === "atrFixo.arranjo") {
 				this.dadoSelecionado = null;

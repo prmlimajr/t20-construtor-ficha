@@ -472,6 +472,11 @@
           }
         }
       ]
+    },
+    "Animar Rochas": {
+      "magiasFixas": [
+        "Conjurar Monstro"
+      ]
     }
   }
 }
