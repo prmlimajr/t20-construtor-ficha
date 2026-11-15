@@ -204,7 +204,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			finalizar: ConstrutorFicha.#finalizar,
 			recomecar: ConstrutorFicha.#recomecar,
 			tentarDeNovo: ConstrutorFicha.#tentarDeNovo,
-			atribuirAberto: ConstrutorFicha.#atribuirAberto
+			atribuirAberto: ConstrutorFicha.#atribuirAberto,
+			focarComplicacao: ConstrutorFicha.#focarComplicacao,
+			escolherComplicacao: ConstrutorFicha.#escolherComplicacao
 		}
 	};
 
@@ -2453,35 +2455,53 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		};
 	}
 
-	/** Complicações: gerais e da classe, com a descrição à vista; a escolhida pede um poder geral. */
+	/**
+	 * Complicações: lista à esquerda (as da classe e as gerais) e painel à direita com a complicação
+	 * em foco, o botão de escolher/desistir e, para a escolhida, o seletor do poder geral.
+	 */
 	async #ctxComplicacoes() {
 		const e = this.estado;
 		const escolhida = this.complicacao;
-		const card = async (c) => ({
-			nome: c.doc.name, img: c.doc.img, uuid: c.doc.uuid,
-			descricao: await this.#html(c.doc.uuid, c.doc.system?.description?.value),
-			selecionado: escolhida?.uuid === c.doc.uuid
-		});
 		const disponiveis = this.complicacoesDisponiveis();
-		const gerais = [];
-		const daClasse = [];
-		for (const c of disponiveis) (c.classe ? daClasse : gerais).push(await card(c));
+		// foco: a clicada por último; se nenhuma, a escolhida
+		if (!disponiveis.some((c) => c.doc.uuid === this.focoComplicacao)) this.focoComplicacao = escolhida?.uuid ?? "";
+		const resumo = (doc) => {
+			const t = String(doc.system?.description?.value ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+			return t.length > 90 ? `${t.slice(0, 90).replace(/\s+\S*$/, "")}…` : t;
+		};
+		const card = (c) => ({
+			uuid: c.doc.uuid, nome: c.doc.name, img: c.doc.img,
+			sub: resumo(c.doc),
+			selecionado: escolhida?.uuid === c.doc.uuid,
+			foco: this.focoComplicacao === c.doc.uuid
+		});
 		const classe = this.classe?.name ?? "";
-		return {
-			escolhida: escolhida ? {
-				nome: escolhida.name,
-				poder: {
+		const grupos = [
+			{ titulo: `Complicações de ${classe}`, cards: disponiveis.filter((c) => c.classe).map(card) },
+			{ titulo: "Complicações gerais", cards: disponiveis.filter((c) => !c.classe).map(card) }
+		].filter((g) => g.cards.length);
+
+		let info = null;
+		const foco = disponiveis.find((c) => c.doc.uuid === this.focoComplicacao);
+		if (foco) {
+			const ehEscolhida = escolhida?.uuid === foco.doc.uuid;
+			info = {
+				uuid: foco.doc.uuid,
+				nome: foco.doc.name, img: foco.doc.img,
+				tipo: foco.classe ? `Complicação de ${classe}` : "Complicação geral",
+				descricao: await this.#html(foco.doc.uuid, foco.doc.system?.description?.value),
+				escolhida: ehEscolhida,
+				outraEscolhida: escolhida && !ehEscolhida ? escolhida.name : null,
+				poder: ehEscolhida ? {
 					campo: "complicacaoPoder",
 					lista: "poderGeralComplicacao",
-					titulo: `Poder geral concedido por ${escolhida.name}`,
+					titulo: `Poder geral concedido por ${foco.doc.name}`,
 					escolhido: e.complicacaoPoder ?? ""
-				}
-			} : null,
-			grupos: [
-				{ titulo: `Complicações de ${classe}`, cards: daClasse },
-				{ titulo: "Complicações gerais", cards: gerais }
-			].filter((g) => g.cards.length)
-		};
+				} : null,
+				poderInfo: ehEscolhida && e.complicacaoPoder ? await this.#infoPoder(poder(this.dados, e.complicacaoPoder)) : null
+			};
+		}
+		return { grupos, info, escolhidaNome: escolhida?.name ?? "" };
 	}
 
 	/** Espólio (Nobre) e Protótipo (Inventor). */
@@ -3301,6 +3321,20 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		});
 		this.estado.dinheiro = roll.total;
 		this.#mudou();
+	}
+
+	/** Complicações: mostra a clicada no painel lateral (não escolhe). */
+	static #focarComplicacao(event, target) {
+		this.focoComplicacao = target.dataset.valor;
+		this.render();
+	}
+
+	/** Complicações: escolhe a complicação em foco, ou desiste dela se já for a escolhida. */
+	static #escolherComplicacao(event, target) {
+		const uuid = target.dataset.valor;
+		const atual = this.estado.complicacoes?.[0];
+		this.focoComplicacao = uuid;
+		this.#definirCampo("complicacoes", atual === uuid ? [] : [uuid]);
 	}
 
 	/** Raças abertas: põe o modificador `indice` no atributo clicado (clicar de novo tira). */

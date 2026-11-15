@@ -1,17 +1,45 @@
-<div class="cf-complicacoes">
-	<p class="cf-nota"><i class="fa-solid fa-circle-info"></i> Complicações são opcionais (Heróis de Arton). Se escolher uma, você recebe um poder geral à sua escolha. Clique numa complicação para escolhê-la; clique de novo para desistir.</p>
-
-	{{#if escolhida}}
-	<div class="cf-bloco cf-escolha-racial">
-		<div class="cf-escolha-titulo"><i class="fa-solid fa-scale-unbalanced"></i> <span>{{escolhida.nome}}: escolha seu poder geral</span></div>
-		<div class="cf-campo"><span class="cf-rotulo-abrir">Poder geral:</span> {{> "modules/t20-construtor-ficha/templates/partes/abrir.hbs" escolhida.poder}}</div>
+<div class="cf-duas">
+	<div class="cf-lista">
+		<p class="cf-nota"><i class="fa-solid fa-circle-info"></i> Opcional (Heróis de Arton): escolha no máximo uma complicação; em troca, você recebe um poder geral.
+			{{#if escolhidaNome}}Escolhida: <strong>{{escolhidaNome}}</strong>.{{/if}}</p>
+		{{#each grupos}}
+		<h4>{{titulo}} <small>({{cards.length}})</small></h4>
+		<div class="cf-cards cf-cards-coluna">
+			{{#each cards}}
+			<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if foco}}foco{{/if}}" data-action="focarComplicacao" data-valor="{{uuid}}">
+				{{#if img}}<img src="{{img}}" alt="">{{/if}}
+				<span class="cf-card-texto">
+					<span class="cf-card-nome">{{nome}}{{#if selecionado}} <i class="fa-solid fa-circle-check"></i>{{/if}}</span>
+					<span class="cf-card-sub">{{sub}}</span>
+				</span>
+			</button>
+			{{/each}}
+		</div>
+		{{/each}}
 	</div>
-	{{/if}}
 
-	{{#each grupos}}
-	<h4>{{titulo}} <small>{{cards.length}}</small></h4>
-	{{#each cards}}
-	{{> "modules/t20-construtor-ficha/templates/partes/poder-selecionavel.hbs" nome=nome img=img descricao=descricao selecionado=selecionado campo="complicacoes" valor=uuid limite=1}}
-	{{/each}}
-	{{/each}}
+	<aside class="cf-info">
+		{{#if info}}
+		<h3>{{#if info.img}}<img src="{{info.img}}" alt="">{{/if}} {{info.nome}}</h3>
+		<p class="cf-destaque">{{info.tipo}}</p>
+		<button type="button" class="cf-primario cf-escolher" data-action="escolherComplicacao" data-valor="{{info.uuid}}">
+			{{#if info.escolhida}}<i class="fa-solid fa-xmark"></i> Desistir desta complicação{{else}}<i class="fa-solid fa-check"></i> Escolher esta complicação{{/if}}
+		</button>
+		{{#if info.outraEscolhida}}<p class="cf-nota">Escolher esta substitui <strong>{{info.outraEscolhida}}</strong> (e o poder geral escolhido por ela).</p>{{/if}}
+		{{#if info.descricao}}<div class="cf-descricao">{{{info.descricao}}}</div>{{/if}}
+
+		{{#if info.poder}}
+		<div class="cf-bloco cf-escolha-racial">
+			<div class="cf-escolha-titulo">
+				{{#if info.poder.escolhido}}<i class="fa-solid fa-circle-check"></i>{{else}}<i class="fa-solid fa-circle-exclamation"></i>{{/if}}
+				<span>Poder geral concedido</span>
+			</div>
+			{{> "modules/t20-construtor-ficha/templates/partes/abrir.hbs" info.poder}}
+			{{#if info.poderInfo}}{{> "modules/t20-construtor-ficha/templates/partes/poder.hbs" info.poderInfo aberto=true}}{{/if}}
+		</div>
+		{{/if}}
+		{{else}}
+		<p class="cf-vazio">Clique em uma complicação para ver os detalhes. A complicação é opcional: você pode avançar sem escolher nenhuma.</p>
+		{{/if}}
+	</aside>
 </div>
