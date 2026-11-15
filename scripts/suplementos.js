@@ -161,6 +161,40 @@ function devocaoDoTexto(t) {
 	return devocao;
 }
 
+const OFICIO_POR_NOME = { alfaiate: "alfa", alquimista: "alqu", armeiro: "arme", artesao: "arte", cozinheiro: "cozi", engenhoqueiro: "enge" };
+
+/** Tira o rótulo "Perícias." que vem no começo do texto copiado do livro. */
+function limparTextoPericias(texto) {
+	return String(texto ?? "").replace(/^\s*per[ií]cias\.\s*/i, "").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Perícias de uma classe a partir do texto do livro. Além do formato normal ("X e Y, mais N a sua
+ * escolha entre ..."), entende "Como o <classe> básico" (copia as perícias da classe básica) e
+ * "mas seu Ofício inicial é <ofício>" (troca o Ofício à escolha pelo Ofício indicado).
+ */
+function periciasDoTexto(texto, regrasBase) {
+	const limpo = limparTextoPericias(texto);
+	if (!limpo) return null;
+	const como = /^como (?:o|a) (.+?) b[aá]sic[oa]/i.exec(limpo);
+	if (!como) return interpretarPericiasClasse(limpo);
+	const nomeBase = Object.keys(regrasBase).find((k) => normalizar(k) === normalizar(como[1]));
+	const base = nomeBase ? regrasBase[nomeBase] : null;
+	if (!base) return { fixas: [], ou: [], opcoes: ["todas"], numero: 2, naoReconhecidas: [como[1]] };
+	const out = { fixas: [...base.fixas], ou: base.ou.map((g) => [...g]), opcoes: [...base.opcoes], numero: base.numero, naoReconhecidas: [] };
+	const oficio = /of[ií]cio inicial (?:é|e) (?:o |a )?(\w+)/i.exec(limpo)?.[1];
+	if (oficio) {
+		const k = OFICIO_POR_NOME[normalizar(oficio)];
+		if (!k) out.naoReconhecidas.push(`Ofício (${oficio})`);
+		else {
+			// o grupo "um Ofício à escolha" vira o Ofício indicado, treinado automaticamente
+			out.ou = out.ou.filter((g) => !(g.length === 1 && g[0] === "oficio"));
+			out.fixas.push(k);
+		}
+	}
+	return out;
+}
+
 /**
  * Regras de 1º nível de uma classe do suplemento. Prioridade:
  * 1. regras completas em data/suplementos.json → "classes";
@@ -191,27 +225,33 @@ function regrasClasseSuplemento(doc, poderesSup, regrasBase, config) {
 		for (const o of opcoes) habilidades.splice(habilidades.indexOf(o), 1);
 	}
 
+	// perícias cadastradas como texto do livro (data/suplementos.json → periciasClasses)
+	const textoPericias = config.periciasClasses?.[doc.name];
+	const doLivro = periciasDoTexto(textoPericias, regrasBase);
+	if (doLivro?.naoReconhecidas?.length) console.warn(`${MODULE_ID} | perícias não reconhecidas em ${doc.name}:`, doLivro.naoReconhecidas);
+
 	const nomeBase = config.variantes?.[doc.name];
 	const base = nomeBase ? regrasBase[nomeBase] : null;
 	if (base) {
+		const pericias = doLivro ?? base;
 		return {
-			fixas: base.fixas, ou: base.ou, opcoes: base.opcoes, numero: base.numero,
+			fixas: pericias.fixas, ou: pericias.ou, opcoes: pericias.opcoes, numero: pericias.numero,
+			...(doLivro ? { periciasTexto: limparTextoPericias(textoPericias) } : {}),
 			proficiencias: base.proficiencias,
 			habilidades, escolhas,
 			...(conjurador ? { conjurador } : {}),
 			...(devocao ? { devocao } : base.devocao && habilidades.some((h) => /aben[cç]oado/i.test(h)) ? { devocao: base.devocao } : {}),
 			equipamentoExtra: base.equipamentoExtra ?? [],
 			suplemento: true,
-			aviso: `Variante de ${nomeBase}: perícias e proficiências herdadas de ${nomeBase}; habilidades de 1º nível deduzidas dos poderes do suplemento. Confira com o livro.`
+			aviso: doLivro
+				? `Variante de ${nomeBase}: perícias conforme o livro; proficiências herdadas de ${nomeBase}; habilidades de 1º nível deduzidas dos poderes do suplemento. Confira com o livro.`
+				: `Variante de ${nomeBase}: perícias e proficiências herdadas de ${nomeBase}; habilidades de 1º nível deduzidas dos poderes do suplemento. Confira com o livro.`
 		};
 	}
-	// perícias cadastradas como texto do livro (data/suplementos.json → periciasClasses)
-	const doLivro = interpretarPericiasClasse(config.periciasClasses?.[doc.name]);
 	if (doLivro) {
-		if (doLivro.naoReconhecidas.length) console.warn(`${MODULE_ID} | perícias não reconhecidas em ${doc.name}:`, doLivro.naoReconhecidas);
 		return {
 			fixas: doLivro.fixas, ou: doLivro.ou, opcoes: doLivro.opcoes, numero: doLivro.numero,
-			periciasTexto: config.periciasClasses[doc.name],
+			periciasTexto: limparTextoPericias(textoPericias),
 			proficiencias: [],
 			habilidades, escolhas,
 			...(conjurador ? { conjurador } : {}),
