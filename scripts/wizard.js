@@ -2689,12 +2689,14 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			if (e.complicacaoPoder) adicionar(poderesComplicacao)(e.complicacaoPoder);
 		}
 
+		// Ordem na ficha (campo "sort"): raciais, origem, concedidos, complicação e, sempre por último,
+		// os de classe de 1º nível ("1 - ")
 		const gruposPoderes = [
 			{ prefixo: "R", nome: "Raciais", poderes: poderesRaciais, raciais: true },
 			{ prefixo: "O", nome: "Origem", poderes: poderesOrigem },
 			{ prefixo: "D", nome: "Concedidos", poderes: poderesConcedidos },
-			{ prefixo: "1", nome: "Classe", poderes: poderesClasse },
-			{ prefixo: "C", nome: "Complicação", poderes: poderesComplicacao }
+			{ prefixo: "C", nome: "Complicação", poderes: poderesComplicacao },
+			{ prefixo: "1", nome: "Classe", poderes: poderesClasse }
 		];
 		const poderes = [...poderesOrigem, ...poderesConcedidos, ...poderesClasse];
 
