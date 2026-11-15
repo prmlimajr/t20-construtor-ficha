@@ -203,7 +203,21 @@ function periciasDoTexto(texto, regrasBase) {
  * As habilidades de 1º nível, a conjuração e a devoção vêm dos poderes da própria classe.
  */
 function regrasClasseSuplemento(doc, poderesSup, regrasBase, config) {
-	if (config.classes?.[doc.name]) return { ...config.classes[doc.name], suplemento: true };
+	// regras cadastradas à mão (data/suplementos.json → classes): substituem a dedução automática.
+	// Aceitam "periciasTexto" (texto do livro) e "variante" (classe básica de onde vêm as proficiências).
+	const manual = config.classes?.[doc.name];
+	if (manual) {
+		const base = manual.variante ? regrasBase[manual.variante] : null;
+		const pericias = manual.periciasTexto ? periciasDoTexto(manual.periciasTexto, regrasBase) : null;
+		if (pericias?.naoReconhecidas?.length) console.warn(`${MODULE_ID} | perícias não reconhecidas em ${doc.name}:`, pericias.naoReconhecidas);
+		return {
+			fixas: [], ou: [], opcoes: [], numero: 0, escolhas: [], equipamentoExtra: base?.equipamentoExtra ?? [],
+			...manual,
+			...(pericias ? { fixas: pericias.fixas, ou: pericias.ou, opcoes: pericias.opcoes, numero: pericias.numero, periciasTexto: limparTextoPericias(manual.periciasTexto) } : {}),
+			proficiencias: manual.proficiencias ?? base?.proficiencias ?? [],
+			suplemento: true
+		};
+	}
 	const habilidades = habilidadesNivel1(doc.name, poderesSup);
 	const porNome = (n) => poderesSup.find((p) => p.name === n);
 	const magias = habilidades.find((n) => /^magias\b/i.test(n));

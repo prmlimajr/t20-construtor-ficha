@@ -160,7 +160,10 @@ async function carregar() {
 		doc, categoria,
 		tipo: ESTRUTURA_LOJA.find((t) => t.categorias.includes(categoria))?.tipo ?? "Itens gerais"
 	});
-	const todosPoderes = [...poderes, ...sup.poderes, ...poderesSubstitutos(sup)];
+	const doConstrutor = poderesSubstitutos(sup);
+	// os poderes do construtor marcados "substituiSuplemento" tiram os homônimos do suplemento da lista
+	const substituidos = new Set(doConstrutor.filter((p) => p.substituiSuplemento).map((p) => p.name));
+	const todosPoderes = [...poderes, ...doConstrutor, ...sup.poderes.filter((p) => !substituidos.has(p.name))];
 	// itens: os do sistema primeiro (em nomes repetidos, vale o do livro básico)
 	const equipPorNome = new Map([...indiceEquip].map((e) => [normalizar(e.name), e]));
 	for (const { doc } of sup.itens) if (!equipPorNome.has(normalizar(doc.name))) equipPorNome.set(normalizar(doc.name), doc);
@@ -190,7 +193,7 @@ async function carregar() {
 		estruturaLoja: ESTRUTURA_LOJA,
 		regrasClasses: { ...regrasClasses, ...sup.regrasClasses },
 		origens: [...(origens.origens ?? []), ...(sup.origensMundanas ?? [])],
-		origensRegionais: sup.origensRegionais ?? regionais.origens ?? [],
+		origensRegionais: comOrigensDoConstrutor(sup.origensRegionais ?? regionais.origens ?? [], doConstrutor),
 		divindades: sup.divindades ?? divindades.divindades ?? [],
 		/** Conteúdo vindo dos Suplementos de Arton: uuid → nome do compêndio. */
 		fonteSuplemento: sup.fonte,
@@ -213,6 +216,18 @@ async function carregar() {
 	return dados;
 }
 
+/** Efeito "ao usar" (aplicado na rolagem, como a Marca da Presa do caçador). */
+function efeitoAoUsar(nome, img, changes, { tipos = ["attack"], custo = null, aumenta = false, nomes = [], automatico = false } = {}) {
+	return {
+		name: nome, img, type: "base", transfer: false, disabled: true,
+		system: {
+			changes: changes.map(([key, value, type = "add"]) => ({ key, value, type, phase: "initial", priority: null })),
+			onuse: true,
+			abilityUse: { description: "", automatic: automatico, aumenta, custo, names: nomes, types: tipos }
+		}
+	};
+}
+
 /** Efeito "somar" no formato dos efeitos de poder do sistema (Foundry v14). */
 function efeitoSomar(nome, img, changes) {
 	return {
@@ -228,20 +243,138 @@ function efeitoSomar(nome, img, changes) {
 const PODERES_DO_CONSTRUTOR = [
 	{
 		nome: "Herança de Drashantyr",
-		tipo: "racial", subtipo: "Suraggel",
+		tipo: "racial", subtipo: "Suraggel", requerSuplemento: true,
 		img: "systems/tormenta20/icons/racas/suraggel.webp",
 		descricao: "<p>Graças ao poder elemental dos dragões, você recebe +1 PM e redução de ácido, eletricidade, fogo, frio, luz e trevas 5.</p>",
 		efeitos: (img) => [efeitoSomar("Herança de Drashantyr", img, [
 			["system.attributes.pm.bonus.total", 1],
 			...["acido", "eletricidade", "fogo", "frio", "luz", "trevas"].map((t) => [`system.tracos.resistencias.${t}.bonus`, 5])
 		])]
+	},
+	// Miragem (Caçador), classe variante (SDD/fontes/novo-mistico.pdf). Dança da Areia e Cortina de
+	// Poeira substituem as homônimas do suplemento (da Miragem antiga, que esta variante substitui).
+	{
+		nome: "Dança da Areia",
+		tipo: "ability", subtipo: "Miragem", requerSuplemento: true, substituiSuplemento: true,
+		img: "icons/magic/control/debuff-energy-hold-levitate-yellow.webp",
+		ativacao: { execucao: "free", custo: 1, qtd: "", condicao: "", special: "" },
+		descricao: "<p>Você pode gastar 1 PM para iniciar uma dança da areia. Enquanto executa essa dança, você recebe um bônus de +1d4 em suas rolagens de dano com armas contra alvos em alcance curto. A cada quatro níveis, você pode gastar +1 PM para aumentar o dado de bônus de dano em um passo (veja a tabela da classe). A dança termina ao final da cena ou se você passar uma rodada sem percorrer pelo menos 6m sem passar pelo mesmo espaço duas vezes. Esta habilidade exige liberdade de movimentos; você não pode usá-la se estiver de armadura pesada ou na condição imóvel.</p>",
+		efeitos: () => [
+			efeitoAoUsar("Dança da Areia", "icons/svg/upgrade.svg", [["dano", "1d4"]]),
+			// +1 PM a cada quatro níveis: o dado sobe um passo (1d6 no 5º, 1d8 no 9º, 1d10 no 13º, 1d12 no 17º)
+			efeitoAoUsar("Dança da Areia", "icons/svg/upgrade.svg", [["efeito.dano", ":1d6;1d8;1d10;1d12", "override"]], { tipos: ["self"], custo: 1, aumenta: true })
+		]
+	},
+	{
+		nome: "Cortina de Poeira",
+		tipo: "ability", subtipo: "Miragem", requerSuplemento: true, substituiSuplemento: true,
+		img: "icons/magic/air/fog-gas-smoke-dense-brown.webp",
+		descricao: "<p>No 7º nível, você usa sua velocidade para criar uma nuvem de terra ou outros detritos para obscurecer a visão de seus inimigos. Quando usa Dança da Areia, você pode gastar +3 PM para receber camuflagem leve enquanto sua dança estiver ativa.</p>"
+	},
+	{
+		nome: "Passo do Deserto",
+		tipo: "ability", subtipo: "Miragem", requerSuplemento: true,
+		img: "icons/magic/earth/barrier-stone-explosion-debris.webp",
+		descricao: "<p>A partir do 9º nível, uma vez por rodada você pode gastar 3 PM para entrar no solo e sair em outro espaço desocupado no solo em alcance curto. Tanto o ponto de entrada quanto de saída devem estar em solo macio (como areia, terra ou equivalente) e devem estar conectados pelo mesmo tipo de terreno. Efeito Mágico.</p>"
+	},
+	{
+		nome: "Mestre do Deserto",
+		tipo: "ability", subtipo: "Miragem", requerSuplemento: true,
+		img: "icons/magic/control/silhouette-aura-energy.webp",
+		descricao: "<p>No 20º nível, enquanto estiver usando Dança da Areia, quando sofre dano você pode gastar 2 PM para receber RD 20 contra esse dano. Além disso, quando usa a ação agredir durante a Dança da Areia, você pode gastar 2 PM para fazer um ataque adicional.</p>"
+	},
+	// Novos poderes de Caçador (SDD/fontes/novo-mistico.pdf). Arsenal do Deserto, Passo Duplo e Passos
+	// Precisos substituem os homônimos da Miragem antiga do suplemento.
+	{
+		nome: "Arsenal do Deserto",
+		tipo: "classe", subtipo: "Caçador", substituiSuplemento: true,
+		img: "icons/magic/movement/trail-streak-zigzag-yellow.webp",
+		descricao: "<p>Você recebe +2 nas rolagens de dano com azagaias, cimitarras e lanças e considera essas armas como leves.</p>",
+		// +2 no dano ao atacar com essas armas (o efeito vale pelo nome do item da arma)
+		efeitos: () => [efeitoAoUsar("Arsenal do Deserto", "icons/svg/upgrade.svg", [["dano", 2]], { tipos: [], nomes: ["Azagaia", "Cimitarra", "Lança"], automatico: true })]
+	},
+	{
+		nome: "Escaramuça Distante",
+		tipo: "classe", subtipo: "Caçador",
+		img: "icons/magic/movement/trail-streak-zigzag-yellow.webp",
+		descricao: "<p>Você pode usar Escaramuça e Dança da Areia contra alvos em alcance médio.</p>"
+	},
+	{
+		nome: "Passo Duplo",
+		tipo: "classe", subtipo: "Caçador", substituiSuplemento: true,
+		img: "icons/magic/movement/trail-streak-zigzag-yellow.webp",
+		descricao: "<p>Uma vez por rodada, se estiver usando Escaramuça ou Dança da Areia e usar a ação agredir para fazer um ataque corpo a corpo com uma arma leve, você pode gastar 2 PM para fazer um ataque adicional. <em>Pré-requisito:</em> Dança da Areia ou Escaramuça, 5º nível de caçador.</p>"
+	},
+	{
+		nome: "Passos Precisos",
+		tipo: "classe", subtipo: "Caçador", substituiSuplemento: true,
+		img: "icons/magic/movement/trail-streak-zigzag-yellow.webp",
+		descricao: "<p>Enquanto estiver usando Escaramuça ou Dança da Areia, você recebe +2 na margem de ameaça de seus ataques.</p>",
+		// +2 na margem de ameaça ao atacar (ligar enquanto usa Escaramuça ou Dança da Areia)
+		efeitos: () => [efeitoAoUsar("Passos Precisos", "icons/svg/upgrade.svg", [["criticoM", -2]])]
+	},
+	{
+		nome: "Tesouros da Natureza",
+		tipo: "classe", subtipo: "Caçador",
+		img: "icons/magic/movement/trail-streak-zigzag-yellow.webp",
+		descricao: "<p>Sempre que for bem-sucedido em montar um acampamento em terreno natural, você encontra frutos, insetos ou outros recursos naturais que ajudam a recuperar as energias. Cada personagem acampado recupera 1 PM por patamar em que você está.</p>"
+	},
+	// Origens regionais de Halak-Tûr (poderes de origem; cada um traz os itens da origem)
+	{
+		nome: "Criança do Crepúsculo",
+		tipo: "origem", subtipo: "Halak-Tûr", regiao: "Halak-Tûr",
+		img: "icons/skills/trades/academics-astronomy-navigation-purple.webp",
+		descricao: "<p>Você nasceu no Vale do Crepúsculo (veja <em>Atlas de Arton</em>, p. 380) e, por algum motivo, abandonou a segurança de sua terra natal em busca dos perigos e da aventura que o restante de Arton tem a oferecer.</p><p><strong>Benefício.</strong> Escolha duas de suas habilidades com um custo em PM, uma para dia, outra para noite. Quando usa a habilidade escolhida para dia enquanto sob luz solar ou equivalente, o custo dela diminui em –1 PM e o custo da outra habilidade aumenta em +1 PM. Quando usa a habilidade escolhida para noite sob efeito de escuridão, esses modificadores nos custos se invertem. Por fim, durante o crepúsculo, o custo de ambas as habilidades diminui em –1 PM. Uma vez por patamar acima de iniciante, você pode trocar as habilidades escolhidas. Este poder não pode ser escolhido por construtos ou mortos-vivos.</p><p><strong>Itens.</strong> Uma poção mágica contendo uma magia de 1º círculo (1 PM).</p>",
+		itensOrigem: [{ texto: "Poção mágica (magia de 1º círculo, 1 PM)" }]
+	},
+	{
+		nome: "Nascido nas Estepes",
+		tipo: "origem", subtipo: "Halak-Tûr", regiao: "Halak-Tûr",
+		img: "icons/skills/trades/academics-astronomy-navigation-purple.webp",
+		descricao: "<p>Você cresceu entre os dai-kerat e foi criado na tênue linha entre os rigores do deserto e a sofisticação da herança tamuraniana.</p><p><strong>Benefício.</strong> Você recebe +2 em Cavalgar e Vontade e nas rolagens de dano com arcos curtos e katanas.</p><p><strong>Itens.</strong> Arco curto, cavalo de guerra, flecha x20, veste de seda.</p>",
+		itensOrigem: [{ nome: "Arco curto" }, { texto: "Cavalo de guerra" }, { nome: "Flechas", qtd: 20 }, { nome: "Veste de Seda" }],
+		efeitos: (img) => [
+			efeitoSomar("Nascido nas Estepes", img, [["system.pericias.cava.bonus", 2], ["system.pericias.vont.bonus", 2]]),
+			efeitoAoUsar("Nascido nas Estepes: dano", "icons/svg/upgrade.svg", [["dano", 2]], { tipos: [], nomes: ["Arco curto", "Katana"], automatico: true })
+		]
+	},
+	{
+		nome: "Nômade Ferani",
+		tipo: "origem", subtipo: "Halak-Tûr", regiao: "Halak-Tûr",
+		img: "icons/skills/trades/academics-astronomy-navigation-purple.webp",
+		descricao: "<p>Trog ou não, você passou sua infância entre os ferani, aprendendo como percorrer os ermos de forma rápida e discreta.</p><p><strong>Benefício.</strong> Você recebe +2 em Fortitude e Furtividade e nas rolagens de dano contra criaturas desprevenidas. Além disso, pode atravessar terrenos difíceis sem sofrer redução em seu deslocamento — se já puder fazer isso por outra habilidade, em vez disso seu deslocamento aumenta em +3m.</p><p><strong>Itens.</strong> Lança, manto camuflado (deserto), ração de viagem x10.</p>",
+		itensOrigem: [{ nome: "Lança" }, { nome: "Manto Camuflado", rotulo: "Manto camuflado (deserto)" }, { nome: "Ração de viagem", qtd: 10 }],
+		efeitos: (img) => [
+			efeitoSomar("Nômade Ferani", img, [["system.pericias.fort.bonus", 2], ["system.pericias.furt.bonus", 2]]),
+			// +2 no dano contra desprevenidas: opção ao atacar
+			efeitoAoUsar("Nômade Ferani: dano contra desprevenidos", "icons/svg/upgrade.svg", [["dano", 2]])
+		]
+	},
+	// Poder concedido de Allihanna e Megalokk (livro básico: funciona sem o suplemento)
+	{
+		nome: "Canção da Pedra",
+		tipo: "concedido", subtipo: "Allihanna, Megalokk",
+		img: "icons/magic/earth/strike-body-stone-crumble.webp",
+		// "Apenas druidas podem escolher este poder" (variantes de druida também)
+		apenasClasses: ["Druida"],
+		// magias que o poder dá na ficha no 1º nível (Controlar Terra só com magias divinas de 3º círculo)
+		magias: ["Transmutar Objetos"],
+		descricao: "<p>Você pode usar Religião em vez de Ofício para testes relacionados a grandes estruturas de pedra, como veículos e construções, e no lugar de Pilotagem para conduzir veículos de pedra. Além disso, aprende e pode lançar <em>Transmutar Objetos</em> (apenas em objetos de pedra) e, se puder lançar magias divinas de 3º círculo, aprende e pode lançar <em>Controlar Terra</em>. Caso aprenda novamente essas magias, seu custo diminui em –1 PM. Apenas druidas podem escolher este poder. Efeito Mágico.</p>",
+		efeitos: () => [{
+			name: "Canção da Pedra", img: "icons/svg/upgrade.svg", type: "base", transfer: true, disabled: true,
+			system: {
+				changes: [], onuse: true,
+				abilityUse: { description: "", automatic: false, aumenta: false, custo: -1, names: ["Transmutar Objetos", "Controlar Terra"], types: ["spell"] }
+			}
+		}]
 	}
 ];
 
 function poderesSubstitutos(sup) {
-	if (!sup.ligado) return [];
 	return PODERES_DO_CONSTRUTOR
-		.filter((x) => !sup.poderes.some((p) => p.name === x.nome)) // se o suplemento passar a ter, vale o dele
+		.filter((x) => !x.requerSuplemento || sup.ligado)
+		// se o suplemento passar a ter o poder, vale o dele (a menos que o do construtor o substitua de propósito)
+		.filter((x) => x.substituiSuplemento || !sup.poderes.some((p) => p.name === x.nome))
 		.map((x) => ({
 			name: x.nome,
 			type: "poder",
@@ -249,9 +382,34 @@ function poderesSubstitutos(sup) {
 			uuid: `${MODULE_ID}.poder.${x.nome}`,
 			_id: null,
 			substituto: true,
-			effects: x.efeitos(x.img),
-			system: { tipo: x.tipo, subtipo: x.subtipo, description: { value: x.descricao } }
+			substituiSuplemento: !!x.substituiSuplemento,
+			apenasClasses: x.apenasClasses ?? null,
+			regiao: x.regiao ?? null,
+			itensOrigem: x.itensOrigem ?? [],
+			magiasConcedidas: x.magias ?? [],
+			effects: x.efeitos ? x.efeitos(x.img) : [],
+			system: {
+				tipo: x.tipo, subtipo: x.subtipo, description: { value: x.descricao },
+				...(x.ativacao ? { ativacao: x.ativacao } : {})
+			}
 		}));
+}
+
+/**
+ * Acrescenta às origens regionais os poderes de origem do construtor (ex.: Halak-Tûr): entram na
+ * região de mesmo nome (a do Atlas, se existir) ou criam a região.
+ */
+function comOrigensDoConstrutor(origens, doConstrutor) {
+	const lista = origens.map((o) => ({ ...o, poderes: [...(o.poderes ?? [])] }));
+	for (const p of doConstrutor.filter((x) => x.regiao)) {
+		let o = lista.find((x) => normalizar(x.nome) === normalizar(p.regiao));
+		if (!o) {
+			o = { nome: p.regiao, descricao: `Origem regional de ${p.regiao}. Escolha um dos poderes regionais abaixo.`, itens: [], pericias: [], poderes: [], grupos: [] };
+			lista.push(o);
+		}
+		if (!o.poderes.includes(p.name)) o.poderes.push(p.name);
+	}
+	return lista.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 }
 
 /** O poder pode aparecer nas listas de escolha? (do sistema, ou do suplemento com a chave "Poderes" ligada) */

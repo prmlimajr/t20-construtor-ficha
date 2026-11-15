@@ -70,7 +70,7 @@
 		{{/if}}
 		{{#each info.poderes}}
 		{{#if ../info.escolhida}}
-		{{> "modules/t20-construtor-ficha/templates/partes/poder-selecionavel.hbs" nome=nome img=info.img descricao=info.descricao selecionado=selecionado campo="poderesConcedidos" valor=nome limite=../info.qtd}}
+		{{> "modules/t20-construtor-ficha/templates/partes/poder-selecionavel.hbs" nome=nome img=info.img descricao=info.descricao selecionado=selecionado bloqueado=bloqueado motivo=motivo detalhe=motivo campo="poderesConcedidos" valor=nome limite=../info.qtd}}
 		{{else}}
 		{{> "modules/t20-construtor-ficha/templates/partes/poder-selecionavel.hbs" nome=nome img=info.img descricao=info.descricao}}
 		{{/if}}

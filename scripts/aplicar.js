@@ -13,7 +13,7 @@ function doCompendio(doc) {
 }
 
 /** Resolve um item pelo nome no compêndio de equipamentos; se não existir, cria um item simples. */
-async function itemPorNome(dados, { nome, qtd = 1 }) {
+async function itemPorNome(dados, { nome, qtd = 1, rotulo = null }) {
 	const entrada = equipamento(dados, nome);
 	let data;
 	if (entrada) {
@@ -22,6 +22,8 @@ async function itemPorNome(dados, { nome, qtd = 1 }) {
 		data = { name: nome, type: "tesouro" };
 	}
 	if (qtd > 1) foundry.utils.setProperty(data, "system.qtd", qtd);
+	// nome específico da origem para um item do compêndio (ex.: "Manto camuflado (deserto)")
+	if (rotulo) data.name = rotulo;
 	return data;
 }
 

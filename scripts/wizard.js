@@ -490,7 +490,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		e.magias = e.magias.filter((u) => uuidsMagias.has(u));
 		const div = d.divindades.find((x) => x.nome === e.divindade);
 		if (e.divindade && !div) Object.assign(e, { divindade: "", poderesConcedidos: [] });
-		if (div) e.poderesConcedidos = e.poderesConcedidos.filter((n) => div.poderes.includes(n) && poder(d, n));
+		if (div) e.poderesConcedidos = e.poderesConcedidos.filter((n) => div.poderes.includes(n) && poder(d, n) && !this.impedimentoPoder(poder(d, n)));
 		for (const [sub, lista] of [["principal", d.origens], ["regional", d.origensRegionais]]) {
 			const o = e.origens[sub];
 			if (o.nome && !lista.some((x) => x.nome === o.nome)) {
@@ -693,6 +693,16 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			return `${this.classe?.name}s só podem ser devotos de ${r.devocao.divindades.join(", ")}.`;
 		}
 		return null;
+	}
+
+	/** Motivo pelo qual o personagem não pode escolher o poder (null = pode). Ex.: "Apenas druidas". */
+	impedimentoPoder(p) {
+		const classes = p?.apenasClasses;
+		if (!classes?.length) return null;
+		const classe = this.classe?.name;
+		const base = classe ? this.dados.variantes?.[classe] ?? this.dados.regrasClasses[classe]?.variante : null;
+		if (classes.includes(classe) || (base && classes.includes(base))) return null;
+		return `Apenas ${classes.map((c) => c.toLowerCase()).join(" ou ")}s podem escolher este poder.`;
 	}
 
 	divindadesDisponiveis() {
@@ -1774,7 +1784,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	async #ctxClasse() {
 		const e = this.estado;
 		const classes = this.dados.classes.map((c) => ({
-			uuid: c.uuid, nome: c.name, img: c.img,
+			uuid: c.uuid, nome: this.dados.regrasClasses[c.name]?.nomeExibicao ?? c.name, img: c.img,
 			resumo: `PV ${c.system.pvPorNivel * 4} · PM ${c.system.pmPorNivel}`,
 			fonte: fonteDe(this.dados, c),
 			selecionado: c.uuid === e.classe
@@ -1821,7 +1831,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			}
 			const conj = this.conjurador;
 			info = {
-				nome: c.name, img: c.img,
+				nome: r.nomeExibicao ?? c.name, img: c.img,
 				pv: `${c.system.pvPorNivel * 4} + Con no 1º nível (+${c.system.pvPorNivel} + Con por nível)`,
 				pm: `${c.system.pmPorNivel} por nível`,
 				pericias: c.system.pericias?.inatas || r.periciasTexto || (r.periciasManuais ? "Não registradas: indique no passo Perícias." : ""),
@@ -2299,9 +2309,13 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			const poderes = [];
 			for (const nome of div.poderes) {
 				const p = poder(this.dados, nome);
+				if (!p) continue;
+				const impedido = this.impedimentoPoder(p);
 				poderes.push({
 					nome,
 					selecionado: e.poderesConcedidos.includes(nome),
+					bloqueado: !!impedido,
+					motivo: impedido ?? "",
 					info: await this.#infoPoder(p)
 				});
 			}
@@ -2575,6 +2589,14 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			else if (it.texto) out.push({ nome: it.texto, qtd: 1, texto: true });
 			else if ((it.escolha || it.arma) && est.itens[i]) out.push({ nome: est.itens[i], qtd: 1 });
 		});
+		// itens que vêm junto com o benefício escolhido (ex.: origens regionais de Halak-Tûr)
+		for (const b of est.beneficios ?? []) {
+			if (!b.startsWith("poder:")) continue;
+			for (const it of poder(this.dados, b.slice(6))?.itensOrigem ?? []) {
+				if (it.texto) out.push({ nome: it.texto, qtd: 1, texto: true });
+				else out.push({ nome: it.nome, qtd: it.qtd ?? 1, ...(it.rotulo ? { rotulo: it.rotulo } : {}) });
+			}
+		}
 		return out;
 	}
 
@@ -2746,7 +2768,10 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			return true;
 		});
 		const magiasDaRaca = unicas(magiasRaciais);
-		const magiasDePoderesClasse = unicas(daClasse.magias);
+		// magias que poderes escolhidos dão na ficha (ex.: Canção da Pedra → Transmutar Objetos)
+		const deOutrosPoderes = gruposPoderes.filter((g) => !g.raciais).flatMap((g) => g.poderes)
+			.flatMap((p) => (p.magiasConcedidas ?? []).map((n) => magiaPorNome(this.dados, n)).filter(Boolean).map((doc) => ({ doc })));
+		const magiasDePoderesClasse = unicas([...daClasse.magias, ...deOutrosPoderes]);
 
 		let conjuracao = this.conjurador?.atributo ?? null;
 		for (const esc of this.escolhasAtivas()) {

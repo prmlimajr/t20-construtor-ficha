@@ -11,7 +11,12 @@
       "arma": "Corrente de espinhos",
       "devotosTexto": "Quaisquer. A Tormenta aceita tudo e todos.",
       "devotos": {},
-      "poderes": ["Afinidade com a Tormenta", "Êxtase da Loucura", "Percepção Temporal", "Rejeição Divina"],
+      "poderes": [
+        "Afinidade com a Tormenta",
+        "Êxtase da Loucura",
+        "Percepção Temporal",
+        "Rejeição Divina"
+      ],
       "obrigacoes": "Quase todos os cultistas de Aharadak são maníacos insanos, compelidos a praticar os atos mais abomináveis. No entanto, talvez devido à natureza alienígena e incompreensível deste deus, alguns devotos conseguem se resguardar. Preservam sua humanidade, abstendo-se de cometer crimes ou profanações. Ainda assim, o devoto paga um preço. No início de qualquer cena de ação, role 1d6. Com um resultado ímpar, você fica fascinado na primeira rodada, perdido em devaneios sobre a futilidade da vida (mesmo que seja imune a esta condição)."
     },
     {
@@ -23,8 +28,25 @@
       "energia": "Positiva",
       "arma": "Bordão",
       "devotosTexto": "Dahllan, elfos, sílfides, bárbaros, caçadores, druidas.",
-      "devotos": { "racas": ["Dahllan", "Elfo", "Sílfide"], "classes": ["Bárbaro", "Caçador", "Druida"] },
-      "poderes": ["Compreender os Ermos", "Dedo Verde", "Descanso Natural", "Voz da Natureza"],
+      "devotos": {
+        "racas": [
+          "Dahllan",
+          "Elfo",
+          "Sílfide"
+        ],
+        "classes": [
+          "Bárbaro",
+          "Caçador",
+          "Druida"
+        ]
+      },
+      "poderes": [
+        "Compreender os Ermos",
+        "Dedo Verde",
+        "Descanso Natural",
+        "Voz da Natureza",
+        "Canção da Pedra"
+      ],
       "obrigacoes": "Devotos de Allihanna não podem usar armaduras e escudos feitos de metal. Assim, você só pode usar armadura acolchoada, de couro, gibão de peles e escudo leve, ou itens feitos de materiais especiais não metálicos. Devotos de Allihanna não podem descansar em nenhuma comunidade maior que uma aldeia (não perdem seus poderes, mas também não recuperam pontos de vida ou mana). Por isso, sempre preferem o relento a um quarto de estalagem."
     },
     {
@@ -36,8 +58,24 @@
       "energia": "Qualquer",
       "arma": "Martelo de guerra",
       "devotosTexto": "Anões, minotauros, bárbaros, cavaleiros, guerreiros, lutadores.",
-      "devotos": { "racas": ["Anão", "Minotauro"], "classes": ["Bárbaro", "Cavaleiro", "Guerreiro", "Lutador"] },
-      "poderes": ["Conjurar Arma", "Coragem Total", "Fé Guerreira", "Sangue de Ferro"],
+      "devotos": {
+        "racas": [
+          "Anão",
+          "Minotauro"
+        ],
+        "classes": [
+          "Bárbaro",
+          "Cavaleiro",
+          "Guerreiro",
+          "Lutador"
+        ]
+      },
+      "poderes": [
+        "Conjurar Arma",
+        "Coragem Total",
+        "Fé Guerreira",
+        "Sangue de Ferro"
+      ],
       "obrigacoes": "Um devoto de Arsenal é proibido de ser derrotado em qualquer tipo de combate ou disputa (como um teste oposto para ver quem é mais forte). Caso seu grupo seja derrotado, isso também constitui uma violação das obrigações."
     },
     {
@@ -49,8 +87,27 @@
       "energia": "Positiva",
       "arma": "Cimitarra",
       "devotosTexto": "Aggelus, qareen, arcanistas, bárbaros, caçadores, cavaleiros, guerreiros, nobres, paladinos.",
-      "devotos": { "racas": ["Aggelus", "Qareen"], "classes": ["Arcanista", "Bárbaro", "Caçador", "Cavaleiro", "Guerreiro", "Nobre", "Paladino"] },
-      "poderes": ["Espada Solar", "Fulgor Solar", "Habitante do Deserto", "Inimigo das Trevas"],
+      "devotos": {
+        "racas": [
+          "Aggelus",
+          "Qareen"
+        ],
+        "classes": [
+          "Arcanista",
+          "Bárbaro",
+          "Caçador",
+          "Cavaleiro",
+          "Guerreiro",
+          "Nobre",
+          "Paladino"
+        ]
+      },
+      "poderes": [
+        "Espada Solar",
+        "Fulgor Solar",
+        "Habitante do Deserto",
+        "Inimigo das Trevas"
+      ],
       "obrigacoes": "O devoto de Azgher deve manter o rosto sempre coberto (com uma máscara, capuz ou trapos). Sua face pode ser revelada apenas ao sumo-sacerdote ou em seu funeral. Devotos do Sol também devem doar para a igreja de Azgher 20% de qualquer tesouro obtido. Essa doação deve ser feita em ouro, seja na forma de moedas ou itens."
     },
     {
@@ -62,8 +119,26 @@
       "energia": "Qualquer",
       "arma": "Adaga",
       "devotosTexto": "Hynne, goblins, sílfides, bardos, bucaneiros, ladinos, inventores, nobres.",
-      "devotos": { "racas": ["Hynne", "Goblin", "Sílfide"], "classes": ["Bardo", "Bucaneiro", "Ladino", "Inventor", "Nobre"] },
-      "poderes": ["Apostar com o Trapaceiro", "Farsa do Fingidor", "Forma de Macaco", "Golpista Divino"],
+      "devotos": {
+        "racas": [
+          "Hynne",
+          "Goblin",
+          "Sílfide"
+        ],
+        "classes": [
+          "Bardo",
+          "Bucaneiro",
+          "Ladino",
+          "Inventor",
+          "Nobre"
+        ]
+      },
+      "poderes": [
+        "Apostar com o Trapaceiro",
+        "Farsa do Fingidor",
+        "Forma de Macaco",
+        "Golpista Divino"
+      ],
       "obrigacoes": "Um devoto de Hyninn não recusa participação em um golpe, trapaça ou artimanha (o que muitas vezes inclui missões para roubar... hã, resgatar tesouros), exceto quando prejudica seus próprios aliados. O devoto também deve fazer um ato furtivo, ousado ou proibido por dia (ou por sessão de jogo, o que demorar mais), como oferenda a Hyninn. Roubar uma bolsa, enganar um miliciano, invadir o quarto de um nobre... Em termos de jogo, uma ação exigindo um teste de Enganação ou Ladinagem com CD mínima 15 + metade do seu nível."
     },
     {
@@ -75,8 +150,26 @@
       "energia": "Negativa",
       "arma": "Lança",
       "devotosTexto": "Elfos, medusas, sulfure, arcanistas, cavaleiros, guerreiros, lutadores, nobres.",
-      "devotos": { "racas": ["Elfo", "Medusa", "Sulfure"], "classes": ["Arcanista", "Cavaleiro", "Guerreiro", "Lutador", "Nobre"] },
-      "poderes": ["Aura de Medo", "Escamas Dracônicas", "Presas Primordiais", "Servos do Dragão"],
+      "devotos": {
+        "racas": [
+          "Elfo",
+          "Medusa",
+          "Sulfure"
+        ],
+        "classes": [
+          "Arcanista",
+          "Cavaleiro",
+          "Guerreiro",
+          "Lutador",
+          "Nobre"
+        ]
+      },
+      "poderes": [
+        "Aura de Medo",
+        "Escamas Dracônicas",
+        "Presas Primordiais",
+        "Servos do Dragão"
+      ],
       "obrigacoes": "Para subir de nível, além de acumular XP suficiente, o devoto de Kally deve realizar uma oferenda em tesouro. O valor é igual à 20% da diferença do dinheiro inicial do nível que vai alcançar para o nível atual (por exemplo, T$ 80 para subir para o 4º nível). Sabe-se, também, de devotos malignos que sacrificam vítimas a Kally (não permitido para personagens jogadores)."
     },
     {
@@ -88,8 +181,24 @@
       "energia": "Positiva",
       "arma": "Espada longa",
       "devotosTexto": "Aggelus, anões, cavaleiros, guerreiros, nobres, paladinos.",
-      "devotos": { "racas": ["Aggelus", "Anão"], "classes": ["Cavaleiro", "Guerreiro", "Nobre", "Paladino"] },
-      "poderes": ["Coragem Total", "Dom da Verdade", "Espada Justiceira", "Reparar Injustiça"],
+      "devotos": {
+        "racas": [
+          "Aggelus",
+          "Anão"
+        ],
+        "classes": [
+          "Cavaleiro",
+          "Guerreiro",
+          "Nobre",
+          "Paladino"
+        ]
+      },
+      "poderes": [
+        "Coragem Total",
+        "Dom da Verdade",
+        "Espada Justiceira",
+        "Reparar Injustiça"
+      ],
       "obrigacoes": "Devotos de Khalmyr não podem recusar pedidos de ajuda de pessoas inocentes. Também devem cumprir as ordens de superiores na hierarquia da igreja (devotos do Deus da Justiça de nível maior) e só podem usar itens mágicos permanentes criados por devotos do mesmo deus."
     },
     {
@@ -101,8 +210,22 @@
       "energia": "Positiva",
       "arma": "Não há. Servos desta deusa não podem lançar a magia Arma Espiritual e similares.",
       "devotosTexto": "Dahllan, qareen, nobres, paladinos.",
-      "devotos": { "racas": ["Dahllan", "Qareen"], "classes": ["Nobre", "Paladino"] },
-      "poderes": ["Ataque Piedoso", "Aura Restauradora", "Cura Gentil", "Curandeira Perfeita"],
+      "devotos": {
+        "racas": [
+          "Dahllan",
+          "Qareen"
+        ],
+        "classes": [
+          "Nobre",
+          "Paladino"
+        ]
+      },
+      "poderes": [
+        "Ataque Piedoso",
+        "Aura Restauradora",
+        "Cura Gentil",
+        "Curandeira Perfeita"
+      ],
       "obrigacoes": "Devotos de Lena não podem causar dano letal ou perda de PV a criaturas vivas (fornecer bônus em dano letal também é proibido). Podem causar dano não letal e prejudicar seus inimigos (em termos de jogo, impondo condições), desde que não causem dano letal ou perda de PV. Para um devoto de Lena, é preferível perder a própria vida a tirá-la de outros. Apenas mulheres podem ser devotas de Lena. Uma clériga precisa dar à luz pelo menos uma vez antes de receber seus poderes divinos. A fecundação é um mistério bem guardado pelas sacerdotisas; conta-se que a própria deusa vem semear suas discípulas. Paladinos de Lena podem ser homens (são os únicos devotos masculinos permitidos) ou mulheres."
     },
     {
@@ -114,8 +237,23 @@
       "energia": "Qualquer",
       "arma": "Katana",
       "devotosTexto": "Anões, cavaleiros, guerreiros, nobres, paladinos.",
-      "devotos": { "racas": ["Anão"], "classes": ["Cavaleiro", "Guerreiro", "Nobre", "Paladino"] },
-      "poderes": ["Coragem Total", "Kiai Divino", "Mente Vazia", "Tradição de Samurai"],
+      "devotos": {
+        "racas": [
+          "Anão"
+        ],
+        "classes": [
+          "Cavaleiro",
+          "Guerreiro",
+          "Nobre",
+          "Paladino"
+        ]
+      },
+      "poderes": [
+        "Coragem Total",
+        "Kiai Divino",
+        "Mente Vazia",
+        "Tradição de Samurai"
+      ],
       "obrigacoes": "Antigas proibições quanto a devotos estrangeiros ou do gênero feminino não mais se aplicam. No entanto, devotos de Lin-Wu ainda devem demonstrar comportamento honrado, jamais recorrendo a mentiras e subterfúgios. Em termos de jogo, são proibidos de tentar qualquer ação que exigiria um teste de Enganação, Furtividade ou Ladinagem."
     },
     {
@@ -127,8 +265,25 @@
       "energia": "Positiva",
       "arma": "Não há. Devotos desta deusa não podem lançar a magia Arma Espiritual e similares.",
       "devotosTexto": "Aggelus, elfos, hynne, qareen, bardos, nobres, paladinos.",
-      "devotos": { "racas": ["Aggelus", "Elfo", "Hynne", "Qareen"], "classes": ["Bardo", "Nobre", "Paladino"] },
-      "poderes": ["Aura de Paz", "Dom da Esperança", "Palavras de Bondade", "Talento Artístico"],
+      "devotos": {
+        "racas": [
+          "Aggelus",
+          "Elfo",
+          "Hynne",
+          "Qareen"
+        ],
+        "classes": [
+          "Bardo",
+          "Nobre",
+          "Paladino"
+        ]
+      },
+      "poderes": [
+        "Aura de Paz",
+        "Dom da Esperança",
+        "Palavras de Bondade",
+        "Talento Artístico"
+      ],
       "obrigacoes": "Devotos de Marah não podem causar dano, perda de PV e condições a criaturas, exceto enfeitiçado, fascinado e pasmo (fornecer bônus em dano também é proibido). Em combate, só podem recorrer a ações como proteger ou curar — ou fugir, render-se ou aceitar a morte. Um devoto de Marah jamais vai causar violência, nem mesmo para se salvar."
     },
     {
@@ -140,8 +295,28 @@
       "energia": "Negativa",
       "arma": "Maça",
       "devotosTexto": "Goblins, medusas, minotauros, sulfure, trogs, bárbaros, caçadores, druidas, lutadores.",
-      "devotos": { "racas": ["Goblin", "Medusa", "Minotauro", "Sulfure", "Trog"], "classes": ["Bárbaro", "Caçador", "Druida", "Lutador"] },
-      "poderes": ["Olhar Amedrontador", "Presas Primordiais", "Urro Divino", "Voz dos Monstros"],
+      "devotos": {
+        "racas": [
+          "Goblin",
+          "Medusa",
+          "Minotauro",
+          "Sulfure",
+          "Trog"
+        ],
+        "classes": [
+          "Bárbaro",
+          "Caçador",
+          "Druida",
+          "Lutador"
+        ]
+      },
+      "poderes": [
+        "Olhar Amedrontador",
+        "Presas Primordiais",
+        "Urro Divino",
+        "Voz dos Monstros",
+        "Canção da Pedra"
+      ],
       "obrigacoes": "Devotos de Megalokk devem rejeitar os modos civilizados e se entregar à ferocidade, descontrole e impaciência. Você é proibido de usar perícias baseadas em Inteligência ou Carisma (exceto Adestramento e Intimidação) e não pode preparar uma ação, escolher 10 ou 20 em testes e lançar magias sustentadas (pois são ações que exigem foco e paciência)."
     },
     {
@@ -153,8 +328,27 @@
       "energia": "Qualquer",
       "arma": "Nenhuma e todas! Ao usar um efeito que dependa de arma preferida, qualquer arma (ou outro objeto!) pode aparecer, de acordo com o mestre.",
       "devotosTexto": "Goblins, qareen, sílfides, arcanistas, bárbaros, bardos, bucaneiros, inventores, ladinos.",
-      "devotos": { "racas": ["Goblin", "Qareen", "Sílfide"], "classes": ["Arcanista", "Bárbaro", "Bardo", "Bucaneiro", "Inventor", "Ladino"] },
-      "poderes": ["Êxtase da Loucura", "Poder Oculto", "Sorte dos Loucos", "Transmissão da Loucura"],
+      "devotos": {
+        "racas": [
+          "Goblin",
+          "Qareen",
+          "Sílfide"
+        ],
+        "classes": [
+          "Arcanista",
+          "Bárbaro",
+          "Bardo",
+          "Bucaneiro",
+          "Inventor",
+          "Ladino"
+        ]
+      },
+      "poderes": [
+        "Êxtase da Loucura",
+        "Poder Oculto",
+        "Sorte dos Loucos",
+        "Transmissão da Loucura"
+      ],
       "obrigacoes": "Por serem incapazes de seguir regras, estes devotos não têm “obrigações” verdadeiras (portanto, nunca perdem PM por descumprirem suas O&R). No entanto, sofrem certas restrições que não podem ignorar. Devotos de Nimb são loucos (ou agem como se fossem), não conseguindo convencer ninguém de coisa alguma. Você sofre –5 em testes de perícias baseadas em Carisma. Além disso, no início de cada cena de ação, role 1d6. Com um resultado 1, você fica confuso (mesmo que seja imune a esta condição)."
     },
     {
@@ -166,8 +360,26 @@
       "energia": "Qualquer",
       "arma": "Tridente",
       "devotosTexto": "Dahllan, hynne, minotauros, sereias/tritões, bárbaros, bucaneiros, caçadores, druidas.",
-      "devotos": { "racas": ["Dahllan", "Hynne", "Minotauro", "Sereia/Tritão"], "classes": ["Bárbaro", "Bucaneiro", "Caçador", "Druida"] },
-      "poderes": ["Anfíbio", "Arsenal das Profundezas", "Mestre dos Mares", "Sopro do Mar"],
+      "devotos": {
+        "racas": [
+          "Dahllan",
+          "Hynne",
+          "Minotauro",
+          "Sereia/Tritão"
+        ],
+        "classes": [
+          "Bárbaro",
+          "Bucaneiro",
+          "Caçador",
+          "Druida"
+        ]
+      },
+      "poderes": [
+        "Anfíbio",
+        "Arsenal das Profundezas",
+        "Mestre dos Mares",
+        "Sopro do Mar"
+      ],
       "obrigacoes": "As únicas armas permitidas para devotos do Oceano são a azagaia, a lança, o tridente e a rede. Podem usar apenas armaduras leves. O devoto também não pode se manter afastado do oceano por mais de um mês."
     },
     {
@@ -179,8 +391,25 @@
       "energia": "Negativa",
       "arma": "Adaga",
       "devotosTexto": "Medusas, arcanistas, bardos, bucaneiros, inventores, ladinos, nobres.",
-      "devotos": { "racas": ["Medusa"], "classes": ["Arcanista", "Bardo", "Bucaneiro", "Inventor", "Ladino", "Nobre"] },
-      "poderes": ["Astúcia da Serpente", "Familiar Ofídico", "Presas Venenosas", "Sangue Ofídico"],
+      "devotos": {
+        "racas": [
+          "Medusa"
+        ],
+        "classes": [
+          "Arcanista",
+          "Bardo",
+          "Bucaneiro",
+          "Inventor",
+          "Ladino",
+          "Nobre"
+        ]
+      },
+      "poderes": [
+        "Astúcia da Serpente",
+        "Familiar Ofídico",
+        "Presas Venenosas",
+        "Sangue Ofídico"
+      ],
       "obrigacoes": "O devoto deve fazer um ato de traição, intriga ou corrupção por dia (ou por sessão de jogo, o que demorar mais) como oferenda a Sszzaas. Pouco importa se o alvo é aliado ou inimigo — uns poucos sszzaazitas usam seus métodos torpes para ajudar colegas aventureiros em suas missões, às vezes sem que eles próprios saibam. Sugerir a alguém que foi traído pelo cônjuge, influenciar um guarda a aceitar suborno, instruir um mercador a roubar nos preços, incriminar alguém por um crime que não cometeu, enganar um guerreiro para que mate um oponente rendido e inofensivo... Em termos de jogo, uma ação exigindo um teste de Enganação com CD mínima 15 + metade do seu nível."
     },
     {
@@ -192,8 +421,25 @@
       "energia": "Qualquer",
       "arma": "Bordão",
       "devotosTexto": "Golens, kliren, arcanistas, bardos, inventores, nobres, paladinos.",
-      "devotos": { "racas": ["Golem", "Kliren"], "classes": ["Arcanista", "Bardo", "Inventor", "Nobre", "Paladino"] },
-      "poderes": ["Conhecimento Enciclopédico", "Mente Analítica", "Pesquisa Abençoada", "Voz da Civilização"],
+      "devotos": {
+        "racas": [
+          "Golem",
+          "Kliren"
+        ],
+        "classes": [
+          "Arcanista",
+          "Bardo",
+          "Inventor",
+          "Nobre",
+          "Paladino"
+        ]
+      },
+      "poderes": [
+        "Conhecimento Enciclopédico",
+        "Mente Analítica",
+        "Pesquisa Abençoada",
+        "Voz da Civilização"
+      ],
       "obrigacoes": "Devotos de Tanna-Toh jamais podem recusar uma missão que envolva a busca por um novo conhecimento ou informação; investigar rumores sobre um livro perdido, procurar uma aldeia lendária, pesquisar os hábitos de uma criatura desconhecida... Além disso, o devoto sempre deve dizer a verdade e nunca pode se recusar a responder uma pergunta direta, pouco importando as consequências. É proibido para ele esconder qualquer conhecimento."
     },
     {
@@ -205,8 +451,27 @@
       "energia": "Negativa",
       "arma": "Adaga",
       "devotosTexto": "Anões, medusas, qareen, osteon, sulfure, trogs, arcanistas, bardos, ladinos.",
-      "devotos": { "racas": ["Anão", "Medusa", "Qareen", "Osteon", "Sulfure", "Trog"], "classes": ["Arcanista", "Bardo", "Ladino"] },
-      "poderes": ["Carícia Sombria", "Manto da Penumbra", "Visão nas Trevas", "Zumbificar"],
+      "devotos": {
+        "racas": [
+          "Anão",
+          "Medusa",
+          "Qareen",
+          "Osteon",
+          "Sulfure",
+          "Trog"
+        ],
+        "classes": [
+          "Arcanista",
+          "Bardo",
+          "Ladino"
+        ]
+      },
+      "poderes": [
+        "Carícia Sombria",
+        "Manto da Penumbra",
+        "Visão nas Trevas",
+        "Zumbificar"
+      ],
       "obrigacoes": "Tenebra proíbe que seus devotos sejam tocados por Azgher, o odiado rival. O devoto deve se cobrir inteiramente durante o dia, sem expor ao sol nenhum pedaço de pele."
     },
     {
@@ -219,7 +484,12 @@
       "arma": "Machado de guerra",
       "devotosTexto": "Qualquer duyshidakk (aceito como membro do povo goblinoide).",
       "devotos": {},
-      "poderes": ["Almejar o Impossível", "Fúria Divina", "Olhar Amedrontador", "Tropas Goblinóides"],
+      "poderes": [
+        "Almejar o Impossível",
+        "Fúria Divina",
+        "Olhar Amedrontador",
+        "Tropas Goblinóides"
+      ],
       "obrigacoes": "Não importando sua raça, o devoto de Thwor deve ser duyshidakk — ou seja, aceito como membro do povo goblinoide. Também deve se esforçar para que o “Mundo Como Deve Ser” tome o continente. Deve sempre procurar fazer alianças com goblinoides e só lutar contra eles em último caso."
     },
     {
@@ -231,8 +501,24 @@
       "energia": "Positiva",
       "arma": "Espada longa",
       "devotosTexto": "Aggelus, cavaleiros, guerreiros, inventores, lutadores, paladinos.",
-      "devotos": { "racas": ["Aggelus"], "classes": ["Cavaleiro", "Guerreiro", "Inventor", "Lutador", "Paladino"] },
-      "poderes": ["Ataque Piedoso", "Dom da Imortalidade", "Dom da Profecia", "Dom da Ressurreição"],
+      "devotos": {
+        "racas": [
+          "Aggelus"
+        ],
+        "classes": [
+          "Cavaleiro",
+          "Guerreiro",
+          "Inventor",
+          "Lutador",
+          "Paladino"
+        ]
+      },
+      "poderes": [
+        "Ataque Piedoso",
+        "Dom da Imortalidade",
+        "Dom da Profecia",
+        "Dom da Ressurreição"
+      ],
       "obrigacoes": "Devotos de Thyatis são proibidos de matar criaturas inteligentes (Int –3 ou maior). Podem atacar e causar dano, mas jamais levar à morte. Por esse motivo, devotos de Thyatis preferem armas e ataques que apenas incapacitam seus oponentes ou causam dano não letal."
     },
     {
@@ -245,7 +531,12 @@
       "arma": "Mangual",
       "devotosTexto": "Aventureiros; membros de todas as classes podem ser devotos de Valkaria.",
       "devotos": {},
-      "poderes": ["Almejar o Impossível", "Armas da Ambição", "Coragem Total", "Liberdade Divina"],
+      "poderes": [
+        "Almejar o Impossível",
+        "Armas da Ambição",
+        "Coragem Total",
+        "Liberdade Divina"
+      ],
       "obrigacoes": "Valkaria odeia o conformismo. Seus devotos são proibidos de fixar moradia em um mesmo lugar, não podendo permanecer mais de 2d10+10 dias na mesma cidade (ou vila, aldeia, povoado...) ou 1d4+2 meses no mesmo reino. Devotos de Valkaria também são proibidos de se casar ou formar qualquer união estável."
     },
     {
@@ -257,8 +548,24 @@
       "energia": "Qualquer",
       "arma": "Adaga",
       "devotosTexto": "Elfos, golens, qareen, sílfides, arcanistas, bardos.",
-      "devotos": { "racas": ["Elfo", "Golem", "Qareen", "Sílfide"], "classes": ["Arcanista", "Bardo"] },
-      "poderes": ["Bênção do Mana", "Centelha Mágica", "Escudo Mágico", "Teurgista Místico"],
+      "devotos": {
+        "racas": [
+          "Elfo",
+          "Golem",
+          "Qareen",
+          "Sílfide"
+        ],
+        "classes": [
+          "Arcanista",
+          "Bardo"
+        ]
+      },
+      "poderes": [
+        "Bênção do Mana",
+        "Centelha Mágica",
+        "Escudo Mágico",
+        "Teurgista Místico"
+      ],
       "obrigacoes": "Assim como a magia jamais deva ser negada para quem a busca, devotos de Wynna devem praticar a bondade e a generosidade de sua deusa, jamais recusando um pedido de ajuda de alguém inocente. Além disso, devotos de Wynna são proibidos de matar seres mágicos (elfos, qareen, sílfides e outros a critério do mestre) e conjuradores arcanos."
     }
   ]
