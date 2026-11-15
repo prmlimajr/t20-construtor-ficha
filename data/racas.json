@@ -1,5 +1,5 @@
 {
-  "_comentario": "Escolhas das habilidades raciais (T20 Jogo do Ano, cap. 1). Chave = nome do poder racial no compêndio tormenta20.poderes. Tipos: 'opcao' (escolha única: resistência/imunidade), 'magias' (N magias de uma lista ou de um círculo), 'beneficio' (perícias treinadas ou com bônus; até 'poder.maximo' delas podem virar um poder). 'magiasFixas' = magias concedidas sem escolha. 'semOrigem' = a raça não escolhe origem. Suplementos de Arton: 'somenteSuplemento' limita a regra ao poder homônimo do suplemento; 'opcoesPericias'/'atributosPericias' restringem as perícias; 'periciasFixas'/'proficiencias' são concedidas sem escolha; a chave 'raca:<Nome>' guarda escolhas da raça que não pertencem a uma habilidade; listas de poder: 'poderGeral', 'grupo:<Grupo>', 'poderGeralOrigem', 'poderes:A|B|C'; 'opcao' com efeito 'pericia' aplica 'valor' na perícia escolhida.",
+  "_comentario": "Escolhas das habilidades raciais (T20 Jogo do Ano, cap. 1). Chave = nome do poder racial no compêndio tormenta20.poderes. Tipos: 'opcao' (escolha única: resistência/imunidade), 'magias' (N magias de uma lista ou de um círculo), 'beneficio' (perícias treinadas ou com bônus; até 'poder.maximo' delas podem virar um poder). 'magiasFixas' = magias concedidas sem escolha. 'semOrigem' = a raça não escolhe origem. Suplementos de Arton: 'somenteSuplemento' limita a regra ao poder homônimo do suplemento; 'opcoesPericias'/'atributosPericias' restringem as perícias; 'periciasFixas'/'proficiencias' são concedidas sem escolha; a chave 'raca:<Nome>' guarda escolhas da raça que não pertencem a uma habilidade; listas de poder: 'poderGeral', 'grupo:<Grupo>', 'poderGeralOrigem', 'poderes:A|B|C'; 'opcao' com efeito 'pericia' aplica 'valor' na perícia escolhida. 'opcional': a escolha pode ficar vazia; 'substitui': habilidades da raça removidas quando a escolha é feita (ex.: suraggel variante); 'requerSuplemento': só com os Suplementos de Arton ligados.",
   "poderes": {
     "Fonte Elemental": {
       "id": "fonteElemental",
@@ -426,6 +426,48 @@
           "poder": {
             "lista": "poderes:Duende Minúsculo|Duende Pequeno|Duende Médio|Duende Grande",
             "nome": "tamanho",
+            "maximo": 1
+          }
+        }
+      ]
+    },
+    "raca:Aggelus": {
+      "escolhas": [
+        {
+          "id": "suraggelVariante",
+          "requerSuplemento": true,
+          "opcional": true,
+          "substitui": [
+            "Luz Sagrada"
+          ],
+          "tipo": "beneficio",
+          "titulo": "Suraggel variante (opcional): herança divina",
+          "quantidade": 1,
+          "nota": "Escolher uma herança divina torna o personagem um suraggel variante: Luz Sagrada (e a magia que ela concede) sai da ficha.",
+          "poder": {
+            "lista": "poderes:Herança de Al-Gazara|Herança de Arbória|Herança de Chacina|Herança de Deathok|Herança de Drashantyr|Herança de Kundali|Herança de Magika|Herança de Nivenciuén|Herança de Odisseia|Herança de Ordine|Herança de Pelágia|Herança de Pyra|Herança de Ramknal|Herança de Serena|Herança de Skerry|Herança de Solaris|Herança de Sombria|Herança de Sora|Herança de Terápolis|Herança de Venomia|Herança de Vitalia|Herança de Werra",
+            "nome": "herança divina",
+            "maximo": 1
+          }
+        }
+      ]
+    },
+    "raca:Sulfure": {
+      "escolhas": [
+        {
+          "id": "suraggelVariante",
+          "requerSuplemento": true,
+          "opcional": true,
+          "substitui": [
+            "Sombras Profanas"
+          ],
+          "tipo": "beneficio",
+          "titulo": "Suraggel variante (opcional): herança divina",
+          "quantidade": 1,
+          "nota": "Escolher uma herança divina torna o personagem um suraggel variante: Sombras Profanas (e a magia que ela concede) sai da ficha.",
+          "poder": {
+            "lista": "poderes:Herança de Al-Gazara|Herança de Arbória|Herança de Chacina|Herança de Deathok|Herança de Drashantyr|Herança de Kundali|Herança de Magika|Herança de Nivenciuén|Herança de Odisseia|Herança de Ordine|Herança de Pelágia|Herança de Pyra|Herança de Ramknal|Herança de Serena|Herança de Skerry|Herança de Solaris|Herança de Sombria|Herança de Sora|Herança de Terápolis|Herança de Venomia|Herança de Vitalia|Herança de Werra",
+            "nome": "herança divina",
             "maximo": 1
           }
         }

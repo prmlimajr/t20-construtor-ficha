@@ -1,5 +1,5 @@
 {
-  "_comentario": "Ajustes para o módulo Suplementos de Arton (suplementos-de-arton). 'variantes': classe do suplemento → classe básica da qual herda perícias e proficiências (identificadas por habilidades em comum e mesmo PV/PM; conferir com o livro). 'classes': regras completas no formato de classes.json, que substituem a dedução automática. 'ignorarClasses': itens de classe que não são classes jogáveis. 'origensMundanas': origens mundanas do Heróis de Arton (cada uma é um único poder, sem itens nem escolha de benefícios): 'pericias' treinadas automaticamente (chaves do sistema), 'oficiosSemPericia' (Ofícios que o sistema não tem como perícia; ficam como anotação), 'poderesExtras', 'escolhaPericia'/'escolhaPoder' quando o texto pede uma escolha.",
+  "_comentario": "Ajustes para o módulo Suplementos de Arton (suplementos-de-arton). 'variantes': classe do suplemento → classe básica da qual herda perícias e proficiências (identificadas por habilidades em comum e mesmo PV/PM; conferir com o livro). 'classes': regras completas no formato de classes.json, que substituem a dedução automática. 'ignorarClasses': itens de classe que não são classes jogáveis. 'origensMundanas': origens mundanas do Heróis de Arton (cada uma é um único poder, sem itens nem escolha de benefícios): 'pericias' treinadas automaticamente (chaves do sistema), 'oficiosSemPericia' (Ofícios que o sistema não tem como perícia; ficam como anotação), 'poderesExtras', 'escolhaPericia'/'escolhaPoder' quando o texto pede uma escolha. 'periciasClasses': texto de perícias da classe como no livro (\"X e Y, mais N a sua escolha entre ...\"); o construtor interpreta o texto e usa no lugar do campo manual.",
   "ignorarClasses": [
     "Melhor Amigo"
   ],
@@ -195,5 +195,15 @@
       ]
     },
     "Suporte de Tropas": {}
+  },
+  "periciasClasses": {
+    "Frade": "Religião (Sab) e Vontade (Sab), mais 4 a sua escolha entre Adestramento (Car), Atuação (Car), Conhecimento (Int), Cura (Sab), Diplomacia (Car), Fortitude (Con), Guerra (Int), Iniciativa (Des), Intimidação (Car), Intuição (Sab), Investigação (Int), Misticismo (Int), Ofício (Int), Percepção (Sab) e Nobreza (Int).",
+    "Treinador": "Adestramento (Car) e Vontade (Sab), mais 4 a sua escolha entre Atletismo (For), Cavalgar (Des), Diplomacia (Car), Guerra (Int), Iniciativa (Des), Intimidação (Car), Intuição (Sab), Luta (For), Ofício (Int), Percepção (Sab), Pontaria (Des), Reflexos (Des), Religião (Sab) e Sobrevivência (Sab).",
+    "Ventanista": "Ladinagem (Des) e Reflexos (Des), mais 8 a sua escolha entre Acrobacia (Des), Atletismo (For), Atuação (Car), Cavalgar (Des), Conhecimento (Int), Diplomacia (Car), Enganação (Car), Furtividade (Des), Iniciativa (Des), Intimidação (Car), Intuição (Sab), Investigação (Int), Jogatina (Car), Nobreza (Int), Ofício (Int), Percepção (Sab) e Pilotagem (Des).",
+    "Magimarcialista": "Atuação (Car) e Luta (For), mais 6 a sua escolha entre Acrobacia (Des), Atletismo (For), Cavalgar (Des), Conhecimento (Int), Diplomacia (Car), Enganação (Car), Fortitude (Con), Guerra (Int), Iniciativa (Des), Jogatina (Car), Misticismo (Int) e Reflexos (Des).",
+    "Inovador": "Luta (For) ou Pontaria (Des) e Acrobacia (Des), mais 2 a sua escolha entre Adestramento (Car), Atletismo (For), Conhecimento (Int), Fortitude (Con), Guerra (Int), Iniciativa (Des), Intimidação (Car), Investigação (Int), Luta (For), Ofício (Int), Pontaria (Des) e Reflexos (Des).",
+    "Miragem": "Luta (For) ou Pontaria (Des), Reflexos (Des), mais 2 a sua escolha entre Acrobacia (Des), Adestramento (Car), Atletismo (For), Fortitude (Con), Furtividade (Des), Guerra (Int), Iniciativa (Des), Intimidação (Car), Luta (For), Ofício (Int), Percepção (Sab), Pontaria (Des) e Sobrevivência (Sab).",
+    "Místico": "Luta (For) ou Pontaria (Des), Reflexos (Des), mais 2 a sua escolha entre Acrobacia (Des), Adestramento (Car), Atletismo (For), Fortitude (Con), Furtividade (Des), Guerra (Int), Iniciativa (Des), Intimidação (Car), Luta (For), Ofício (Int), Percepção (Sab), Pontaria (Des) e Sobrevivência (Sab).",
+    "Samurai": "Luta (For) e Vontade (Sab), mais 2 a sua escolha entre Acrobacia (Des), Adestramento (Car), Atletismo (For), Cavalgar (Des), Conhecimento (Int), Diplomacia (Car), Fortitude (Con), Guerra (Int), Iniciativa (Des), Intimidação (Car), Intuição (Sab), Nobreza (Int), Ofício (Int), Percepção (Sab) e Pontaria (Des)."
   }
 }

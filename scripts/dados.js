@@ -160,7 +160,7 @@ async function carregar() {
 		doc, categoria,
 		tipo: ESTRUTURA_LOJA.find((t) => t.categorias.includes(categoria))?.tipo ?? "Itens gerais"
 	});
-	const todosPoderes = [...poderes, ...sup.poderes];
+	const todosPoderes = [...poderes, ...sup.poderes, ...poderesSubstitutos(sup)];
 	// itens: os do sistema primeiro (em nomes repetidos, vale o do livro básico)
 	const equipPorNome = new Map([...indiceEquip].map((e) => [normalizar(e.name), e]));
 	for (const { doc } of sup.itens) if (!equipPorNome.has(normalizar(doc.name))) equipPorNome.set(normalizar(doc.name), doc);
@@ -211,6 +211,30 @@ async function carregar() {
 	verificarReferencias(dados);
 	console.info(`${MODULE_ID} | dados carregados em ${Math.round(performance.now() - inicio)} ms`);
 	return dados;
+}
+
+/**
+ * Poderes citados pelas regras que o suplemento não traz: viram itens simples, com o nome e um
+ * aviso para consultar o livro (ex.: Herança de Drashantyr, que falta nas variantes de suraggel).
+ */
+function poderesSubstitutos(sup) {
+	if (!sup.ligado) return [];
+	const faltando = [
+		{ nome: "Herança de Drashantyr", subtipo: "Suraggel", livro: "Heróis de Arton" }
+	].filter((x) => !sup.poderes.some((p) => p.name === x.nome));
+	return faltando.map((x) => ({
+		name: x.nome,
+		type: "poder",
+		img: "icons/svg/item-bag.svg",
+		uuid: `${MODULE_ID}.substituto.${x.nome}`,
+		_id: null,
+		substituto: true,
+		effects: [],
+		system: {
+			tipo: "racial", subtipo: x.subtipo,
+			description: { value: `<p><em>Este poder não está nos dados dos Suplementos de Arton. Consulte o ${x.livro} e anote o efeito na ficha.</em></p>` }
+		}
+	}));
 }
 
 /** O poder pode aparecer nas listas de escolha? (do sistema, ou do suplemento com a chave "Poderes" ligada) */
@@ -279,7 +303,7 @@ function verificarReferencias(d) {
 	};
 	for (const [nome, r] of [...Object.entries(d.regrasRacas), ...Object.entries(d.regrasPoderesClasse)]) {
 		// regras de suplemento só são conferidas com o suplemento carregado
-		const doSuplemento = r.somenteSuplemento || r.escolhas?.some((x) => x.somenteSuplemento);
+		const doSuplemento = r.somenteSuplemento || r.requerSuplemento || r.escolhas?.some((x) => x.somenteSuplemento || x.requerSuplemento);
 		if (doSuplemento && !d.suplementoLigado) continue;
 		// sem o suplemento, as regras das raças dele (Plurivalente, Tabu...) não têm o que conferir
 		if (!d.suplementoLigado && !nome.startsWith("raca:") && !poder(d, nome)) continue;

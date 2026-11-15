@@ -30,6 +30,7 @@
 	{{/if}}
 
 	{{#if ehBeneficio}}
+	{{#if nota}}<p class="cf-nota">{{nota}}</p>{{/if}}
 	<div class="cf-chips">
 		{{#each pericias}}
 		<button type="button" class="cf-chip selecionado cf-chip-remover" data-action="alternar" data-campo="{{../campoPericias}}"

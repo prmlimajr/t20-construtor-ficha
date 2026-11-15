@@ -393,6 +393,15 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		if (!r) return [];
 		const out = [];
 		const doSuplemento = !!fonteDe(this.dados, r);
+		// escolhas da raça que substituem habilidades (ex.: suraggel variante troca Luz Sagrada por uma herança)
+		const escolhasDaRaca = (this.dados.regrasRacas[`raca:${r.name}`]?.escolhas ?? [])
+			.filter((regra) => !(regra.somenteSuplemento && !doSuplemento) && !(regra.requerSuplemento && !this.dados.suplementoLigado));
+		const removidas = new Set();
+		for (const regra of escolhasDaRaca) {
+			if (!regra.substitui) continue;
+			const v = this.estado.racaEscolhas?.[regra.id];
+			if ((v?.poderes?.length ?? 0) + (v?.pericias?.length ?? 0) > 0) regra.substitui.forEach((n) => removidas.add(n));
+		}
 		const regraDe = (p) => {
 			const regra = this.dados.regrasRacas[p.name];
 			// regras marcadas "somenteSuplemento" valem só para o poder homônimo do suplemento (ex.: Chassi do Golem)
@@ -405,14 +414,11 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				const id = String(c.uuid).split(".").pop();
 				const p = this.dados.poderes.find((x) => x.uuid === c.uuid)
 					?? (doSuplemento ? this.dados.poderes.find((x) => x._id === id || x.id === id) : null);
-				if (p) out.push({ poder: p, regra: regraDe(p) });
+				if (p && !removidas.has(p.name)) out.push({ poder: p, regra: regraDe(p) });
 			}
 		}
 		// escolhas da raça que não pertencem a uma habilidade (ex.: natureza e tamanho do duende)
-		for (const regra of this.dados.regrasRacas[`raca:${r.name}`]?.escolhas ?? []) {
-			if (regra.somenteSuplemento && !doSuplemento) continue;
-			out.push({ poder: r, regra, daRaca: true });
-		}
+		for (const regra of escolhasDaRaca) out.push({ poder: r, regra, daRaca: true });
 		return out;
 	}
 
@@ -545,6 +551,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			}
 			if (regra.tipo === "beneficio") {
 				const n = v.pericias.length + v.poderes.length;
+				if (regra.opcional && n === 0) continue;
 				if (n !== regra.quantidade) return `${p.name}: faça ${regra.quantidade} escolha(s) (${n}/${regra.quantidade}).`;
 			}
 			if (regra.tipo === "especialista") {
@@ -1626,7 +1633,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const sufixo = regra.pericia === "bonus" ? ` +${regra.bonus}` : "";
 		return {
 			...base, ehBeneficio: true,
-			pendente: resta !== 0,
+			nota: regra.nota ?? "",
+			pendente: resta !== 0 && !(regra.opcional && total === 0),
 			contagem: `${total}/${regra.quantidade}`,
 			pericias: v.pericias.map((k) => ({ valor: k, nome: `${rotuloPericia(k)}${sufixo}` })),
 			poderes: v.poderes.map((n) => ({ valor: n, nome: n })),
@@ -1816,7 +1824,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				nome: c.name, img: c.img,
 				pv: `${c.system.pvPorNivel * 4} + Con no 1º nível (+${c.system.pvPorNivel} + Con por nível)`,
 				pm: `${c.system.pmPorNivel} por nível`,
-				pericias: c.system.pericias?.inatas,
+				pericias: c.system.pericias?.inatas || r.periciasTexto || (r.periciasManuais ? "Não registradas: indique no passo Perícias." : ""),
 				proficiencias: prof.join(", "),
 				magias: conj
 					? `${conj.tipo === "arc" ? "Arcanas" : "Divinas"} — ${conj.quantidade} magias de 1º círculo${conj.escolas ? ` de ${conj.escolas} escolas à sua escolha` : ""}`

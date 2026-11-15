@@ -88,6 +88,61 @@ export function expandirPericias(lista) {
 	return [...new Set(out)];
 }
 
+/* ---------------- Perícias de classe a partir do texto do livro ---------------- */
+
+const PERICIAS_POR_NOME = {
+	acrobacia: "acro", adestramento: "ades", atletismo: "atle", atuacao: "atua", cavalgar: "cava",
+	conhecimento: "conh", cura: "cura", diplomacia: "dipl", enganacao: "enga", fortitude: "fort",
+	furtividade: "furt", guerra: "guer", iniciativa: "inic", intimidacao: "inti", intuicao: "intu",
+	investigacao: "inve", jogatina: "joga", ladinagem: "ladi", luta: "luta", misticismo: "mist",
+	nobreza: "nobr", oficio: "oficio", percepcao: "perc", pilotagem: "pilo", pontaria: "pont",
+	reflexos: "refl", religiao: "reli", sobrevivencia: "sobr", vontade: "vont"
+};
+
+/** Chave da perícia a partir do nome do livro ("Ofício (Int)" → "oficio"); null se não reconhecer. */
+function chavePericia(nome) {
+	return PERICIAS_POR_NOME[normalizar(nome.replace(/\([^)]*\)/g, "")).replace(/[^a-z]/g, "")] ?? null;
+}
+
+/** Separa uma lista do livro: "A, B e C" → ["A", "B", "C"]. */
+function separarLista(texto) {
+	return texto
+		// tolera vírgula faltando entre itens: "Adestramento (Car) Atletismo (For)"
+		.replace(/\)\s+(?=\p{Lu})/gu, "), ")
+		.split(/,\s*|\s+e\s+/).map((x) => x.trim().replace(/\.$/, "")).filter(Boolean);
+}
+
+/**
+ * Interpreta o texto de perícias de uma classe no formato do livro:
+ * "Luta (For) ou Pontaria (Des) e Acrobacia (Des), mais 2 a sua escolha entre A (Des), B (For) e C (Int)."
+ * Retorna { fixas, ou, opcoes, numero, naoReconhecidas } no formato de data/classes.json.
+ */
+export function interpretarPericiasClasse(texto) {
+	const limpo = String(texto ?? "").replace(/\s+/g, " ").trim();
+	const m = /^(.*?),?\s*mais (\d+|\w+) (?:a|à) sua escolha entre (.*)$/i.exec(limpo);
+	if (!m) return null;
+	const numero = Number(m[2]) || ({ um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, cinco: 5, seis: 6, oito: 8 })[normalizar(m[2])] || 0;
+	const naoReconhecidas = [];
+	const chave = (nome) => {
+		const k = chavePericia(nome);
+		if (!k) naoReconhecidas.push(nome);
+		return k;
+	};
+	const fixas = [];
+	const ou = [];
+	for (const parte of separarLista(m[1])) {
+		if (/\sou\s/i.test(parte)) ou.push(parte.split(/\s+ou\s+/i).map(chave).filter(Boolean));
+		else {
+			const k = chave(parte);
+			// "Ofício" entre as fixas é um Ofício à escolha (não os seis)
+			if (k === "oficio") ou.push(["oficio"]);
+			else if (k) fixas.push(k);
+		}
+	}
+	const opcoes = [...new Set(separarLista(m[3]).map(chave).filter(Boolean))];
+	return { fixas, ou, opcoes, numero, naoReconhecidas };
+}
+
 /* ---------------- Utilitários ---------------- */
 
 export function normalizar(texto) {

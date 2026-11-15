@@ -9,7 +9,7 @@
  * pelo Foundry, mas algumas regras (perícias e proficiências das classes, devotos dos deuses
  * menores) não existem nos dados e são deduzidas ou ficam livres, sempre com aviso.
  */
-import { MODULE_ID, ATRIBUTOS, normalizar } from "./regras.js";
+import { MODULE_ID, ATRIBUTOS, normalizar, interpretarPericiasClasse } from "./regras.js";
 
 export const SUPLEMENTO_ID = "suplementos-de-arton";
 
@@ -203,6 +203,22 @@ function regrasClasseSuplemento(doc, poderesSup, regrasBase, config) {
 			equipamentoExtra: base.equipamentoExtra ?? [],
 			suplemento: true,
 			aviso: `Variante de ${nomeBase}: perícias e proficiências herdadas de ${nomeBase}; habilidades de 1º nível deduzidas dos poderes do suplemento. Confira com o livro.`
+		};
+	}
+	// perícias cadastradas como texto do livro (data/suplementos.json → periciasClasses)
+	const doLivro = interpretarPericiasClasse(config.periciasClasses?.[doc.name]);
+	if (doLivro) {
+		if (doLivro.naoReconhecidas.length) console.warn(`${MODULE_ID} | perícias não reconhecidas em ${doc.name}:`, doLivro.naoReconhecidas);
+		return {
+			fixas: doLivro.fixas, ou: doLivro.ou, opcoes: doLivro.opcoes, numero: doLivro.numero,
+			periciasTexto: config.periciasClasses[doc.name],
+			proficiencias: [],
+			habilidades, escolhas,
+			...(conjurador ? { conjurador } : {}),
+			...(devocao ? { devocao } : {}),
+			equipamentoExtra: [],
+			suplemento: true,
+			aviso: "Classe de suplemento: perícias conforme o livro; proficiências (só as básicas) e habilidades de 1º nível deduzidas dos dados do suplemento. Confira com o livro."
 		};
 	}
 	return {

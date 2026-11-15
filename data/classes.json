@@ -103,7 +103,7 @@
     "habilidades": ["Devoto Fiel (Druida)", "Empatia Selvagem (Druida)", "Magias (Druida)"],
     "escolhas": [],
     "conjurador": { "tipo": "div", "quantidade": 2, "escolas": 3, "atributo": "sab" },
-    "devocao": { "obrigatoria": true, "poderes": 2, "divindades": ["Allihanna", "Megalokk", "Oceano"] },
+    "devocao": { "obrigatoria": true, "poderes": 2, "divindades": ["Aharadak", "Allihanna", "Megalokk", "Oceano", "Tenebra"], "alternativa": { "nome": "Druida de Arton", "descricao": "Serve à natureza do próprio mundo de Arton, sem ser devoto de uma divindade específica. Não recebe poderes concedidos." } },
     "equipamentoExtra": []
   },
   "Guerreiro": {
