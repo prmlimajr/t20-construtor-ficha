@@ -76,6 +76,10 @@
 			"complicacoes": {
 				"Nome": "Use Complications",
 				"Dica": "Adds the Complications step: the player may pick one complication (general or class) and, in exchange, a general power. Both get the “C - ” prefix on the sheet. Requires Suplementos de Arton (complications come from Heróis de Arton)."
+			},
+			"idadesVariadas": {
+				"Nome": "Use Variable Ages",
+				"Dica": "Adds the Age step (after Complications), with Tormenta20's Variable Ages rules: age brackets from child to venerable, ages adjusted by race, attribute modifiers, origin effects, bracket powers and age complications. On the sheet, bracket powers get the “I - ” prefix and age complications “C - ”."
 			}
 		},
 		"SuplementoInativo": "Character Builder: \"Use Suplementos de Arton\" is enabled, but the Suplementos de Arton module is not active. Only the core book is used."

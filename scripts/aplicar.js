@@ -80,6 +80,10 @@ function ajustarPoderRacial(data, ajuste) {
 		const nota = `<p><strong>Escolha (construtor):</strong> ${foundry.utils.escapeHTML?.(ajuste.anotacao) ?? ajuste.anotacao}</p>`;
 		foundry.utils.setProperty(data, "system.description.value", nota + desc);
 	}
+	if (ajuste.tamanho) {
+		// Tamanho Menor (Idades Variadas): sobrepõe o tamanho da raça (prioridade maior que a dos poderes raciais)
+		data.effects.push(novoEfeito(data, [{ ...mudanca("system.tracos.tamanho", ajuste.tamanho, "override"), priority: 100 }]));
+	}
 	if (ajuste.nomesMagias?.length) {
 		for (const ef of data.effects) {
 			if (ef.system?.onuse && ef.system.abilityUse?.types?.includes("spell")) ef.system.abilityUse.names = [...ajuste.nomesMagias];
@@ -106,6 +110,11 @@ export async function aplicarNaFicha(actor, plano, dados) {
 	}
 	for (const k of plano.pericias) update[`system.pericias.${k}.treinado`] = true;
 	if (plano.conjuracao) update["system.attributes.conjuracao"] = plano.conjuracao;
+	// Idades Variadas: faixa etária (e níveis extras a subir) nas notas da ficha
+	if (plano.idade) {
+		const notas = String(actor.system?.detalhes?.info ?? "").trim();
+		update["system.detalhes.info"] = notas ? `${notas} · ${plano.idade}` : plano.idade;
+	}
 	if (actor.prototypeToken?.name === actor.name) update["prototypeToken.name"] = plano.nome;
 	if (plano.img) update.img = plano.img;
 	if (plano.tokenImg) update["prototypeToken.texture.src"] = plano.tokenImg;

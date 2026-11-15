@@ -31,6 +31,7 @@
 	{{#if escolhasClasse}}<dt>Escolhas de classe</dt><dd>{{escolhasClasse}}</dd>{{/if}}
 	<dt>Origem</dt><dd>{{#if plano.origem}}{{plano.origem}}{{else}}—{{/if}}</dd>
 	<dt>Divindade</dt><dd>{{#if plano.divindade}}{{plano.divindade}}{{else}}—{{/if}}</dd>
+	{{#if plano.idade}}<dt>Idade</dt><dd>{{plano.idade}}</dd>{{/if}}
 	<dt>Atributos</dt><dd>{{#each atributos}}{{nome}} {{valor}}{{#unless @last}} · {{/unless}}{{/each}}</dd>
 	<dt>Perícias treinadas</dt><dd>{{listaPericias}}</dd>
 	{{#each gruposPoderes}}<dt>Poderes — {{nome}}</dt><dd>{{lista}}</dd>{{/each}}

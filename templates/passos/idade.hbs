@@ -1,0 +1,59 @@
+<div class="cf-duas cf-idade">
+	<div class="cf-lista">
+		<p class="cf-nota"><i class="fa-solid fa-circle-info"></i> Regra opcional (Tormenta20, cap. 4): a faixa etária muda atributos, origem e
+			poderes. Idades para {{#if raca}}<strong>{{raca}}</strong>{{else}}humanos{{/if}}.{{#if longevidade}} {{longevidade}}{{/if}}</p>
+		<div class="cf-cards cf-cards-coluna">
+			{{#each faixas}}
+			<button type="button" class="cf-card {{#if selecionado}}selecionado foco{{/if}}" data-action="definir" data-campo="idade.faixa" data-valor="{{id}}">
+				<span class="cf-card-texto">
+					<span class="cf-card-nome">{{nome}} <small>({{idades}})</small>{{#if selecionado}} <i class="fa-solid fa-circle-check"></i>{{/if}}</span>
+					<span class="cf-card-sub">{{resumo}}</span>
+				</span>
+			</button>
+			{{/each}}
+		</div>
+
+		{{#if qtdComplicacoes}}
+		<h4>Complicações de idade <small>({{qtdEscolhidas}}/{{qtdComplicacoes}})</small></h4>
+		<div class="cf-idade-complicacoes">
+			{{#each complicacoes}}
+			{{> "modules/t20-construtor-ficha/templates/partes/poder-selecionavel.hbs" nome=nome img=img descricao=descricao selecionado=selecionado campo="idade.complicacoes" valor=nome limite=../qtdComplicacoes}}
+			{{/each}}
+		</div>
+		{{/if}}
+	</div>
+
+	<aside class="cf-info">
+		{{#if info}}
+		<h3>{{info.nome}}</h3>
+		<p class="cf-destaque">{{info.idades}}{{#if info.atributos}} · {{info.atributos}}{{/if}}</p>
+		<p>{{info.descricao}}</p>
+
+		<label class="cf-campo">Idade em anos (opcional)
+			<input type="number" min="0" data-campo="idade.anos" value="{{info.anos}}" placeholder="{{info.idades}}">
+		</label>
+
+		{{#if info.semOrigem}}<p class="cf-nota"><i class="fa-solid fa-triangle-exclamation"></i> Sem Origem: os passos de origem deixam de existir e nenhum benefício de origem vai para a ficha.</p>{{/if}}
+		{{#if info.umBeneficio}}<p class="cf-nota"><i class="fa-solid fa-triangle-exclamation"></i> Origem em Construção: só um benefício de origem{{#if info.menosPericia}}; como sua origem tem um benefício só, você treina uma perícia de classe a menos (revise o passo Perícias){{/if}}.</p>{{/if}}
+		{{#if info.niveisExtras}}<p class="cf-nota"><i class="fa-solid fa-arrow-up"></i> Começa {{info.niveisExtras}} nível(is) acima do grupo. O construtor cria a ficha no 1º nível: suba os níveis extras na ficha depois.</p>{{/if}}
+
+		{{#if info.poderGeral}}
+		<div class="cf-bloco cf-escolha-racial">
+			<div class="cf-escolha-titulo">
+				{{#if info.poderGeral.escolhido}}<i class="fa-solid fa-circle-check"></i>{{else}}<i class="fa-regular fa-circle"></i>{{/if}}
+				<span>Já Vi Coisas — poder geral (opcional, traz uma complicação de idade)</span>
+			</div>
+			{{> "modules/t20-construtor-ficha/templates/partes/abrir.hbs" info.poderGeral}}
+			{{#if info.poderGeral.escolhido}}
+			<button type="button" class="cf-link" data-action="definir" data-campo="idade.poderGeral" data-valor=""><i class="fa-solid fa-xmark"></i> Não usar Já Vi Coisas</button>
+			{{/if}}
+			{{#if info.poderGeralInfo}}{{> "modules/t20-construtor-ficha/templates/partes/poder.hbs" info.poderGeralInfo aberto=true}}{{/if}}
+		</div>
+		{{/if}}
+
+		{{#each info.poderes}}
+		{{> "modules/t20-construtor-ficha/templates/partes/poder-selecionavel.hbs" nome=nome img=img descricao=descricao}}
+		{{/each}}
+		{{/if}}
+	</aside>
+</div>

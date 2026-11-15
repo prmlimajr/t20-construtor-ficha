@@ -12,9 +12,11 @@ import { aplicarNaFicha } from "./aplicar.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const TPL = `modules/${MODULE_ID}/templates`;
+/** Categorias de tamanho, da menor para a maior (system.tracos.tamanho). */
+const TAMANHOS = ["min", "peq", "med", "gra", "eno", "col"];
 
 export const TEMPLATES_PASSOS = [
-	"raca", "atributos", "classe", "magias", "pericias", "origem", "devocao", "complicacoes", "equipamento", "dinheiro", "revisao"
+	"raca", "atributos", "classe", "magias", "pericias", "origem", "devocao", "complicacoes", "idade", "equipamento", "dinheiro", "revisao"
 ].map((p) => `${TPL}/passos/${p}.hbs`).concat(`${TPL}/partes/poder.hbs`, `${TPL}/partes/abrir.hbs`, `${TPL}/partes/aprimoramentos.hbs`, `${TPL}/partes/escolha-racial.hbs`, `${TPL}/partes/poder-escolha.hbs`, `${TPL}/partes/venda.hbs`, `${TPL}/partes/poder-selecionavel.hbs`);
 
 
@@ -66,6 +68,8 @@ function estadoInicial(actor) {
 		/** Complicação escolhida (uuid; no máximo uma) e o poder geral que ela concede. */
 		complicacoes: [],
 		complicacaoPoder: "",
+		/** Idades Variadas (regra opcional): faixa etária, idade em anos, complicações de idade e o poder geral do adulto. */
+		idade: { faixa: "jovem", anos: "", complicacoes: [], poderGeral: "" },
 		equip: { arma: "", armaMarcial: "", armadura: "" },
 		dinheiro: null,
 		compras: {},
@@ -237,8 +241,10 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const c = this.classe;
 		const r = c ? this.dados.regrasClasses[c.name] ?? null : null;
 		// classe sem perícias cadastradas: as treinadas da classe são as que o jogador indicou
-		if (r?.periciasManuais) return { ...r, fixas: [...(this.estado.periciasFixasManuais ?? [])] };
-		return r;
+		let out = r?.periciasManuais ? { ...r, fixas: [...(this.estado.periciasFixasManuais ?? [])] } : r;
+		// Idades Variadas: adolescente com origem de benefício único treina uma perícia de classe a menos
+		if (out && this.menosPericiaPorIdade) out = { ...out, numero: Math.max(0, out.numero - 1) };
+		return out;
 	}
 
 	/** Tipos de magia que a classe pode aprender: os do conjurador e os acrescentados por poderes (ex.: Linhagem Abençoada → divinas). */
@@ -278,7 +284,10 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	 */
 	beneficiosPorOrigem(sub = "principal") {
 		if (sub === "regional") return 1;
-		return this.origemDupla ? game.settings.get(MODULE_ID, "beneficiosOrigemDupla") : 2;
+		const n = this.origemDupla ? game.settings.get(MODULE_ID, "beneficiosOrigemDupla") : 2;
+		// Idades Variadas: Origem em Construção (adolescente) limita a um benefício
+		const lim = this.faixaIdade?.beneficiosOrigem;
+		return Number.isFinite(lim) ? Math.min(n, lim) : n;
 	}
 
 
@@ -304,6 +313,62 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		} catch (err) {
 			return false;
 		}
+	}
+
+	/** Regra opcional "Usar Idades Variadas" (Tormenta20, cap. 4). */
+	get usarIdades() {
+		try {
+			return !!game.settings.get(MODULE_ID, "idadesVariadas") && !!this.dados?.idades?.faixas?.length;
+		} catch (err) {
+			return false;
+		}
+	}
+
+	/** Faixa etária escolhida (definição de data/idades.json) ou null se a regra estiver desligada. */
+	get faixaIdade() {
+		if (!this.usarIdades) return null;
+		const faixas = this.dados.idades.faixas;
+		return faixas.find((f) => f.id === this.estado.idade?.faixa) ?? faixas.find((f) => f.id === "jovem") ?? null;
+	}
+
+	/** Modificador de atributo da faixa etária. */
+	idadeAtr(k) {
+		return Number(this.faixaIdade?.atributos?.[k] ?? 0);
+	}
+
+	/** Complicações de idade exigidas pela faixa (Adulto: 1 se escolheu o poder geral de Já Vi Coisas). */
+	complicacoesIdadeExigidas() {
+		const f = this.faixaIdade;
+		if (!f) return 0;
+		if (f.poderGeralOpcional) return this.estado.idade?.poderGeral ? 1 : 0;
+		return Number(f.complicacoes ?? 0);
+	}
+
+	/**
+	 * Idades de início de cada faixa para a raça atual: a longevidade multiplica as idades a partir
+	 * de uma faixa (ex.: elfos ×5 a partir de adulto; goblins ×0,7 em todas). [{id, inicio, fim}]
+	 */
+	idadesDaRaca(raca = this.raca) {
+		const d = this.dados?.idades;
+		if (!d) return [];
+		const nome = raca?.name ?? "";
+		const regra = (d.longevidade ?? []).find((l) => l.racas.some((r) => nome === r || nome.startsWith(`${r}-`) || nome.startsWith(`${r} `)));
+		const inicioMult = regra ? d.faixas.findIndex((f) => f.id === regra.aPartirDe) : -1;
+		const inicios = d.faixas.map((f, i) => (regra && i >= inicioMult ? Math.round(f.inicio * regra.multiplicador) : f.inicio));
+		return d.faixas.map((f, i) => ({ id: f.id, inicio: inicios[i], fim: i + 1 < inicios.length ? inicios[i + 1] - 1 : null, multiplicador: regra?.multiplicador ?? 1 }));
+	}
+
+	/** Texto da faixa de idade para a raça. Ex.: "25 a 39 anos", "80+ anos". */
+	rotuloIdades(id) {
+		const x = this.idadesDaRaca().find((f) => f.id === id);
+		if (!x) return "";
+		return x.fim === null ? `${x.inicio}+ anos` : `${x.inicio} a ${x.fim} anos`;
+	}
+
+	/** Adolescente com origem de um só benefício (mundana): uma perícia de classe a menos. */
+	get menosPericiaPorIdade() {
+		if (this.faixaIdade?.beneficiosOrigem !== 1) return false;
+		return this.origensAtivas().some((o) => o.chave === "principal" && o.def.especial === "mundana");
 	}
 
 	/** Complicações disponíveis: as gerais e as da classe escolhida (ou da classe básica, se for variante). */
@@ -601,6 +666,11 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		return this.poderesDaRaca().some((x) => x.regra?.semOrigem);
 	}
 
+	/** Sem origem: pela raça (Golem) ou pela idade (criança: Sem Origem). */
+	get semOrigem() {
+		return this.racaSemOrigem || this.faixaIdade?.beneficiosOrigem === 0;
+	}
+
 	/** Perícias treinadas por habilidades raciais (Versátil, Híbrido, Memória Póstuma). */
 	periciasRaciais({ exceto = null } = {}) {
 		const set = new Set();
@@ -656,7 +726,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	}
 
 	atributoFinal(k) {
-		return (this.base(k) ?? 0) + this.racial(k);
+		return (this.base(k) ?? 0) + this.racial(k) + this.idadeAtr(k);
 	}
 
 	/** Perícias treinadas até determinada etapa (exclusive). */
@@ -684,7 +754,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	origensAtivas() {
 		const out = [];
-		if (this.racaSemOrigem) return out;
+		if (this.semOrigem) return out;
 		const p = this.estado.origens.principal;
 		const def = this.dados.origens.find((o) => o.nome === p.nome);
 		if (def) out.push({ chave: "principal", def, estado: p });
@@ -762,17 +832,18 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		];
 		if (this.conjurador) lista.push({ id: "magias", titulo: "Magias", dica: "Escolha as magias que você conhece." });
 		lista.push({ id: "pericias", titulo: "Perícias", dica: "Escolha suas perícias treinadas." });
-		if (!this.racaSemOrigem) lista.push({
+		if (!this.semOrigem) lista.push({
 			id: "origem", sub: "principal",
 			titulo: this.origemDupla ? "Origem profissional" : "Origem",
 			dica: "Escolha sua origem e os benefícios que ela fornece."
 		});
-		if (this.origemDupla && !this.racaSemOrigem) {
+		if (this.origemDupla && !this.semOrigem) {
 			lista.push({ id: "origem", sub: "regional", titulo: "Origem regional", dica: "Escolha sua origem regional." });
 		}
 		lista.push(
 			{ id: "devocao", titulo: "Devoção", dica: "Seu personagem é devoto de algum deus?" },
 			...(this.usarComplicacoes ? [{ id: "complicacoes", titulo: "Complicações", dica: "Uma complicação opcional: em troca, você recebe um poder geral." }] : []),
+			...(this.usarIdades ? [{ id: "idade", titulo: "Idade", dica: "Escolha a faixa etária do seu personagem." }] : []),
 			{ id: "equipamento", titulo: "Equipamento", dica: "Escolha seu equipamento inicial." },
 			{ id: "dinheiro", titulo: "Dinheiro", dica: "Role 4d6 para definir seus tibares iniciais." },
 			{ id: "revisao", titulo: "Revisão", dica: "Confira tudo antes de criar a ficha." }
@@ -890,6 +961,14 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			case "complicacoes":
 				if (this.complicacao && !e.complicacaoPoder) return "Escolha o poder geral concedido pela complicação.";
 				return null;
+			case "idade": {
+				const f = this.faixaIdade;
+				if (!f) return null;
+				const n = this.complicacoesIdadeExigidas();
+				const tem = e.idade?.complicacoes?.length ?? 0;
+				if (tem !== n) return n ? `Escolha ${n === 1 ? "1 complicação" : `${n} complicações`} de idade (${tem} escolhida${tem === 1 ? "" : "s"}).` : "Desmarque as complicações de idade.";
+				return null;
+			}
 			case "equipamento":
 				if (!e.equip.arma) return "Escolha sua arma simples.";
 				if (this.temProficiencia("marcial") && !e.equip.armaMarcial) return "Escolha sua arma marcial.";
@@ -1358,6 +1437,13 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				return this.dados.poderes.filter((p) => p.system.tipo === "geral" && poderSelecionavel(this.dados, p) && (!ja.has(p.name) || p.name === atual))
 					.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")).map(poderCard);
 			}
+			case "poderGeralIdade": {
+				// Já Vi Coisas (adulto): poder geral que o personagem ainda não recebe por outra fonte
+				const atual = this.estado.idade?.poderGeral;
+				const ja = new Set(this.plano({ semIdade: true }).gruposPoderes.flatMap((g) => g.poderes.map((p) => p.name)));
+				return this.dados.poderes.filter((p) => p.system.tipo === "geral" && poderSelecionavel(this.dados, p) && (!ja.has(p.name) || p.name === atual))
+					.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")).map(poderCard);
+			}
 			case "poderGeral":
 				return this.dados.poderes.filter((p) => p.system.tipo === "geral" && poderSelecionavel(this.dados, p))
 					.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")).map(poderCard);
@@ -1402,7 +1488,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				descricao: f.doc ? await this.#html(f.doc.uuid, f.doc.system?.description?.value) : ""
 			};
 		}
-		if (["grupo", "poderGeral", "poderes", "poderGeralOrigem", "poderGeralComplicacao"].includes(tipo)) {
+		if (["grupo", "poderGeral", "poderes", "poderGeralOrigem", "poderGeralComplicacao", "poderGeralIdade"].includes(tipo)) {
 			const p = poder(this.dados, valor);
 			if (!p) return null;
 			const i = await this.#infoPoder(p);
@@ -1514,6 +1600,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const origens = this.origensAtivas().map((o) => o.def.nome);
 		if (origens.length) linhas.push(["Origem", origens.join(" / ")]);
 		if (this.textoDivindade) linhas.push(["Divindade", this.textoDivindade]);
+		if (this.faixaIdade) linhas.push(["Idade", this.faixaIdade.nome + (Number(e.idade?.anos) > 0 ? ` (${Number(e.idade.anos)} anos)` : "")]);
 		if (e.dinheiro !== null) linhas.push(["Tibares", ConstrutorFicha.formatarTibares(this.saldo)]);
 		const atributos = e.atrModo
 			? ATRIBUTOS.map((k) => ({ sigla: k.toUpperCase(), valor: sinal(this.atributoFinal(k)) }))
@@ -1531,6 +1618,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			case "origem": return this.#ctxOrigem(passo.sub);
 			case "devocao": return this.#ctxDevocao();
 			case "complicacoes": return this.#ctxComplicacoes();
+			case "idade": return this.#ctxIdade();
 			case "equipamento": return this.#ctxEquipamento();
 			case "dinheiro": return this.#ctxDinheiro();
 			case "revisao": return this.#ctxRevisao();
@@ -1750,6 +1838,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				indice: i, texto: a.map(sinal).join(", "), selecionado: i === e.atrFixo.arranjo
 			}));
 		}
+		// Idades Variadas: coluna da faixa etária (só se a faixa mexe em algum atributo)
+		ctx.colunaIdade = ATRIBUTOS.some((k) => this.idadeAtr(k));
+		ctx.nomeFaixa = this.faixaIdade?.nome ?? "";
 		ctx.linhas = ATRIBUTOS.map((k) => {
 			const base = this.base(k);
 			const linha = {
@@ -1757,6 +1848,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				nome: NOMES_ATRIBUTOS[k],
 				base: base === null ? "—" : sinal(base),
 				racial: sinal(this.racial(k)),
+				idade: sinal(this.idadeAtr(k)),
 				total: base === null ? "—" : sinal(this.atributoFinal(k))
 			};
 			if (e.atrModo === "pontos") {
@@ -2568,6 +2660,57 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		return { grupos, info, escolhidaNome: escolhida?.name ?? "" };
 	}
 
+	/** Idades Variadas: faixas etárias (idades ajustadas pela raça), habilidades da faixa e complicações de idade. */
+	async #ctxIdade() {
+		const e = this.estado;
+		const atual = this.faixaIdade;
+		const faixas = this.dados.idades.faixas.map((f) => ({
+			id: f.id, nome: f.nome, resumo: f.resumo,
+			idades: this.rotuloIdades(f.id),
+			selecionado: f.id === atual?.id
+		}));
+		const longevidade = this.idadesDaRaca()[0]?.multiplicador ?? 1;
+		const qtd = this.complicacoesIdadeExigidas();
+		const escolhidas = e.idade?.complicacoes ?? [];
+		const complicacoes = qtd ? await Promise.all(this.dados.idades.complicacoes.map(async (nome) => {
+			const p = poder(this.dados, nome);
+			return {
+				nome, img: p?.img,
+				descricao: p ? await this.#html(p.uuid, p.system.description?.value) : "",
+				selecionado: escolhidas.includes(nome)
+			};
+		})) : [];
+		const poderes = await Promise.all((atual?.poderes ?? []).map(async (n) => this.#infoPoder(poder(this.dados, n))));
+		const atributos = ATRIBUTOS.filter((k) => this.idadeAtr(k)).map((k) => `${NOMES_ATRIBUTOS[k]} ${sinal(this.idadeAtr(k))}`);
+		return {
+			faixas,
+			raca: this.raca?.name ?? "",
+			longevidade: longevidade !== 1 ? (longevidade > 1 ? `Raça longeva: idades ×${longevidade} a partir de adulto.` : `Raça de vida curta: idades ×${String(longevidade).replace(".", ",")}.`) : "",
+			info: atual ? {
+				nome: atual.nome,
+				idades: this.rotuloIdades(atual.id),
+				descricao: atual.descricao,
+				atributos: atributos.join(", "),
+				poderes: poderes.filter(Boolean),
+				niveisExtras: atual.niveisExtras ?? 0,
+				anos: e.idade?.anos ?? "",
+				semOrigem: atual.beneficiosOrigem === 0,
+				umBeneficio: atual.beneficiosOrigem === 1,
+				menosPericia: this.menosPericiaPorIdade,
+				poderGeral: atual.poderGeralOpcional ? {
+					campo: "idade.poderGeral",
+					lista: "poderGeralIdade",
+					titulo: "Já Vi Coisas — poder geral (traz uma complicação de idade)",
+					escolhido: e.idade?.poderGeral ?? ""
+				} : null,
+				poderGeralInfo: atual.poderGeralOpcional && e.idade?.poderGeral ? await this.#infoPoder(poder(this.dados, e.idade.poderGeral)) : null
+			} : null,
+			qtdComplicacoes: qtd,
+			qtdEscolhidas: escolhidas.length,
+			complicacoes
+		};
+	}
+
 	/** Espólio (Nobre) e Protótipo (Inventor). */
 	#ctxItensClasse() {
 		const out = [];
@@ -2689,9 +2832,32 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		};
 	}
 
+	/** Tamanho da raça: o último "override" de system.tracos.tamanho nos poderes raciais (padrão: médio). */
+	#tamanhoRaca(poderesRaciais) {
+		let tam = "med";
+		for (const p of poderesRaciais) {
+			for (const ef of p.effects ?? []) {
+				for (const c of ef.system?.changes ?? ef.changes ?? []) {
+					if (c.key === "system.tracos.tamanho" && TAMANHOS.includes(c.value)) tam = c.value;
+				}
+			}
+		}
+		return tam;
+	}
+
+	/** Texto da idade para as notas da ficha. Ex.: "Idade: Velho, 65 anos (+2 níveis a subir)". */
+	#textoIdade(faixa) {
+		const anos = Number(this.estado.idade?.anos);
+		const partes = [faixa.nome];
+		if (Number.isFinite(anos) && anos > 0) partes.push(`${anos} anos`);
+		let txt = `Idade: ${partes.join(", ")}`;
+		if (faixa.niveisExtras) txt += ` — começa ${faixa.niveisExtras === 1 ? "1 nível" : `${faixa.niveisExtras} níveis`} acima do grupo (suba de nível na ficha)`;
+		return txt;
+	}
+
 	/* ---------------- Plano final (usado na revisão e no aplicar) ---------------- */
 
-	plano({ semVendas = false, semComplicacao = false } = {}) {
+	plano({ semVendas = false, semComplicacao = false, semIdade = false } = {}) {
 		const e = this.estado;
 		const r = this.regrasClasse ?? {};
 		const raca = this.raca;
@@ -2763,6 +2929,27 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			if (e.complicacaoPoder) adicionar(poderesComplicacao)(e.complicacaoPoder);
 		}
 
+		// Idades Variadas: habilidades da faixa ("I") e complicações de idade e poder geral do adulto ("C")
+		const poderesIdade = [];
+		const faixa = semIdade ? null : this.faixaIdade;
+		if (faixa) {
+			(faixa.poderes ?? []).forEach(adicionar(poderesIdade));
+			if (faixa.poderGeralOpcional && e.idade?.poderGeral) {
+				adicionar(poderesIdade)("Já Vi Coisas");
+				adicionar(poderesComplicacao)(e.idade.poderGeral);
+			}
+			(e.idade?.complicacoes ?? []).forEach(adicionar(poderesComplicacao));
+			// Tamanho Menor: uma categoria abaixo do tamanho da raça (Minúsculo: só estética)
+			const menor = poderesIdade.find((p) => p.name === "Tamanho Menor");
+			if (menor) {
+				const atual = this.#tamanhoRaca(poderesRaciais);
+				const i = TAMANHOS.indexOf(atual);
+				ajustesRaciais[menor.uuid] = i > 0
+					? { tamanho: TAMANHOS[i - 1] }
+					: { anotacao: "Raça já é Minúscula: a mudança é apenas estética." };
+			}
+		}
+
 		// Ordem na ficha (campo "sort"): raciais, origem, concedidos, complicação e, sempre por último,
 		// os de classe de 1º nível ("1 - ")
 		const gruposPoderes = [
@@ -2770,6 +2957,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			{ prefixo: "O", nome: "Origem", poderes: poderesOrigem },
 			{ prefixo: "D", nome: "Concedidos", poderes: poderesConcedidos },
 			{ prefixo: "C", nome: "Complicação", poderes: poderesComplicacao },
+			{ prefixo: "I", nome: "Idade", poderes: poderesIdade },
 			{ prefixo: "1", nome: "Classe", poderes: poderesClasse }
 		];
 		const poderes = [...poderesOrigem, ...poderesConcedidos, ...poderesClasse];
@@ -2828,7 +3016,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			magiasRaciais: magiasDaRaca, magiasPoderesClasse: magiasDePoderesClasse,
 			ajustesRaciais, escolhasRaciais: escolhasTexto, escolhasClasse: daClasse.texto,
 			pericias: ordenarPericias([...this.periciasTreinadas()]),
-			atributos: Object.fromEntries(ATRIBUTOS.map((k) => [k, { base: this.base(k) ?? 0, racial: this.racial(k) }])),
+			// a faixa etária (Idades Variadas) entra no valor base
+			atributos: Object.fromEntries(ATRIBUTOS.map((k) => [k, { base: (this.base(k) ?? 0) + this.idadeAtr(k), racial: this.racial(k) }])),
+			idade: faixa ? this.#textoIdade(faixa) : null,
 			origem: this.origensAtivas().map((o) => o.def.nome).join(" / "),
 			divindade: this.textoDivindade,
 			dinheiro: Math.round(((e.dinheiro ?? 0) + vendas.total - this.gastoCompras) * 100) / 100,
@@ -3007,6 +3197,23 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			if (campo === "divindade") e.poderesConcedidos = [];
 			// trocar ou tirar a complicação zera o poder geral escolhido por ela
 			if (campo === "complicacoes") e.complicacaoPoder = "";
+			if (campo === "idade.faixa") {
+				// trocar de faixa zera as complicações e o poder geral de idade, e corta o que a faixa nova não permite
+				e.idade.complicacoes = [];
+				e.idade.poderGeral = "";
+				for (const sub of ["principal", "regional"]) {
+					const o = e.origens[sub];
+					const n = this.beneficiosPorOrigem(sub);
+					if (o.beneficios.length > n) {
+						for (const b of o.beneficios.slice(n)) if (b.startsWith("grupo:")) delete o.grupos[b.slice(6)];
+						o.beneficios = o.beneficios.slice(0, n);
+					}
+				}
+				const r = this.regrasClasse;
+				if (r && e.periciasClasse.length > r.numero) e.periciasClasse = e.periciasClasse.slice(0, r.numero);
+			}
+			// Adulto: tirar o poder geral de Já Vi Coisas devolve a complicação de idade que vinha com ele
+			if (campo === "idade.poderGeral" && !valor) e.idade.complicacoes = [];
 			// Protótipo: trocar o item base invalida a melhoria
 			if (campo === "classePoderEscolhas.prototipo.item") e.classePoderEscolhas.prototipo.melhoria = "";
 			if (campo === "devoto" && valor === false) {

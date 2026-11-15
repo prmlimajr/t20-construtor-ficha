@@ -122,7 +122,7 @@ export async function carregarDados() {
 async function carregar() {
 	const inicio = performance.now();
 	// arquivos JSON do módulo (pequenos) primeiro: o suplemento precisa das regras de classe
-	const [regrasClasses, origens, regionais, divindades, equipamento, escolas, regrasRacas, regrasPoderesClasse, configSuplementos] =
+	const [regrasClasses, origens, regionais, divindades, equipamento, escolas, regrasRacas, regrasPoderesClasse, configSuplementos, idades] =
 		await Promise.all([
 			lerJson("classes.json"),
 			lerJson("origens.json"),
@@ -132,7 +132,8 @@ async function carregar() {
 			lerJson("escolas.json"),
 			lerJson("racas.json"),
 			lerJson("poderes-classe.json"),
-			lerJson("suplementos.json")
+			lerJson("suplementos.json"),
+			lerJson("idades.json")
 		]);
 
 	// todos os compêndios ao mesmo tempo (é a parte demorada)
@@ -215,7 +216,9 @@ async function carregar() {
 		escolas: escolas.escolas ?? {},
 		regrasRacas: regrasRacas.poderes ?? {},
 		regrasPoderesClasse: comOpcoesDivindades(regrasPoderesClasse.poderes ?? {}, divindades.divindades ?? []),
-		melhorias
+		melhorias,
+		/** Idades Variadas (regra opcional): faixas, longevidade por raça e complicações de idade. */
+		idades
 	};
 	verificarReferencias(dados);
 	console.info(`${MODULE_ID} | dados carregados em ${Math.round(performance.now() - inicio)} ms`);
@@ -552,6 +555,250 @@ const PODERES_DO_CONSTRUTOR = [
 		tipo: "racial", subtipo: "Salamandra", exclusivo: true,
 		img: "icons/creatures/reptiles/lizard-iguana-green.webp",
 		descricao: "<p>Você sofre –5 em testes contra efeitos de frio e sofre 1 ponto de dano adicional por dado de dano de frio.</p>"
+	},
+	// Idades Variadas (Tormenta20, cap. 4): habilidades das faixas etárias e complicações de idade
+	{
+		nome: "Tamanho Menor",
+		tipo: "ability", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Você é uma categoria de tamanho menor que o padrão de sua raça (exceto se sua raça já for Minúscula; nesse caso, a mudança é apenas estética).</p>"
+	},
+	{
+		nome: "Protegido dos Deuses",
+		tipo: "ability", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Você recebe +2 na Defesa e +5 em todos os testes de resistência. Isso é uma mistura de sorte sobrenatural com o fato de que inimigos normalmente ignoram crianças, justamente por serem menos perigosas.</p>",
+		efeitos: (img) => [{
+			name: "Protegido dos Deuses", img, type: "base", transfer: true, disabled: false,
+			system: { changes: [
+				{ key: "system.attributes.defesa.bonus", value: 2, type: "add", phase: "initial", priority: null },
+				{ key: "system.modificadores.pericias.resistencia", value: 5, type: "add", phase: "initial", priority: null }
+			], onuse: false }
+		}]
+	},
+	{
+		nome: "Sem Origem",
+		tipo: "ability", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Você não recebe benefícios de origem. Você está apenas começando a viver os anos que definirão quem você será!</p>"
+	},
+	{
+		nome: "Ímpeto Juvenil",
+		tipo: "ability", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Você recebe +3 pontos de mana. Adolescentes acham que podem fazer qualquer coisa, e essa confiança os torna mais heroicos.</p>",
+		efeitos: (img) => [{
+			name: "Ímpeto Juvenil", img, type: "base", transfer: true, disabled: false,
+			system: { changes: [
+				{ key: "system.attributes.pm.bonus.total", value: 3, type: "add", phase: "initial", priority: null }
+			], onuse: false }
+		}]
+	},
+	{
+		nome: "Origem em Construção",
+		tipo: "ability", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Você recebe apenas um benefício de origem, em vez de dois (se sua origem possuir um único benefício, comece com uma perícia treinada a menos por sua classe).</p>"
+	},
+	{
+		nome: "Veterano Calejado",
+		tipo: "ability", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Você começa o jogo com um nível adicional em relação aos personagens mais novos do grupo. Por exemplo, se o grupo vai começar no 1º nível, você começa no 2º. Contudo, essa experiência tem seu preço — você recebe duas complicações de idade.</p>"
+	},
+	{
+		nome: "Ai Minhas Costas",
+		tipo: "ability", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Você começa o jogo com dois níveis adicionais. Contudo, perde 1 ponto em todos os atributos físicos (Força, Destreza e Constituição) e recebe três complicações de idade. Além disso, não pode escolher o poder Aumento de Atributo para nenhum atributo físico — infelizmente, os tempos de vigor ficaram para trás.</p>"
+	},
+	{
+		nome: "O Inverno da Vida",
+		tipo: "ability", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Você começa o jogo com três níveis adicionais. Porém, perde 2 pontos em todos os atributos físicos (Força, Destreza e Constituição) e recebe quatro complicações de idade. Assim como velhos, você não pode escolher o poder Aumento de Atributo para atributos físicos.</p>"
+	},
+	{
+		nome: "Já Vi Coisas",
+		tipo: "ability", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Você pode receber um poder geral. Nesse caso, também recebe uma complicação de idade.</p>"
+	},
+	{
+		nome: "Abatido",
+		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Seu vigor se foi. Você recebe –2 PV por nível.</p>",
+		efeitos: (img) => [{
+			name: "Abatido", img, type: "base", transfer: true, disabled: false,
+			system: { changes: [
+				{ key: "system.attributes.pv.bonus.nivel", value: -2, type: "add", phase: "initial", priority: null }
+			], onuse: false }
+		}]
+	},
+	{
+		nome: "Catarata",
+		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Seus olhos já não são os mesmos. Você sofre –5 em Percepção e Pontaria.</p>",
+		efeitos: (img) => [{
+			name: "Catarata", img, type: "base", transfer: true, disabled: false,
+			system: { changes: [
+				{ key: "system.pericias.perc.bonus", value: -5, type: "add", phase: "initial", priority: null },
+				{ key: "system.pericias.pont.bonus", value: -5, type: "add", phase: "initial", priority: null }
+			], onuse: false }
+		}]
+	},
+	{
+		nome: "Dedos Trêmulos",
+		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Você sofre –2 em Luta e Pontaria. Além disso, quando usa um item que esteja empunhando, role 1d4. Em um resultado 1, você derruba esse item.</p>",
+		efeitos: (img) => [{
+			name: "Dedos Trêmulos", img, type: "base", transfer: true, disabled: false,
+			system: { changes: [
+				{ key: "system.pericias.luta.bonus", value: -2, type: "add", phase: "initial", priority: null },
+				{ key: "system.pericias.pont.bonus", value: -2, type: "add", phase: "initial", priority: null }
+			], onuse: false }
+		}]
+	},
+	{
+		nome: "Definhamento",
+		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>A idade roubou seu peso, deixando-o um fiapo do que era antes. Você sofre –5 em Fortitude e em testes de manobras de combate.</p>",
+		efeitos: (img) => [{
+			name: "Definhamento", img, type: "base", transfer: true, disabled: false,
+			system: { changes: [
+				{ key: "system.pericias.fort.bonus", value: -5, type: "add", phase: "initial", priority: null }
+			], onuse: false }
+		}]
+	},
+	{
+		nome: "Desatento",
+		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Você já não é mais tão atento quanto outrora. Na primeira rodada de qualquer cena de ação, role um dado. Em um resultado ímpar, você fica surpreendido (mesmo que um efeito possa evitar isso).</p>"
+	},
+	{
+		nome: "“Devagar, Jovem!”",
+		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Você já não anda no mesmo ritmo que antes. Seu deslocamento diminui em –3m e você não pode correr ou fazer investidas.</p>",
+		efeitos: (img) => [{
+			name: "“Devagar, Jovem!”", img, type: "base", transfer: true, disabled: false,
+			system: { changes: [
+				{ key: "system.attributes.movement.walk.base", value: -3, type: "add", phase: "initial", priority: null }
+			], onuse: false }
+		}]
+	},
+	{
+		nome: "Gota",
+		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Sempre que faz um teste de Destreza ou de perícias baseadas nesse atributo você perde 1d6 pontos de vida. Você só pode recuperar esses PV com descanso.</p>"
+	},
+	{
+		nome: "Juntas Duras",
+		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Suas articulações doem. Você sofre –5 em testes de Acrobacia e Reflexos.</p>",
+		efeitos: (img) => [{
+			name: "Juntas Duras", img, type: "base", transfer: true, disabled: false,
+			system: { changes: [
+				{ key: "system.pericias.acro.bonus", value: -5, type: "add", phase: "initial", priority: null },
+				{ key: "system.pericias.refl.bonus", value: -5, type: "add", phase: "initial", priority: null }
+			], onuse: false }
+		}]
+	},
+	{
+		nome: "Melancólico",
+		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Você já não tem mais tanta motivação para realizar grandes façanhas. Você perde 1 PM por nível.</p>",
+		efeitos: (img) => [{
+			name: "Melancólico", img, type: "base", transfer: true, disabled: false,
+			system: { changes: [
+				{ key: "system.attributes.pm.bonus.nivel", value: -1, type: "add", phase: "initial", priority: null }
+			], onuse: false }
+		}]
+	},
+	{
+		nome: "Memórias Tristes",
+		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Você passou por um trauma, como a perda de um ente querido ou a culpa por um erro que cometeu e pelo qual nunca se perdoou. Sempre que rola um resultado 1 natural em qualquer teste, você fica pasmo por 1 rodada e frustrado até o fim do dia (cumulativo).</p>"
+	},
+	{
+		nome: "“No Meu Tempo...”",
+		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Você se prende a visões idealizadas de um passado que nunca existiu e se torna presa fácil para manipulação. Você sofre –5 em Intuição e Vontade.</p>",
+		efeitos: (img) => [{
+			name: "“No Meu Tempo...”", img, type: "base", transfer: true, disabled: false,
+			system: { changes: [
+				{ key: "system.pericias.intu.bonus", value: -5, type: "add", phase: "initial", priority: null },
+				{ key: "system.pericias.vont.bonus", value: -5, type: "add", phase: "initial", priority: null }
+			], onuse: false }
+		}]
+	},
+	{
+		nome: "Pulmão Ruim",
+		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Quando corre ou prende a respiração, você precisa fazer testes de Fortitude para não ficar fatigado a partir da primeira rodada (normalmente, personagens só precisam fazer esses testes após um número de rodadas igual a sua Constituição +1). Além disso, sempre que faz uma investida, você fica fatigado até o fim da cena.</p>"
+	},
+	{
+		nome: "Rabugento",
+		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Você reclama de tudo. Você sofre –5 em testes de Carisma e de perícias baseadas nesse atributo, exceto Intimidação.</p>",
+		efeitos: (img) => [{
+			name: "Rabugento", img, type: "base", transfer: true, disabled: false,
+			system: { changes: [
+				{ key: "system.pericias.ades.bonus", value: -5, type: "add", phase: "initial", priority: null },
+				{ key: "system.pericias.atua.bonus", value: -5, type: "add", phase: "initial", priority: null },
+				{ key: "system.pericias.dipl.bonus", value: -5, type: "add", phase: "initial", priority: null },
+				{ key: "system.pericias.enga.bonus", value: -5, type: "add", phase: "initial", priority: null },
+				{ key: "system.pericias.joga.bonus", value: -5, type: "add", phase: "initial", priority: null }
+			], onuse: false }
+		}]
+	},
+	{
+		nome: "Recurvado",
+		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>A idade dobrou suas costas. Você conta como uma categoria de tamanho menor para alcance natural, modificador de manobras e armas que pode empunhar (mas não para espaço ocupado, modificador de Furtividade ou dano de armas naturais).</p>"
+	},
+	{
+		nome: "Sono Ruim",
+		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Você acorda várias vezes no meio da noite, o que atrapalha seu descanso. Sua recuperação de PM e PV é sempre uma categoria pior. Se a condição de descanso já é ruim, você recupera apenas 1 PM e 1 PV, independentemente do seu nível. Se já recupera apenas 1 PM e 1 PV, não recupera nada!</p>"
+	},
+	{
+		nome: "Teimoso",
+		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Sempre que falha em um teste de atributo ou de perícia que possa tentar novamente, você é obrigado a tentar pelo menos mais uma vez (mesmo que isso possa prejudicá-lo). Teimoso é quem teima com você!</p>"
+	},
+	{
+		nome: "Tosse",
+		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Em cenas de ação, role 1d6 no início de cada rodada. Num resultado 1, você tem uma crise de tosse e fica atordoado por 1 rodada. Em cenas de interpretação, role 1d6 sempre que fizer um teste de perícia baseada em Carisma. Num resultado 1, você tem uma crise de tosse e sofre uma penalidade de –5 nesse teste.</p>"
+	},
+	{
+		nome: "Turrão",
+		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Você faz tudo sempre do seu jeito e tem dificuldade de lidar com coisas nas quais não é perito. Você não recebe o bônus de metade do nível em perícias nas quais não é treinado.</p>"
+	},
+	{
+		nome: "Velha Ferida",
+		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
+		img: "icons/svg/hourglass.svg",
+		descricao: "<p>Você tem um machucado antigo, que nunca cicatrizou direito. Sempre que você sofre um acerto crítico, o multiplicador de dano aumenta em +1 e você fica fraco (mesmo que seja imune, cumulativo).</p>"
 	},
 	// Sahiri (variante de dahllan): substituem Amiga das Plantas e Armadura da Natureza
 	{

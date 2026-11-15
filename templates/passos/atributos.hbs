@@ -82,7 +82,7 @@
 
 {{#if modo}}
 <table class="cf-tabela-atributos {{#if dnd}}cf-dnd{{/if}}">
-	<thead><tr><th>Atributo</th><th>Base</th><th>Raça</th><th>Total</th></tr></thead>
+	<thead><tr><th>Atributo</th><th>Base</th><th>Raça</th>{{#if colunaIdade}}<th title="{{nomeFaixa}}">Idade</th>{{/if}}<th>Total</th></tr></thead>
 	<tbody>
 		{{#each linhas}}
 		<tr>
@@ -111,6 +111,7 @@
 				{{else}}<strong>{{base}}</strong>{{/if}}
 			</td>
 			<td>{{racial}}</td>
+			{{#if ../colunaIdade}}<td>{{idade}}</td>{{/if}}
 			<td class="cf-total">{{total}}</td>
 		</tr>
 		{{/each}}

@@ -1,0 +1,70 @@
+{
+  "_comentario": "Idades Variadas (regra opcional, Tormenta20 cap. 4, p. 288-291). 'faixas': faixas etárias com idade inicial humana, modificadores de atributo, poderes da faixa (definidos em scripts/dados.js), benefícios de origem permitidos, níveis extras e complicações de idade obrigatórias. 'longevidade': multiplicador das idades por raça ('aPartirDe' = primeira faixa afetada). 'complicacoes': as complicações de idade (poderes em scripts/dados.js).",
+  "faixas": [
+    {
+      "id": "crianca", "nome": "Criança", "inicio": 9,
+      "atributos": { "for": -2, "con": -1, "sab": -1 },
+      "poderes": ["Tamanho Menor", "Protegido dos Deuses", "Sem Origem"],
+      "beneficiosOrigem": 0,
+      "resumo": "For –2, Con –1, Sab –1, Tamanho Menor, Protegido dos Deuses, Sem Origem",
+      "descricao": "A menor faixa etária possível para personagens jogadores. Crianças são fisicamente mais fracas e frágeis que adultos, além de menos capazes de entender as sutilezas do mundo."
+    },
+    {
+      "id": "adolescente", "nome": "Adolescente", "inicio": 13,
+      "atributos": { "sab": -1 },
+      "poderes": ["Ímpeto Juvenil", "Origem em Construção"],
+      "beneficiosOrigem": 1,
+      "resumo": "Sab –1, Ímpeto Juvenil, Origem em Construção",
+      "descricao": "Muitos aventureiros começam suas carreiras nesta idade. Adolescentes são conhecidos por sua impetuosidade."
+    },
+    {
+      "id": "jovem", "nome": "Jovem", "inicio": 18,
+      "atributos": {},
+      "poderes": [],
+      "resumo": "Nenhum modificador",
+      "descricao": "A idade padrão. Heróis jovens usam as regras básicas de construção de personagem, sem modificadores."
+    },
+    {
+      "id": "adulto", "nome": "Adulto", "inicio": 25,
+      "atributos": {},
+      "poderes": [],
+      "poderGeralOpcional": true,
+      "resumo": "Um poder geral extra e uma complicação de idade (opcional)",
+      "descricao": "Uma idade comum para aventureiros. Já Vi Coisas: você pode receber um poder geral. Nesse caso, também recebe uma complicação de idade."
+    },
+    {
+      "id": "maduro", "nome": "Maduro", "inicio": 40,
+      "atributos": {},
+      "poderes": ["Veterano Calejado"],
+      "niveisExtras": 1, "complicacoes": 2,
+      "resumo": "Um nível extra, duas complicações de idade",
+      "descricao": "Muitas figuras de autoridade, como burgomestres e capitães da guarda, são desta faixa etária. Elas talvez não tenham o vigor de pessoas mais novas, mas compensam isso com experiência."
+    },
+    {
+      "id": "velho", "nome": "Velho", "inicio": 60,
+      "atributos": { "for": -1, "des": -1, "con": -1 },
+      "poderes": ["Ai Minhas Costas"],
+      "niveisExtras": 2, "complicacoes": 3,
+      "resumo": "For –1, Des –1, Con –1, dois níveis extras, três complicações de idade",
+      "descricao": "Num mundo de problemas como Arton, nem todos chegam a esta idade respeitável. Aqueles que a alcançam muitas vezes assumem posições de respeito."
+    },
+    {
+      "id": "anciao", "nome": "Ancião", "inicio": 80,
+      "atributos": { "for": -2, "des": -2, "con": -2 },
+      "poderes": ["O Inverno da Vida"],
+      "niveisExtras": 3, "complicacoes": 4,
+      "resumo": "For –2, Des –2, Con –2, três níveis extras, quatro complicações de idade",
+      "descricao": "A última faixa etária. Em Arton, poucas pessoas chegam até aqui."
+    }
+  ],
+  "longevidade": [
+    { "multiplicador": 2, "aPartirDe": "adulto", "racas": ["Anão", "Meio-Elfo", "Qareen"] },
+    { "multiplicador": 5, "aPartirDe": "adulto", "racas": ["Dahllan", "Duende", "Eiradaan", "Elfo", "Golem", "Osteon", "Sátiro", "Sílfide"] },
+    { "multiplicador": 0.7, "aPartirDe": "crianca", "racas": ["Goblin", "Trog"] }
+  ],
+  "complicacoes": [
+    "Abatido", "Catarata", "Dedos Trêmulos", "Definhamento", "Desatento", "“Devagar, Jovem!”", "Gota",
+    "Juntas Duras", "Melancólico", "Memórias Tristes", "“No Meu Tempo...”", "Pulmão Ruim", "Rabugento",
+    "Recurvado", "Sono Ruim", "Teimoso", "Tosse", "Turrão", "Velha Ferida"
+  ]
+}

@@ -1005,3 +1005,8 @@
 }
 .t20-construtor .cf-card-texto { flex: 1 1 auto; min-width: 0; overflow: visible; }
 .t20-construtor .cf-card img { align-self: center; }
+
+/* Idades Variadas */
+.t20-construtor .cf-idade-complicacoes { margin-bottom: 8px; }
+.t20-construtor .cf-idade .cf-card-nome small { font-weight: normal; opacity: 0.8; }
+.t20-construtor .cf-idade .cf-info .cf-campo input { width: 100%; }
