@@ -1,10 +1,10 @@
 <div class="cf-duas cf-idade">
 	<div class="cf-lista">
-		<p class="cf-nota"><i class="fa-solid fa-circle-info"></i> Regra opcional (Tormenta20, cap. 4): a faixa etária muda atributos, origem e
-			poderes. Idades para {{#if raca}}<strong>{{raca}}</strong>{{else}}humanos{{/if}}.{{#if longevidade}} {{longevidade}}{{/if}}</p>
+		<p class="cf-nota"><i class="fa-solid fa-circle-info"></i> Regra opcional (Tormenta20, cap. 4). Idades para {{#if raca}}<strong>{{raca}}</strong>{{else}}humanos{{/if}}.{{#if longevidade}} {{longevidade}}{{/if}}
+			{{#if escolhidaNome}}Escolhida: <strong>{{escolhidaNome}}</strong>.{{/if}}</p>
 		<div class="cf-cards cf-cards-coluna">
 			{{#each faixas}}
-			<button type="button" class="cf-card {{#if selecionado}}selecionado foco{{/if}}" data-action="definir" data-campo="idade.faixa" data-valor="{{id}}">
+			<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if foco}}foco{{/if}}" data-action="focarIdade" data-valor="{{id}}">
 				<span class="cf-card-texto">
 					<span class="cf-card-nome">{{nome}} <small>({{idades}})</small>{{#if selecionado}} <i class="fa-solid fa-circle-check"></i>{{/if}}</span>
 					<span class="cf-card-sub">{{resumo}}</span>
@@ -12,26 +12,25 @@
 			</button>
 			{{/each}}
 		</div>
-
-		{{#if qtdComplicacoes}}
-		<h4>Complicações de idade <small>({{qtdEscolhidas}}/{{qtdComplicacoes}})</small></h4>
-		<div class="cf-idade-complicacoes">
-			{{#each complicacoes}}
-			{{> "modules/t20-construtor-ficha/templates/partes/poder-selecionavel.hbs" nome=nome img=img descricao=descricao selecionado=selecionado campo="idade.complicacoes" valor=nome limite=../qtdComplicacoes}}
-			{{/each}}
-		</div>
-		{{/if}}
 	</div>
 
 	<aside class="cf-info">
 		{{#if info}}
 		<h3>{{info.nome}}</h3>
 		<p class="cf-destaque">{{info.idades}}{{#if info.atributos}} · {{info.atributos}}{{/if}}</p>
+		{{#if info.escolhida}}
+		<p class="cf-escolhida"><i class="fa-solid fa-circle-check"></i> Faixa etária escolhida</p>
+		{{else}}
+		<button type="button" class="cf-primario cf-escolher" data-action="escolherIdade" data-valor="{{info.id}}"><i class="fa-solid fa-check"></i> Escolher esta idade</button>
+		{{#if info.trocaZera}}<p class="cf-nota">Trocar de faixa descarta as complicações de idade (e o poder geral) já escolhidos.</p>{{/if}}
+		{{/if}}
 		<p>{{info.descricao}}</p>
 
+		{{#if info.escolhida}}
 		<label class="cf-campo">Idade em anos (opcional)
 			<input type="number" min="0" data-campo="idade.anos" value="{{info.anos}}" placeholder="{{info.idades}}">
 		</label>
+		{{/if}}
 
 		{{#if info.semOrigem}}<p class="cf-nota"><i class="fa-solid fa-triangle-exclamation"></i> Sem Origem: os passos de origem deixam de existir e nenhum benefício de origem vai para a ficha.</p>{{/if}}
 		{{#if info.umBeneficio}}<p class="cf-nota"><i class="fa-solid fa-triangle-exclamation"></i> Origem em Construção: só um benefício de origem{{#if info.menosPericia}}; como sua origem tem um benefício só, você treina uma perícia de classe a menos (revise o passo Perícias){{/if}}.</p>{{/if}}
@@ -49,11 +48,39 @@
 			{{/if}}
 			{{#if info.poderGeralInfo}}{{> "modules/t20-construtor-ficha/templates/partes/poder.hbs" info.poderGeralInfo aberto=true}}{{/if}}
 		</div>
+		{{else if info.poderGeralOpcional}}
+		<p class="cf-nota">Já Vi Coisas: você pode receber um poder geral; nesse caso, também recebe uma complicação de idade.</p>
+		{{/if}}
+
+		{{#if info.qtdComplicacoes}}
+		<div class="cf-bloco cf-escolha-racial">
+			<div class="cf-escolha-titulo">
+				{{#if info.completas}}<i class="fa-solid fa-circle-check"></i>{{else}}<i class="fa-solid fa-circle-exclamation"></i>{{/if}}
+				<span>Complicações de idade ({{info.qtdEscolhidas}}/{{info.qtdComplicacoes}})</span>
+			</div>
+			{{#if info.escolhida}}
+			{{#unless info.completas}}
+			<button type="button" class="cf-abrir" data-action="abrirSlideout" data-campo="idade.complicacoes" data-lista="complicacoesIdade"
+				data-limite="{{info.qtdComplicacoes}}" data-titulo="Escolha uma complicação de idade ({{info.qtdEscolhidas}}/{{info.qtdComplicacoes}})">
+				<span>— escolher complicação —</span>
+				<i class="fa-solid fa-chevron-right"></i>
+			</button>
+			{{/unless}}
+			{{#if info.complicacoes.length}}<p class="cf-nota">Clique em uma complicação para removê-la.</p>{{/if}}
+			{{#each info.complicacoes}}
+			{{> "modules/t20-construtor-ficha/templates/partes/poder-selecionavel.hbs" nome=nome img=img descricao=descricao selecionado=true campo="idade.complicacoes" valor=nome limite=../info.qtdComplicacoes}}
+			{{/each}}
+			{{else}}
+			<p class="cf-nota">Escolha esta idade para selecionar {{info.qtdComplicacoes}} complicações de idade.</p>
+			{{/if}}
+		</div>
 		{{/if}}
 
 		{{#each info.poderes}}
 		{{> "modules/t20-construtor-ficha/templates/partes/poder-selecionavel.hbs" nome=nome img=img descricao=descricao}}
 		{{/each}}
+		{{else}}
+		<p class="cf-vazio">Clique em uma faixa etária para ver os detalhes.</p>
 		{{/if}}
 	</aside>
 </div>

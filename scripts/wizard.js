@@ -212,7 +212,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			tentarDeNovo: ConstrutorFicha.#tentarDeNovo,
 			atribuirAberto: ConstrutorFicha.#atribuirAberto,
 			focarComplicacao: ConstrutorFicha.#focarComplicacao,
-			escolherComplicacao: ConstrutorFicha.#escolherComplicacao
+			escolherComplicacao: ConstrutorFicha.#escolherComplicacao,
+			focarIdade: ConstrutorFicha.#focarIdade,
+			escolherIdade: ConstrutorFicha.#escolherIdade
 		}
 	};
 
@@ -902,7 +904,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			}
 			case "magias": {
 				const c = this.conjurador;
-				if (!c) return null;
+				if (!c || c.todas) return null;
 				if (c.escolas && e.magiasEscolas.length !== c.escolas) return `Escolha ${c.escolas} escolas de magia.`;
 				if (e.magias.length !== c.quantidade) return `Escolha ${c.quantidade} magias (${e.magias.length} escolhidas).`;
 				return null;
@@ -1444,6 +1446,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				return this.dados.poderes.filter((p) => p.system.tipo === "geral" && poderSelecionavel(this.dados, p) && (!ja.has(p.name) || p.name === atual))
 					.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")).map(poderCard);
 			}
+			case "complicacoesIdade":
+				return (this.dados.idades?.complicacoes ?? []).map((n) => poder(this.dados, n)).filter(Boolean).map(poderCard);
 			case "poderGeral":
 				return this.dados.poderes.filter((p) => p.system.tipo === "geral" && poderSelecionavel(this.dados, p))
 					.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")).map(poderCard);
@@ -1488,7 +1492,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				descricao: f.doc ? await this.#html(f.doc.uuid, f.doc.system?.description?.value) : ""
 			};
 		}
-		if (["grupo", "poderGeral", "poderes", "poderGeralOrigem", "poderGeralComplicacao", "poderGeralIdade"].includes(tipo)) {
+		if (["grupo", "poderGeral", "poderes", "poderGeralOrigem", "poderGeralComplicacao", "poderGeralIdade", "complicacoesIdade"].includes(tipo)) {
 			const p = poder(this.dados, valor);
 			if (!p) return null;
 			const i = await this.#infoPoder(p);
@@ -2032,7 +2036,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			};
 		}) : null;
 
-		const escolhidas = this.dados.magias.filter((m) => e.magias.includes(m.uuid)).map((m) => ({
+		// Usurpador (Usurpar): todas as magias do tipo de 1º círculo, sem escolha
+		const conhecidas = c.todas ? this.magiasDisponiveis().sort((a, b) => a.name.localeCompare(b.name, "pt-BR")) : this.dados.magias.filter((m) => e.magias.includes(m.uuid));
+		const escolhidas = conhecidas.map((m) => ({
 			uuid: m.uuid, nome: m.name, img: m.img,
 			sub: `${rotuloEscola(m.system.escola)} · ${m.system.tipo === "uni" ? "Universal" : (m.system.tipo === "arc" ? "Arcana" : "Divina")}`,
 			foco: m.uuid === this.focoMagia
@@ -2071,8 +2077,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			precisaEscolas,
 			escolhidas,
 			vagas: Array.from({ length: precisaEscolas ? 0 : vagas }, (_, i) => i),
-			qtd: c.quantidade,
+			qtd: c.todas ? escolhidas.length : c.quantidade,
 			qtdEscolhidas: escolhidas.length,
+			todas: !!c.todas,
 			infoEscola,
 			infoMagia
 		};
@@ -2660,54 +2667,63 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		return { grupos, info, escolhidaNome: escolhida?.name ?? "" };
 	}
 
-	/** Idades Variadas: faixas etárias (idades ajustadas pela raça), habilidades da faixa e complicações de idade. */
+	/** Idades Variadas: lista de faixas etárias e painel com a faixa em foco (escolha, poderes e complicações). */
 	async #ctxIdade() {
 		const e = this.estado;
 		const atual = this.faixaIdade;
-		const faixas = this.dados.idades.faixas.map((f) => ({
+		const faixasDef = this.dados.idades.faixas;
+		if (!faixasDef.some((f) => f.id === this.focoIdade)) this.focoIdade = atual?.id ?? "";
+		const faixas = faixasDef.map((f) => ({
 			id: f.id, nome: f.nome, resumo: f.resumo,
 			idades: this.rotuloIdades(f.id),
-			selecionado: f.id === atual?.id
+			selecionado: f.id === atual?.id,
+			foco: f.id === this.focoIdade
 		}));
 		const longevidade = this.idadesDaRaca()[0]?.multiplicador ?? 1;
-		const qtd = this.complicacoesIdadeExigidas();
-		const escolhidas = e.idade?.complicacoes ?? [];
-		const complicacoes = qtd ? await Promise.all(this.dados.idades.complicacoes.map(async (nome) => {
-			const p = poder(this.dados, nome);
-			return {
-				nome, img: p?.img,
-				descricao: p ? await this.#html(p.uuid, p.system.description?.value) : "",
-				selecionado: escolhidas.includes(nome)
-			};
-		})) : [];
-		const poderes = await Promise.all((atual?.poderes ?? []).map(async (n) => this.#infoPoder(poder(this.dados, n))));
-		const atributos = ATRIBUTOS.filter((k) => this.idadeAtr(k)).map((k) => `${NOMES_ATRIBUTOS[k]} ${sinal(this.idadeAtr(k))}`);
-		return {
-			faixas,
-			raca: this.raca?.name ?? "",
-			longevidade: longevidade !== 1 ? (longevidade > 1 ? `Raça longeva: idades ×${longevidade} a partir de adulto.` : `Raça de vida curta: idades ×${String(longevidade).replace(".", ",")}.`) : "",
-			info: atual ? {
-				nome: atual.nome,
-				idades: this.rotuloIdades(atual.id),
-				descricao: atual.descricao,
+		const f = faixasDef.find((x) => x.id === this.focoIdade);
+		let info = null;
+		if (f) {
+			const escolhida = f.id === atual?.id;
+			const poderes = await Promise.all((f.poderes ?? []).map((n) => this.#infoPoder(poder(this.dados, n))));
+			const atributos = ATRIBUTOS.filter((k) => f.atributos?.[k]).map((k) => `${NOMES_ATRIBUTOS[k]} ${sinal(f.atributos[k])}`);
+			const qtd = escolhida ? this.complicacoesIdadeExigidas() : Number(f.complicacoes ?? 0);
+			const marcadas = escolhida ? e.idade?.complicacoes ?? [] : [];
+			const complicacoes = await Promise.all(marcadas.map(async (nome) => {
+				const p = poder(this.dados, nome);
+				return { nome, img: p?.img, descricao: p ? await this.#html(p.uuid, p.system.description?.value) : "" };
+			}));
+			info = {
+				id: f.id, nome: f.nome, escolhida,
+				idades: this.rotuloIdades(f.id),
+				descricao: f.descricao,
 				atributos: atributos.join(", "),
 				poderes: poderes.filter(Boolean),
-				niveisExtras: atual.niveisExtras ?? 0,
+				niveisExtras: f.niveisExtras ?? 0,
 				anos: e.idade?.anos ?? "",
-				semOrigem: atual.beneficiosOrigem === 0,
-				umBeneficio: atual.beneficiosOrigem === 1,
-				menosPericia: this.menosPericiaPorIdade,
-				poderGeral: atual.poderGeralOpcional ? {
+				semOrigem: f.beneficiosOrigem === 0,
+				umBeneficio: f.beneficiosOrigem === 1,
+				menosPericia: escolhida && this.menosPericiaPorIdade,
+				trocaZera: !escolhida && ((e.idade?.complicacoes?.length ?? 0) > 0 || !!e.idade?.poderGeral),
+				qtdComplicacoes: qtd,
+				qtdEscolhidas: marcadas.length,
+				completas: marcadas.length >= qtd,
+				complicacoes,
+				poderGeral: escolhida && f.poderGeralOpcional ? {
 					campo: "idade.poderGeral",
 					lista: "poderGeralIdade",
 					titulo: "Já Vi Coisas — poder geral (traz uma complicação de idade)",
 					escolhido: e.idade?.poderGeral ?? ""
 				} : null,
-				poderGeralInfo: atual.poderGeralOpcional && e.idade?.poderGeral ? await this.#infoPoder(poder(this.dados, e.idade.poderGeral)) : null
-			} : null,
-			qtdComplicacoes: qtd,
-			qtdEscolhidas: escolhidas.length,
-			complicacoes
+				poderGeralOpcional: !!f.poderGeralOpcional,
+				poderGeralInfo: escolhida && f.poderGeralOpcional && e.idade?.poderGeral ? await this.#infoPoder(poder(this.dados, e.idade.poderGeral)) : null
+			};
+		}
+		return {
+			faixas,
+			raca: this.raca?.name ?? "",
+			longevidade: longevidade !== 1 ? (longevidade > 1 ? `Raça longeva: idades ×${longevidade} a partir de adulto.` : `Raça de vida curta: idades ×${String(longevidade).replace(".", ",")}.`) : "",
+			escolhidaNome: atual?.nome ?? "",
+			info
 		};
 	}
 
@@ -2990,7 +3006,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			itens.push({ nome, qtd: n * pacote, comprado: true });
 		}
 
-		const magias = this.conjurador ? this.dados.magias.filter((m) => e.magias.includes(m.uuid)) : [];
+		const conj = this.conjurador;
+		const magias = !conj ? [] : conj.todas ? this.magiasDisponiveis() : this.dados.magias.filter((m) => e.magias.includes(m.uuid));
 		// Magias raciais: uma vez só (se a classe também der a magia, fica a da classe;
 		// o redutor de –1 PM vem do efeito do poder racial)
 		const jaTem = new Set(magias.map((m) => m.uuid));
@@ -3134,6 +3151,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	/** Define um campo do estado aplicando as invalidações necessárias. */
 	#definirCampo(campo, valor) {
 		const e = this.estado;
+		// passo atual antes da mudança: se passos surgirem ou sumirem (ex.: criança fica sem origem),
+		// o construtor continua no mesmo passo em vez de pular para o que ficou no mesmo índice
+		const passoAntes = this.passos()[this.indice];
 		if (campo === "divindade") this.focoDivindade = "";
 		const anterior = foundry.utils.getProperty(e, campo);
 		foundry.utils.setProperty(e, campo, valor);
@@ -3244,7 +3264,19 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			e.classePoderEscolhas.especialista = e.classePoderEscolhas.especialista
 				.filter((k) => treinadas.has(k)).slice(0, this.qtdEspecialista);
 		}
+		this.#manterPasso(passoAntes);
 		this.#mudou();
+	}
+
+	/** Reposiciona o índice no mesmo passo (id e sub) depois que a lista de passos mudou. */
+	#manterPasso(passoAntes) {
+		if (!passoAntes) return;
+		const passos = this.passos();
+		const novo = passos.findIndex((p) => p.id === passoAntes.id && (p.sub ?? null) === (passoAntes.sub ?? null));
+		if (novo < 0 || novo === this.indice) return;
+		const delta = novo - this.indice;
+		this.indice = novo;
+		this.estado.alcancado = Math.min(passos.length - 1, Math.max(novo, (this.estado.alcancado ?? 0) + delta));
 	}
 
 	/* ---------------- Ações ---------------- */
@@ -3625,6 +3657,19 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	}
 
 	/** Complicações: escolhe a complicação em foco, ou desiste dela se já for a escolhida. */
+	/** Idades Variadas: clicar numa faixa só mostra os detalhes; a escolha é pelo botão do painel. */
+	static #focarIdade(event, target) {
+		this.focoIdade = target.dataset.valor;
+		this.render();
+	}
+
+	static #escolherIdade(event, target) {
+		const id = target.dataset.valor;
+		this.focoIdade = id;
+		if (this.estado.idade?.faixa === id) return this.render();
+		this.#definirCampo("idade.faixa", id);
+	}
+
 	static #escolherComplicacao(event, target) {
 		const uuid = target.dataset.valor;
 		const atual = this.estado.complicacoes?.[0];

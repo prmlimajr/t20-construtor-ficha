@@ -147,6 +147,9 @@ function conjuradorDoTexto(t) {
 	const escolas = numeroPorExtenso(/escolha (\w+) escolas/.exec(n)?.[1] ?? "") ?? 0;
 	const atr = /atributo-chave para lancar magias e (\w+)/.exec(n)?.[1] ?? "";
 	const atributo = atr.startsWith("sab") ? "sab" : atr.startsWith("car") ? "car" : "int";
+	// Usurpador: não começa com magias, mas Usurpar lança qualquer magia divina dos círculos acessíveis
+	// → a ficha recebe todas as magias do tipo de 1º círculo (sem escolha)
+	if (/nao comeca com nenhuma magia/.test(n) && /usurpar/.test(n)) return { tipo, quantidade: 0, escolas: 0, atributo, todas: true };
 	return { tipo, quantidade: qtd, escolas, atributo };
 }
 

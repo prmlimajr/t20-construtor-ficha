@@ -1007,6 +1007,7 @@
 .t20-construtor .cf-card img { align-self: center; }
 
 /* Idades Variadas */
-.t20-construtor .cf-idade-complicacoes { margin-bottom: 8px; }
+.t20-construtor .cf-idade .cf-escolhida { color: var(--cf-ouro); font-weight: bold; margin: 4px 0 8px; }
+.t20-construtor .cf-idade .cf-escolha-racial .cf-abrir { margin-bottom: 8px; }
 .t20-construtor .cf-idade .cf-card-nome small { font-weight: normal; opacity: 0.8; }
 .t20-construtor .cf-idade .cf-info .cf-campo input { width: 100%; }

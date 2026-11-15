@@ -627,7 +627,7 @@ const PODERES_DO_CONSTRUTOR = [
 	{
 		nome: "Abatido",
 		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "icons/magic/control/voodoo-doll-pain-damage-purple.webp",
 		descricao: "<p>Seu vigor se foi. Você recebe –2 PV por nível.</p>",
 		efeitos: (img) => [{
 			name: "Abatido", img, type: "base", transfer: true, disabled: false,
@@ -639,7 +639,7 @@ const PODERES_DO_CONSTRUTOR = [
 	{
 		nome: "Catarata",
 		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "icons/magic/control/voodoo-doll-pain-damage-purple.webp",
 		descricao: "<p>Seus olhos já não são os mesmos. Você sofre –5 em Percepção e Pontaria.</p>",
 		efeitos: (img) => [{
 			name: "Catarata", img, type: "base", transfer: true, disabled: false,
@@ -652,7 +652,7 @@ const PODERES_DO_CONSTRUTOR = [
 	{
 		nome: "Dedos Trêmulos",
 		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "icons/magic/control/voodoo-doll-pain-damage-purple.webp",
 		descricao: "<p>Você sofre –2 em Luta e Pontaria. Além disso, quando usa um item que esteja empunhando, role 1d4. Em um resultado 1, você derruba esse item.</p>",
 		efeitos: (img) => [{
 			name: "Dedos Trêmulos", img, type: "base", transfer: true, disabled: false,
@@ -665,7 +665,7 @@ const PODERES_DO_CONSTRUTOR = [
 	{
 		nome: "Definhamento",
 		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "icons/magic/control/voodoo-doll-pain-damage-purple.webp",
 		descricao: "<p>A idade roubou seu peso, deixando-o um fiapo do que era antes. Você sofre –5 em Fortitude e em testes de manobras de combate.</p>",
 		efeitos: (img) => [{
 			name: "Definhamento", img, type: "base", transfer: true, disabled: false,
@@ -677,13 +677,13 @@ const PODERES_DO_CONSTRUTOR = [
 	{
 		nome: "Desatento",
 		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "icons/magic/control/voodoo-doll-pain-damage-purple.webp",
 		descricao: "<p>Você já não é mais tão atento quanto outrora. Na primeira rodada de qualquer cena de ação, role um dado. Em um resultado ímpar, você fica surpreendido (mesmo que um efeito possa evitar isso).</p>"
 	},
 	{
 		nome: "“Devagar, Jovem!”",
 		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "icons/magic/control/voodoo-doll-pain-damage-purple.webp",
 		descricao: "<p>Você já não anda no mesmo ritmo que antes. Seu deslocamento diminui em –3m e você não pode correr ou fazer investidas.</p>",
 		efeitos: (img) => [{
 			name: "“Devagar, Jovem!”", img, type: "base", transfer: true, disabled: false,
@@ -695,13 +695,13 @@ const PODERES_DO_CONSTRUTOR = [
 	{
 		nome: "Gota",
 		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "icons/magic/control/voodoo-doll-pain-damage-purple.webp",
 		descricao: "<p>Sempre que faz um teste de Destreza ou de perícias baseadas nesse atributo você perde 1d6 pontos de vida. Você só pode recuperar esses PV com descanso.</p>"
 	},
 	{
 		nome: "Juntas Duras",
 		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "icons/magic/control/voodoo-doll-pain-damage-purple.webp",
 		descricao: "<p>Suas articulações doem. Você sofre –5 em testes de Acrobacia e Reflexos.</p>",
 		efeitos: (img) => [{
 			name: "Juntas Duras", img, type: "base", transfer: true, disabled: false,
@@ -714,7 +714,7 @@ const PODERES_DO_CONSTRUTOR = [
 	{
 		nome: "Melancólico",
 		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "icons/magic/control/voodoo-doll-pain-damage-purple.webp",
 		descricao: "<p>Você já não tem mais tanta motivação para realizar grandes façanhas. Você perde 1 PM por nível.</p>",
 		efeitos: (img) => [{
 			name: "Melancólico", img, type: "base", transfer: true, disabled: false,
@@ -726,13 +726,13 @@ const PODERES_DO_CONSTRUTOR = [
 	{
 		nome: "Memórias Tristes",
 		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "icons/magic/control/voodoo-doll-pain-damage-purple.webp",
 		descricao: "<p>Você passou por um trauma, como a perda de um ente querido ou a culpa por um erro que cometeu e pelo qual nunca se perdoou. Sempre que rola um resultado 1 natural em qualquer teste, você fica pasmo por 1 rodada e frustrado até o fim do dia (cumulativo).</p>"
 	},
 	{
 		nome: "“No Meu Tempo...”",
 		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "icons/magic/control/voodoo-doll-pain-damage-purple.webp",
 		descricao: "<p>Você se prende a visões idealizadas de um passado que nunca existiu e se torna presa fácil para manipulação. Você sofre –5 em Intuição e Vontade.</p>",
 		efeitos: (img) => [{
 			name: "“No Meu Tempo...”", img, type: "base", transfer: true, disabled: false,
@@ -745,13 +745,13 @@ const PODERES_DO_CONSTRUTOR = [
 	{
 		nome: "Pulmão Ruim",
 		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "icons/magic/control/voodoo-doll-pain-damage-purple.webp",
 		descricao: "<p>Quando corre ou prende a respiração, você precisa fazer testes de Fortitude para não ficar fatigado a partir da primeira rodada (normalmente, personagens só precisam fazer esses testes após um número de rodadas igual a sua Constituição +1). Além disso, sempre que faz uma investida, você fica fatigado até o fim da cena.</p>"
 	},
 	{
 		nome: "Rabugento",
 		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "icons/magic/control/voodoo-doll-pain-damage-purple.webp",
 		descricao: "<p>Você reclama de tudo. Você sofre –5 em testes de Carisma e de perícias baseadas nesse atributo, exceto Intimidação.</p>",
 		efeitos: (img) => [{
 			name: "Rabugento", img, type: "base", transfer: true, disabled: false,
@@ -767,37 +767,37 @@ const PODERES_DO_CONSTRUTOR = [
 	{
 		nome: "Recurvado",
 		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "icons/magic/control/voodoo-doll-pain-damage-purple.webp",
 		descricao: "<p>A idade dobrou suas costas. Você conta como uma categoria de tamanho menor para alcance natural, modificador de manobras e armas que pode empunhar (mas não para espaço ocupado, modificador de Furtividade ou dano de armas naturais).</p>"
 	},
 	{
 		nome: "Sono Ruim",
 		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "icons/magic/control/voodoo-doll-pain-damage-purple.webp",
 		descricao: "<p>Você acorda várias vezes no meio da noite, o que atrapalha seu descanso. Sua recuperação de PM e PV é sempre uma categoria pior. Se a condição de descanso já é ruim, você recupera apenas 1 PM e 1 PV, independentemente do seu nível. Se já recupera apenas 1 PM e 1 PV, não recupera nada!</p>"
 	},
 	{
 		nome: "Teimoso",
 		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "icons/magic/control/voodoo-doll-pain-damage-purple.webp",
 		descricao: "<p>Sempre que falha em um teste de atributo ou de perícia que possa tentar novamente, você é obrigado a tentar pelo menos mais uma vez (mesmo que isso possa prejudicá-lo). Teimoso é quem teima com você!</p>"
 	},
 	{
 		nome: "Tosse",
 		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "icons/magic/control/voodoo-doll-pain-damage-purple.webp",
 		descricao: "<p>Em cenas de ação, role 1d6 no início de cada rodada. Num resultado 1, você tem uma crise de tosse e fica atordoado por 1 rodada. Em cenas de interpretação, role 1d6 sempre que fizer um teste de perícia baseada em Carisma. Num resultado 1, você tem uma crise de tosse e sofre uma penalidade de –5 nesse teste.</p>"
 	},
 	{
 		nome: "Turrão",
 		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "icons/magic/control/voodoo-doll-pain-damage-purple.webp",
 		descricao: "<p>Você faz tudo sempre do seu jeito e tem dificuldade de lidar com coisas nas quais não é perito. Você não recebe o bônus de metade do nível em perícias nas quais não é treinado.</p>"
 	},
 	{
 		nome: "Velha Ferida",
 		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "icons/magic/control/voodoo-doll-pain-damage-purple.webp",
 		descricao: "<p>Você tem um machucado antigo, que nunca cicatrizou direito. Sempre que você sofre um acerto crítico, o multiplicador de dano aumenta em +1 e você fica fraco (mesmo que seja imune, cumulativo).</p>"
 	},
 	// Sahiri (variante de dahllan): substituem Amiga das Plantas e Armadura da Natureza
