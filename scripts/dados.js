@@ -213,28 +213,45 @@ async function carregar() {
 	return dados;
 }
 
+/** Efeito "somar" no formato dos efeitos de poder do sistema (Foundry v14). */
+function efeitoSomar(nome, img, changes) {
+	return {
+		name: nome, img, type: "base", transfer: true, disabled: false,
+		system: { changes: changes.map(([key, value]) => ({ key, value, type: "add", phase: "initial", priority: null })), onuse: false }
+	};
+}
+
 /**
- * Poderes citados pelas regras que o suplemento não traz: viram itens simples, com o nome e um
- * aviso para consultar o livro (ex.: Herança de Drashantyr, que falta nas variantes de suraggel).
+ * Poderes que as regras usam mas o suplemento não traz: o construtor os define aqui, com
+ * descrição e efeitos, no mesmo formato dos poderes do compêndio.
  */
+const PODERES_DO_CONSTRUTOR = [
+	{
+		nome: "Herança de Drashantyr",
+		tipo: "racial", subtipo: "Suraggel",
+		img: "systems/tormenta20/icons/racas/suraggel.webp",
+		descricao: "<p>Graças ao poder elemental dos dragões, você recebe +1 PM e redução de ácido, eletricidade, fogo, frio, luz e trevas 5.</p>",
+		efeitos: (img) => [efeitoSomar("Herança de Drashantyr", img, [
+			["system.attributes.pm.bonus.total", 1],
+			...["acido", "eletricidade", "fogo", "frio", "luz", "trevas"].map((t) => [`system.tracos.resistencias.${t}.bonus`, 5])
+		])]
+	}
+];
+
 function poderesSubstitutos(sup) {
 	if (!sup.ligado) return [];
-	const faltando = [
-		{ nome: "Herança de Drashantyr", subtipo: "Suraggel", livro: "Heróis de Arton" }
-	].filter((x) => !sup.poderes.some((p) => p.name === x.nome));
-	return faltando.map((x) => ({
-		name: x.nome,
-		type: "poder",
-		img: "icons/svg/item-bag.svg",
-		uuid: `${MODULE_ID}.substituto.${x.nome}`,
-		_id: null,
-		substituto: true,
-		effects: [],
-		system: {
-			tipo: "racial", subtipo: x.subtipo,
-			description: { value: `<p><em>Este poder não está nos dados dos Suplementos de Arton. Consulte o ${x.livro} e anote o efeito na ficha.</em></p>` }
-		}
-	}));
+	return PODERES_DO_CONSTRUTOR
+		.filter((x) => !sup.poderes.some((p) => p.name === x.nome)) // se o suplemento passar a ter, vale o dele
+		.map((x) => ({
+			name: x.nome,
+			type: "poder",
+			img: x.img,
+			uuid: `${MODULE_ID}.poder.${x.nome}`,
+			_id: null,
+			substituto: true,
+			effects: x.efeitos(x.img),
+			system: { tipo: x.tipo, subtipo: x.subtipo, description: { value: x.descricao } }
+		}));
 }
 
 /** O poder pode aparecer nas listas de escolha? (do sistema, ou do suplemento com a chave "Poderes" ligada) */

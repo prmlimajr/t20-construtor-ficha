@@ -5,8 +5,10 @@ import { MODULE_ID, ATRIBUTOS } from "./regras.js";
 import { equipamento } from "./dados.js";
 
 function doCompendio(doc) {
-	// poder que o suplemento não traz (criado pelo construtor só com nome e aviso)
-	if (doc?.substituto) return { name: doc.name, type: doc.type, img: doc.img, system: foundry.utils.deepClone(doc.system) };
+	// poder que o suplemento não traz, definido pelo construtor (dados.js → PODERES_DO_CONSTRUTOR)
+	if (doc?.substituto) {
+		return { name: doc.name, type: doc.type, img: doc.img, system: foundry.utils.deepClone(doc.system), effects: foundry.utils.deepClone(doc.effects ?? []) };
+	}
 	return game.items.fromCompendium(doc);
 }
 
