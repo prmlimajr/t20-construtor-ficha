@@ -989,3 +989,19 @@
 
 /* Complicações */
 .t20-construtor .cf-complicacoes h4 small { font-size: 12px; -webkit-text-stroke: 0; opacity: 0.8; }
+
+/* Cards: nomes longos quebram linha (os botões do Foundry não quebram por padrão) e o card cresce */
+.t20-construtor button.cf-card {
+	min-height: 56px;
+	padding: 8px 10px;
+	gap: 10px;
+	white-space: normal;
+	line-height: 1.25;
+}
+.t20-construtor .cf-card-nome,
+.t20-construtor .cf-card-sub {
+	white-space: normal;
+	overflow-wrap: anywhere;
+}
+.t20-construtor .cf-card-texto { flex: 1 1 auto; min-width: 0; overflow: visible; }
+.t20-construtor .cf-card img { align-self: center; }

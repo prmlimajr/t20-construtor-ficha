@@ -22,7 +22,7 @@
 	<aside class="cf-info">
 		{{#if info}}
 		<h3><img src="{{info.img}}" alt=""> {{info.nome}}</h3>
-		{{#if info.fonte}}<p class="cf-fonte">{{info.fonte}} (Suplementos de Arton)</p>{{/if}}
+		{{#if info.fonte}}<p class="cf-fonte">{{info.fonte}}{{#if info.doSuplemento}} (Suplementos de Arton){{/if}}</p>{{/if}}
 		<p class="cf-destaque"><strong>Atributos:</strong> {{info.atributos}}</p>
 		{{#if info.abertos}}
 		<div class="cf-bloco cf-racas-abertas">

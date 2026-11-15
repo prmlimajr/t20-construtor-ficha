@@ -402,7 +402,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const r = this.raca;
 		if (!r) return [];
 		const out = [];
-		const doSuplemento = !!fonteDe(this.dados, r);
+		const doSuplemento = !!this.dados.fonteSuplemento?.has(r.uuid);
 		// escolhas da raça que substituem habilidades (ex.: suraggel variante troca Luz Sagrada por uma herança)
 		const escolhasDaRaca = (this.dados.regrasRacas[`raca:${r.name}`]?.escolhas ?? [])
 			.filter((regra) => !(regra.somenteSuplemento && !doSuplemento) && !(regra.requerSuplemento && !this.dados.suplementoLigado));
@@ -1595,6 +1595,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			const din = atributosDinamicosRaca(r);
 			info = {
 				nome: r.name, img: r.img, fonte: fonteDe(this.dados, r),
+				doSuplemento: !!this.dados.fonteSuplemento?.has(r.uuid),
 				atributos: this.#textoAtributosRaca(r),
 				descricao: await this.#html(r.uuid, r.system.description?.value),
 				poderes,
@@ -1878,7 +1879,18 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				semRegras: !this.regrasClasse
 			};
 		}
-		return { classes, info };
+		// agrupadas por livro, como as raças: o básico primeiro, depois Heróis de Arton e os demais
+		const ORDEM = ["", "Heróis de Arton"];
+		const porLivro = new Map();
+		for (const card of classes) (porLivro.get(card.fonte) ?? porLivro.set(card.fonte, []).get(card.fonte)).push(card);
+		const grupos = [...porLivro.entries()]
+			.sort(([a], [b]) => {
+				const ia = ORDEM.indexOf(a), ib = ORDEM.indexOf(b);
+				if (ia >= 0 || ib >= 0) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+				return a.localeCompare(b, "pt-BR");
+			})
+			.map(([fonte, lista]) => ({ titulo: fonte || "Tormenta20 — Jogo do Ano", classes: lista }));
+		return { classes, grupos, variosGrupos: grupos.length > 1, filtro: this.filtros?.classe ?? "", info };
 	}
 
 	/** Magias de 1º círculo que a classe pode aprender (respeitando as escolas escolhidas). */

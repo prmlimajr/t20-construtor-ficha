@@ -163,7 +163,13 @@ async function carregar() {
 	const doConstrutor = poderesSubstitutos(sup);
 	// os poderes do construtor marcados "substituiSuplemento" tiram os homônimos do suplemento da lista
 	const substituidos = new Set(doConstrutor.filter((p) => p.substituiSuplemento).map((p) => p.name));
-	const todosPoderes = [...poderes, ...doConstrutor, ...sup.poderes.filter((p) => !substituidos.has(p.name))];
+	// exclusivos por último: a busca por nome continua achando primeiro o do sistema ou do suplemento
+	const todosPoderes = [
+		...poderes,
+		...doConstrutor.filter((p) => !p.exclusivo),
+		...sup.poderes.filter((p) => !substituidos.has(p.name)),
+		...doConstrutor.filter((p) => p.exclusivo)
+	];
 	// itens: os do sistema primeiro (em nomes repetidos, vale o do livro básico)
 	const equipPorNome = new Map([...indiceEquip].map((e) => [normalizar(e.name), e]));
 	for (const { doc } of sup.itens) if (!equipPorNome.has(normalizar(doc.name))) equipPorNome.set(normalizar(doc.name), doc);
@@ -356,12 +362,7 @@ const PODERES_DO_CONSTRUTOR = [
 		nome: "Devoção Ampla",
 		tipo: "concedido", subtipo: "", substituiSuplemento: true,
 		img: "systems/tormenta20/icons/poderes/concedidos.webp",
-		descricao: "<p>Clérigos e frades do Panteão, druidas de Arton e paladinos do bem não recebem poderes concedidos. Em compensação, por sua devoção ampla, recebem +2 PM por patamar.</p>"
-			+ "<h4>Patamares de Jogo</h4><p>As classificações abaixo fornecem uma noção da escala de poder dos personagens e afetam certas habilidades.</p><ul>"
-			+ "<li><strong>Iniciante (1º ao 4º nível).</strong> Aventureiro novato, envolvido em missões locais, como proteger vilas do ataque de bandidos e escoltar caravanas.</li>"
-			+ "<li><strong>Veterano (5º ao 10º nível).</strong> Neste patamar, o herói presta serviços importantes a nobres e líderes de guildas.</li>"
-			+ "<li><strong>Campeão (11º ao 16º nível).</strong> Já famoso por suas façanhas, o aventureiro trabalha para monarcas e enfrenta grandes vilões e monstros terríveis.</li>"
-			+ "<li><strong>Lenda (17º ao 20º nível).</strong> Entre os mais poderosos de Arton, o herói lida com perigos que ameaçam todo o mundo... Ou mesmo toda a realidade!</li></ul>",
+		descricao: "<p>Clérigos e frades do Panteão, druidas de Arton e paladinos do bem não recebem poderes concedidos. Em compensação, por sua devoção ampla, recebem +2 PM por patamar.</p>",
 		// +2 PM por patamar (o sistema calcula @patamar a partir do nível: 1 a 4)
 		efeitos: (img) => [efeitoSomar("Devoção Ampla", img, [["system.attributes.pm.bonus.total", "2*@patamar"]])]
 	},
@@ -371,6 +372,186 @@ const PODERES_DO_CONSTRUTOR = [
 		tipo: "ability", subtipo: "Arcanista",
 		img: "systems/tormenta20/icons/poderes/classes/conjuradores/mao-divindade.webp",
 		descricao: "<p>Escolha um deus maior. Uma vez feita, essa escolha não pode ser mudada. Você aprende uma magia divina de 1º círculo e pode aprender magias divinas de 1º círculo como magias de feiticeiro. No 2º nível, você recebe um poder concedido do deus escolhido, aprovado pelo mestre, sem precisar ser devoto dele (mas você ainda pode ser devoto desse ou de outro deus).</p>"
+	},
+	// Elfo-do-Gelo (Bestiário de Arton)
+	{
+		nome: "Graça de Beluhga",
+		tipo: "racial", subtipo: "Elfo-do-Gelo",
+		img: "systems/tormenta20/icons/racas/elfo.webp",
+		descricao: "<p>Seu deslocamento é 12m (em vez de 9m) e não é reduzido por terreno difícil natural.</p>",
+		efeitos: (img) => [{
+			name: "Graça de Beluhga", img, type: "base", transfer: true, disabled: false,
+			system: { changes: [{ key: "system.attributes.movement.walk.base", value: 12, type: "override", phase: "initial", priority: null }], onuse: false }
+		}]
+	},
+	{
+		nome: "Herança Gélida",
+		tipo: "racial", subtipo: "Elfo-do-Gelo",
+		img: "systems/tormenta20/icons/racas/elfo.webp",
+		descricao: "<p>Você recebe redução de frio 10 e, quando causa dano, causa +1d4 pontos de dano de frio.</p>",
+		efeitos: (img) => [
+			efeitoSomar("Herança Gélida", img, [["system.tracos.resistencias.frio.bonus", 10]]),
+			// +1d4 de frio em todo dano causado: aplicado automaticamente ao atacar
+			efeitoAoUsar("Herança Gélida: +1d4 de frio", "icons/svg/upgrade.svg", [["dano", "1d4"]], { automatico: true })
+		]
+	},
+	{
+		nome: "Sentidos Glaciais",
+		tipo: "racial", subtipo: "Elfo-do-Gelo",
+		img: "systems/tormenta20/icons/racas/elfo.webp",
+		descricao: "<p>Você recebe visão na penumbra e +2 em Percepção e Sobrevivência.</p>",
+		efeitos: (img) => [efeitoSomar("Sentidos Glaciais", img, [
+			["system.attributes.sentidos.value", "penumbra"],
+			["system.pericias.perc.bonus", 2],
+			["system.pericias.sobr.bonus", 2]
+		])]
+	},
+	// Lâmia (Bestiário de Arton)
+	{
+		nome: "Corpo Felino",
+		tipo: "racial", subtipo: "Lâmia",
+		img: "icons/creatures/abilities/lion-roar-yellow.webp",
+		descricao: "<p>Seu tamanho é Grande e seu deslocamento é 12m. Entretanto, devido ao porte de sua metade humanoide, você conta como Média para fins das armas que usa.</p>",
+		efeitos: (img) => [{
+			name: "Corpo Felino", img, type: "base", transfer: true, disabled: false,
+			system: {
+				changes: [
+					{ key: "system.tracos.tamanho", value: "gra", type: "override", phase: "initial", priority: null },
+					{ key: "system.attributes.movement.walk.base", value: 12, type: "override", phase: "initial", priority: null }
+				],
+				onuse: false
+			}
+		}]
+	},
+	{
+		nome: "Magia das Lâmias",
+		tipo: "racial", subtipo: "Lâmia",
+		img: "icons/creatures/abilities/lion-roar-yellow.webp",
+		descricao: "<p>Você pode lançar duas das magias a seguir (atributo-chave Carisma): <em>Criar Ilusão</em>, <em>Compreensão</em>, <em>Disfarce Ilusório</em> ou <em>Visão Mística</em>. Caso aprenda novamente essa magia, seu custo diminui em –1 PM. Efeito Mágico.</p>",
+		// –1 PM nas magias escolhidas (o construtor preenche os nomes ao gravar)
+		efeitos: () => [{
+			name: "Magia das Lâmias", img: "icons/svg/upgrade.svg", type: "base", transfer: true, disabled: true,
+			system: { changes: [], onuse: true, abilityUse: { description: "", automatic: false, aumenta: false, custo: -1, names: [], types: ["spell"] } }
+		}]
+	},
+	{
+		nome: "Natureza Predadora",
+		tipo: "racial", subtipo: "Lâmia",
+		img: "icons/creatures/abilities/lion-roar-yellow.webp",
+		descricao: "<p>Você é uma criatura do tipo monstro e recebe visão no escuro e +2 em Enganação e Furtividade.</p>",
+		efeitos: (img) => [{
+			name: "Natureza Predadora", img, type: "base", transfer: true, disabled: false,
+			system: {
+				changes: [
+					{ key: "system.detalhes.tipo", value: "mon", type: "override", phase: "initial", priority: null },
+					{ key: "system.attributes.sentidos.value", value: "escuro", type: "add", phase: "initial", priority: null },
+					{ key: "system.pericias.enga.bonus", value: 2, type: "add", phase: "initial", priority: null },
+					{ key: "system.pericias.furt.bonus", value: 2, type: "add", phase: "initial", priority: null }
+				],
+				onuse: false
+			}
+		}]
+	},
+	{
+		nome: "Toque Psíquico",
+		tipo: "racial", subtipo: "Lâmia",
+		img: "icons/creatures/abilities/lion-roar-yellow.webp",
+		descricao: "<p>Você possui uma arma natural de toque psíquico (dano 1d6, crítico x2, psíquico). Uma vez por rodada, quando usa a ação agredir para atacar com outra arma, pode gastar 1 PM para fazer um ataque corpo a corpo extra com o toque psíquico, desde que tenha uma mão livre e ela não tenha sido usada para atacar neste turno.</p>",
+		// arma natural, no mesmo formato dos Chifres do minotauro: ataque de Luta e dano 1d6 psíquico
+		ativacao: { execucao: "", custo: 1, qtd: "", condicao: "", special: "" },
+		rolls: [
+			{ name: "Ataque", key: "ataque0", type: "ataque", parts: [["1d20", "", ""], ["luta", "", ""], ["", "", ""]], versatil: "", adaptavel: "" },
+			{ name: "Dano", key: "dano1", type: "dano", parts: [["1d6+@for", "psiquico", ""]], versatil: "", adaptavel: "" }
+		]
+	},
+	// Manotauro (Bestiário de Arton). "exclusivo": ligado só à raça pelo id; não troca os homônimos
+	// do livro básico (Chifres do minotauro, 1d6) nem do suplemento (Cascos, Medo de Altura).
+	{
+		nome: "Cascos",
+		tipo: "racial", subtipo: "Manotauro", exclusivo: true,
+		img: "systems/tormenta20/icons/racas/minotauro.webp",
+		descricao: "<p>Você possui uma arma natural de cascos (dano 1d8, crítico x2, impacto). Uma vez por rodada, quando usa a ação agredir para atacar com outra arma, pode gastar 1 PM para fazer um ataque corpo a corpo extra com os cascos.</p>",
+		ativacao: { execucao: "", custo: 1, qtd: "", condicao: "", special: "" },
+		rolls: [
+			{ name: "Ataque", key: "ataque0", type: "ataque", parts: [["1d20", "", ""], ["luta", "", ""], ["", "", ""]], versatil: "", adaptavel: "" },
+			{ name: "Dano", key: "dano1", type: "dano", parts: [["1d8+@for", "impacto", ""]], versatil: "", adaptavel: "" }
+		]
+	},
+	{
+		nome: "Chifres",
+		tipo: "racial", subtipo: "Manotauro", exclusivo: true,
+		img: "systems/tormenta20/icons/racas/minotauro.webp",
+		descricao: "<p>Você possui uma arma natural de chifres (dano 1d8, crítico x2, perfuração). Uma vez por rodada, quando usa a ação agredir para atacar com outra arma, pode gastar 1 PM para fazer um ataque corpo a corpo extra com os chifres.</p>",
+		ativacao: { execucao: "", custo: 1, qtd: "", condicao: "", special: "" },
+		rolls: [
+			{ name: "Ataque", key: "ataque0", type: "ataque", parts: [["1d20", "", ""], ["luta", "", ""], ["", "", ""]], versatil: "", adaptavel: "" },
+			{ name: "Dano", key: "dano1", type: "dano", parts: [["1d8+@for", "perfuracao", ""]], versatil: "", adaptavel: "" }
+		]
+	},
+	{
+		nome: "Corpulento",
+		tipo: "racial", subtipo: "Manotauro", exclusivo: true,
+		img: "systems/tormenta20/icons/racas/minotauro.webp",
+		descricao: "<p>Seu tamanho é Grande e seu deslocamento é 12m. Entretanto, você não pode se beneficiar de uma montaria e, se estiver carregando um cavaleiro, sofre −2 em testes (além das penalidades de sobrecarga, se houver) e é considerado em condição ruim para lançar magias.</p>",
+		efeitos: (img) => [{
+			name: "Corpulento", img, type: "base", transfer: true, disabled: false,
+			system: {
+				changes: [
+					{ key: "system.tracos.tamanho", value: "gra", type: "override", phase: "initial", priority: null },
+					{ key: "system.attributes.movement.walk.base", value: 12, type: "override", phase: "initial", priority: null }
+				],
+				onuse: false
+			}
+		}]
+	},
+	{
+		nome: "Medo de Altura",
+		tipo: "racial", subtipo: "Manotauro", exclusivo: true,
+		img: "systems/tormenta20/icons/racas/minotauro.webp",
+		descricao: "<p>Se estiver adjacente a uma queda de 3m ou mais (como um buraco ou penhasco), você fica abalado.</p>"
+	},
+	// Salamandra (Bestiário de Arton)
+	{
+		nome: "Calor Natural",
+		tipo: "racial", subtipo: "Salamandra", exclusivo: true,
+		img: "icons/creatures/reptiles/lizard-iguana-green.webp",
+		descricao: "<p>Você recebe +2 em Ofício (ferreiro) e pode gastar 2 PM para causar +1d6 pontos de dano de fogo com seus ataques até o fim da cena.</p>",
+		// +1d6 de fogo nos ataques: opção ao atacar (o jogador marca enquanto o efeito de 2 PM estiver ativo)
+		efeitos: () => [efeitoAoUsar("Calor Natural: +1d6 de fogo", "icons/svg/upgrade.svg", [["dano", "1d6"]])]
+	},
+	{
+		nome: "Cauda",
+		tipo: "racial", subtipo: "Salamandra", exclusivo: true,
+		img: "icons/creatures/reptiles/lizard-iguana-green.webp",
+		descricao: "<p>Você possui uma arma natural de cauda (dano 1d6, crítico x2, perfuração). Uma vez por rodada, quando usa a ação agredir para atacar com outra arma, pode gastar 1 PM para fazer um ataque corpo a corpo extra com a cauda.</p>",
+		ativacao: { execucao: "", custo: 1, qtd: "", condicao: "", special: "" },
+		rolls: [
+			{ name: "Ataque", key: "ataque0", type: "ataque", parts: [["1d20", "", ""], ["luta", "", ""], ["", "", ""]], versatil: "", adaptavel: "" },
+			{ name: "Dano", key: "dano1", type: "dano", parts: [["1d6+@for", "perfuracao", ""]], versatil: "", adaptavel: "" }
+		]
+	},
+	{
+		nome: "Cria das Chamas",
+		tipo: "racial", subtipo: "Salamandra", exclusivo: true,
+		img: "icons/creatures/reptiles/lizard-iguana-green.webp",
+		descricao: "<p>Você é uma criatura do tipo espírito e recebe redução de fogo 10 e visão no escuro.</p>",
+		efeitos: (img) => [{
+			name: "Cria das Chamas", img, type: "base", transfer: true, disabled: false,
+			system: {
+				changes: [
+					{ key: "system.detalhes.tipo", value: "esp", type: "override", phase: "initial", priority: null },
+					{ key: "system.tracos.resistencias.fogo.bonus", value: 10, type: "add", phase: "initial", priority: null },
+					{ key: "system.attributes.sentidos.value", value: "escuro", type: "add", phase: "initial", priority: null }
+				],
+				onuse: false
+			}
+		}]
+	},
+	{
+		nome: "Fraqueza Glacial",
+		tipo: "racial", subtipo: "Salamandra", exclusivo: true,
+		img: "icons/creatures/reptiles/lizard-iguana-green.webp",
+		descricao: "<p>Você sofre –5 em testes contra efeitos de frio e sofre 1 ponto de dano adicional por dado de dano de frio.</p>"
 	},
 	// Sahiri (variante de dahllan): substituem Amiga das Plantas e Armadura da Natureza
 	{
@@ -415,16 +596,19 @@ const PODERES_DO_CONSTRUTOR = [
 function poderesSubstitutos(sup) {
 	return PODERES_DO_CONSTRUTOR
 		.filter((x) => !x.requerSuplemento || sup.ligado)
-		// se o suplemento passar a ter o poder, vale o dele (a menos que o do construtor o substitua de propósito)
-		.filter((x) => x.substituiSuplemento || !sup.poderes.some((p) => p.name === x.nome))
+		// se o suplemento passar a ter o poder, vale o dele (a menos que o do construtor o substitua de
+		// propósito, ou seja exclusivo de uma raça do construtor e ligado a ela só pelo id)
+		.filter((x) => x.substituiSuplemento || x.exclusivo || !sup.poderes.some((p) => p.name === x.nome))
 		.map((x) => ({
 			name: x.nome,
 			type: "poder",
 			img: x.img,
-			uuid: `${MODULE_ID}.poder.${x.nome}`,
+			// exclusivos levam a raça no id, para não colidir com o homônimo de outra raça do construtor
+			uuid: x.exclusivo ? `${MODULE_ID}.poder.${x.subtipo}.${x.nome}` : `${MODULE_ID}.poder.${x.nome}`,
 			_id: null,
 			substituto: true,
 			substituiSuplemento: !!x.substituiSuplemento,
+			exclusivo: !!x.exclusivo,
 			apenasClasses: x.apenasClasses ?? null,
 			regiao: x.regiao ?? null,
 			itensOrigem: x.itensOrigem ?? [],
@@ -432,7 +616,8 @@ function poderesSubstitutos(sup) {
 			effects: x.efeitos ? x.efeitos(x.img) : [],
 			system: {
 				tipo: x.tipo, subtipo: x.subtipo, description: { value: x.descricao },
-				...(x.ativacao ? { ativacao: x.ativacao } : {})
+				...(x.ativacao ? { ativacao: x.ativacao } : {}),
+				...(x.rolls ? { rolls: x.rolls } : {})
 			}
 		}));
 }
@@ -451,6 +636,43 @@ function comOpcoesDivindades(regras, divindades) {
  */
 const RACAS_DO_CONSTRUTOR = [
 	{
+		nome: "Salamandra",
+		modelo: "Elfo",
+		livro: "Bestiário de Arton",
+		img: "icons/creatures/reptiles/lizard-iguana-green.webp",
+		atributos: { for: 0, des: 1, con: 2, int: 0, sab: 0, car: -1 },
+		habilidades: ["Calor Natural", "Cauda", "Cria das Chamas", "Fraqueza Glacial"],
+		descricao: "<p>Salamandra (<em>Bestiário de Arton</em>). Constituição +2, Destreza +1, Carisma –1.</p>"
+	},
+	{
+		nome: "Manotauro",
+		modelo: "Elfo",
+		livro: "Bestiário de Arton",
+		img: "systems/tormenta20/icons/racas/minotauro.webp",
+		atributos: { for: 2, des: 0, con: 1, int: -1, sab: -2, car: 0 },
+		habilidades: ["Cascos", "Chifres", "Corpulento", "Medo de Altura"],
+		descricao: "<p>Manotauro (<em>Bestiário de Arton</em>). Força +2, Constituição +1, Inteligência –1, Sabedoria –2.</p>"
+	},
+	{
+		nome: "Lâmia",
+		modelo: "Elfo",
+		livro: "Bestiário de Arton",
+		img: "icons/creatures/abilities/lion-roar-yellow.webp",
+		atributos: { for: 0, des: 0, con: -1, int: 0, sab: 1, car: 2 },
+		habilidades: ["Corpo Felino", "Magia das Lâmias", "Natureza Predadora", "Toque Psíquico"],
+		descricao: "<p>Lâmia (<em>Bestiário de Arton</em>). Carisma +2, Sabedoria +1, Constituição –1.</p>"
+	},
+	{
+		// raça nova: usa a estrutura de dados de uma raça do sistema ("modelo"), com atributos e habilidades próprios
+		nome: "Elfo-do-Gelo",
+		modelo: "Elfo",
+		livro: "Bestiário de Arton",
+		img: "systems/tormenta20/icons/racas/elfo.webp",
+		atributos: { for: 0, des: 1, con: -1, int: 0, sab: 2, car: 0 },
+		habilidades: ["Graça de Beluhga", "Herança Gélida", "Sentidos Glaciais"],
+		descricao: "<p>Elfo-do-gelo (<em>Bestiário de Arton</em>). Sabedoria +2, Destreza +1, Constituição –1.</p>"
+	},
+	{
 		nome: "Sahiri",
 		base: "Dahllan",
 		descricao: "<p>Sahiri é uma variante da raça dahllan. Usa as habilidades de dahllan, mas <em>Amiga das Plantas</em> e <em>Armadura de Allihanna</em> são substituídas por <em>Animar Rochas</em> e <em>Proteção da Terra</em>.</p>",
@@ -461,10 +683,27 @@ const RACAS_DO_CONSTRUTOR = [
 function racasDoConstrutor(racas, poderes) {
 	const out = [];
 	for (const def of RACAS_DO_CONSTRUTOR) {
-		const base = racas.find((r) => r.name === def.base);
+		const base = racas.find((r) => r.name === (def.base ?? def.modelo));
 		if (!base) continue;
 		const sistema = typeof base.system?.toObject === "function" ? base.system.toObject() : structuredClone(base.system);
-		const uuidDe = (nome) => poderes.find((p) => p.name === nome)?.uuid ?? null;
+		// habilidades da raça: primeiro as exclusivas dela, depois as do construtor, por fim qualquer homônima
+		const uuidDe = (nome) => (poderes.find((p) => p.name === nome && p.substituto && p.system?.subtipo === def.nome)
+			?? poderes.find((p) => p.name === nome && p.substituto)
+			?? poderes.find((p) => p.name === nome))?.uuid ?? null;
+		if (!def.base) {
+			// raça nova: atributos e habilidades próprios, sem +1 flexível
+			sistema.atributos = { ...def.atributos };
+			sistema.atributosDinamicos = { value: [], description: "+1 em Três Atributos Diferentes" };
+			sistema.grants = [{ title: "", desc: "", type: "multi", choices: def.habilidades.map(uuidDe).filter(Boolean).map((uuid) => ({ uuid })) }];
+			sistema.description = { ...(sistema.description ?? {}), value: def.descricao };
+			out.push({
+				name: def.nome, type: "race", img: def.img ?? base.img,
+				uuid: `${MODULE_ID}.raca.${def.nome}`, _id: null,
+				substituto: true, fonteLivro: def.livro ?? "",
+				effects: [], system: sistema
+			});
+			continue;
+		}
 		sistema.grants = (sistema.grants ?? []).map((g) => ({
 			...g,
 			choices: (g.choices ?? []).map((c) => {
@@ -510,7 +749,7 @@ export function poderSelecionavel(dados, p) {
 
 /** Nome do compêndio do suplemento de onde veio o documento (ou ""). */
 export function fonteDe(dados, doc) {
-	return dados.fonteSuplemento?.get(doc?.uuid) ?? "";
+	return dados.fonteSuplemento?.get(doc?.uuid) ?? doc?.fonteLivro ?? "";
 }
 
 /** Busca um poder pelo nome; avisa no console quando o nome não existe no compêndio. */

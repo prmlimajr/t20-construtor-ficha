@@ -477,6 +477,19 @@
       "magiasFixas": [
         "Conjurar Monstro"
       ]
+    },
+    "Magia das Lâmias": {
+      "id": "magiaLamias",
+      "tipo": "magias",
+      "titulo": "Magias das lâmias",
+      "quantidade": 2,
+      "atributo": "car",
+      "nomes": [
+        "Criar Ilusão",
+        "Compreensão",
+        "Disfarce Ilusório",
+        "Visão Mística"
+      ]
     }
   }
 }

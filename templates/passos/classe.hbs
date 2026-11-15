@@ -1,15 +1,23 @@
 <div class="cf-duas">
-	<div class="cf-lista cf-cards">
-		{{#each classes}}
-		<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}}" data-action="definir" data-campo="classe" data-valor="{{uuid}}">
-			<img src="{{img}}" alt="">
-			<span class="cf-card-texto">
-				<span class="cf-card-nome">{{nome}}</span>
-				<span class="cf-card-sub">{{resumo}}</span>
-				{{#if fonte}}<span class="cf-fonte">{{fonte}}</span>{{/if}}
-			</span>
-		</button>
+	<div class="cf-lista cf-lista-filtravel">
+		<input type="search" class="cf-filtro cf-filtro-lista" data-filtro="classe" placeholder="Buscar classe…" value="{{filtro}}" aria-label="Buscar classe pelo nome">
+		{{#each grupos}}
+		<section class="cf-grupo">
+			{{#if ../variosGrupos}}<h4 class="cf-grupo-titulo">{{titulo}} <small>{{classes.length}}</small></h4>{{/if}}
+			<div class="cf-cards cf-cards-coluna">
+				{{#each classes}}
+				<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}}" data-action="definir" data-campo="classe" data-valor="{{uuid}}" data-busca="{{nome}}">
+					<img src="{{img}}" alt="">
+					<span class="cf-card-texto">
+						<span class="cf-card-nome">{{nome}}</span>
+						<span class="cf-card-sub">{{resumo}}</span>
+					</span>
+				</button>
+				{{/each}}
+			</div>
+		</section>
 		{{/each}}
+		<p class="cf-vazio cf-sem-resultado" hidden>Nenhuma classe com esse nome.</p>
 	</div>
 	<aside class="cf-info">
 		{{#if info}}
