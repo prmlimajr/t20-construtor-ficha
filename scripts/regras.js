@@ -107,7 +107,7 @@ const SIGLAS_ATRIBUTO = new Set(["for", "des", "con", "int", "sab", "car"]);
  * Chave da perícia a partir do nome do livro; null se não reconhecer.
  * "Ofício (Int)" ou "Ofício" → "oficio" (um Ofício à escolha); "Ofício (alquimista)" → "alqu".
  */
-function chavePericia(nome, naoReconhecidas = []) {
+export function chavePericia(nome, naoReconhecidas = []) {
 	const entre = /\(([^)]*)\)/.exec(nome)?.[1]?.trim() ?? "";
 	const base = PERICIAS_POR_NOME[normalizar(nome.replace(/\([^)]*\)/g, "")).replace(/[^a-z]/g, "")] ?? null;
 	if (base === "oficio" && entre && !SIGLAS_ATRIBUTO.has(normalizar(entre))) {

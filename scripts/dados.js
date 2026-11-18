@@ -560,13 +560,13 @@ const PODERES_DO_CONSTRUTOR = [
 	{
 		nome: "Tamanho Menor",
 		tipo: "ability", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "systems/tormenta20/icons/magias/alterar-tamanho.webp",
 		descricao: "<p>Você é uma categoria de tamanho menor que o padrão de sua raça (exceto se sua raça já for Minúscula; nesse caso, a mudança é apenas estética).</p>"
 	},
 	{
 		nome: "Protegido dos Deuses",
 		tipo: "ability", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "systems/tormenta20/icons/magias/protecao-divina.webp",
 		descricao: "<p>Você recebe +2 na Defesa e +5 em todos os testes de resistência. Isso é uma mistura de sorte sobrenatural com o fato de que inimigos normalmente ignoram crianças, justamente por serem menos perigosas.</p>",
 		efeitos: (img) => [{
 			name: "Protegido dos Deuses", img, type: "base", transfer: true, disabled: false,
@@ -579,13 +579,13 @@ const PODERES_DO_CONSTRUTOR = [
 	{
 		nome: "Sem Origem",
 		tipo: "ability", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "systems/tormenta20/icons/poderes/origem.webp",
 		descricao: "<p>Você não recebe benefícios de origem. Você está apenas começando a viver os anos que definirão quem você será!</p>"
 	},
 	{
 		nome: "Ímpeto Juvenil",
 		tipo: "ability", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "systems/tormenta20/icons/itens/gerais/essencia-mana.webp",
 		descricao: "<p>Você recebe +3 pontos de mana. Adolescentes acham que podem fazer qualquer coisa, e essa confiança os torna mais heroicos.</p>",
 		efeitos: (img) => [{
 			name: "Ímpeto Juvenil", img, type: "base", transfer: true, disabled: false,
@@ -597,31 +597,31 @@ const PODERES_DO_CONSTRUTOR = [
 	{
 		nome: "Origem em Construção",
 		tipo: "ability", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "systems/tormenta20/icons/svg/scroll-unfurled.svg",
 		descricao: "<p>Você recebe apenas um benefício de origem, em vez de dois (se sua origem possuir um único benefício, comece com uma perícia treinada a menos por sua classe).</p>"
 	},
 	{
 		nome: "Veterano Calejado",
 		tipo: "ability", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "systems/tormenta20/icons/magias/lendas-historias.webp",
 		descricao: "<p>Você começa o jogo com um nível adicional em relação aos personagens mais novos do grupo. Por exemplo, se o grupo vai começar no 1º nível, você começa no 2º. Contudo, essa experiência tem seu preço — você recebe duas complicações de idade.</p>"
 	},
 	{
 		nome: "Ai Minhas Costas",
 		tipo: "ability", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "systems/tormenta20/icons/conditions/lento.svg",
 		descricao: "<p>Você começa o jogo com dois níveis adicionais. Contudo, perde 1 ponto em todos os atributos físicos (Força, Destreza e Constituição) e recebe três complicações de idade. Além disso, não pode escolher o poder Aumento de Atributo para nenhum atributo físico — infelizmente, os tempos de vigor ficaram para trás.</p>"
 	},
 	{
 		nome: "O Inverno da Vida",
 		tipo: "ability", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "systems/tormenta20/icons/itens/gerais/gelo-eterno.webp",
 		descricao: "<p>Você começa o jogo com três níveis adicionais. Porém, perde 2 pontos em todos os atributos físicos (Força, Destreza e Constituição) e recebe quatro complicações de idade. Assim como velhos, você não pode escolher o poder Aumento de Atributo para atributos físicos.</p>"
 	},
 	{
 		nome: "Já Vi Coisas",
 		tipo: "ability", subtipo: "Idade", exclusivo: true,
-		img: "icons/svg/hourglass.svg",
+		img: "systems/tormenta20/icons/poderes/classes/especialistas/olhos-costas.webp",
 		descricao: "<p>Você pode receber um poder geral. Nesse caso, também recebe uma complicação de idade.</p>"
 	},
 	{
@@ -685,10 +685,11 @@ const PODERES_DO_CONSTRUTOR = [
 		tipo: "complicacao", subtipo: "Idade", exclusivo: true,
 		img: "icons/magic/control/voodoo-doll-pain-damage-purple.webp",
 		descricao: "<p>Você já não anda no mesmo ritmo que antes. Seu deslocamento diminui em –3m e você não pode correr ou fazer investidas.</p>",
+		// prioridade 60: aplica depois do deslocamento racial, que é um "override" (prioridade padrão 50)
 		efeitos: (img) => [{
 			name: "“Devagar, Jovem!”", img, type: "base", transfer: true, disabled: false,
 			system: { changes: [
-				{ key: "system.attributes.movement.walk.base", value: -3, type: "add", phase: "initial", priority: null }
+				{ key: "system.attributes.movement.walk.base", value: -3, type: "add", phase: "initial", priority: 60 }
 			], onuse: false }
 		}]
 	},

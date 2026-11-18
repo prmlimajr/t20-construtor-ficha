@@ -1011,3 +1011,20 @@
 .t20-construtor .cf-idade .cf-escolha-racial .cf-abrir { margin-bottom: 8px; }
 .t20-construtor .cf-idade .cf-card-nome small { font-weight: normal; opacity: 0.8; }
 .t20-construtor .cf-idade .cf-info .cf-campo input { width: 100%; }
+
+/* ---------- Subir de nível ---------- */
+.t20cf-nivel .cf-principal { height: 100%; }
+.t20cf-nivel .cf-nivel-cabecalho { display: flex; align-items: center; gap: 12px; }
+.t20cf-nivel .cf-nivel-cabecalho > img { width: 48px; height: 48px; border: none; flex: none; }
+.t20cf-nivel .cf-nivel-ganhos { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.3fr); gap: 12px; align-items: start; }
+.t20cf-nivel .cf-nivel-ganhos .cf-bloco h4 { margin-top: 0; }
+.t20cf-nivel .cf-nivel-abas { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.t20cf-nivel .cf-nivel-abas .cf-chips { flex: 1; }
+.t20cf-nivel .cf-nivel-indisponiveis { display: flex; align-items: center; gap: 4px; font-size: 12px; white-space: nowrap; }
+.t20cf-nivel .cf-duas { min-height: 320px; }
+.t20cf-nivel .cf-card:disabled { cursor: not-allowed; }
+.t20cf-nivel .cf-nivel-anotacao { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; font-size: 12px; }
+@media (max-width: 720px) {
+	.t20cf-nivel .cf-nivel-ganhos,
+	.t20cf-nivel .cf-duas { grid-template-columns: 1fr; }
+}
