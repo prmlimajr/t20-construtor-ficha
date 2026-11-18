@@ -2,6 +2,7 @@
 	"T20CF": {
 		"CriarPersonagem": "Criar personagem (wizard)",
 		"Construtor": "Construtor",
+		"SubirNivel": "Subir de nível",
 		"NovoPersonagem": "Novo personagem",
 		"SemPermissao": "Você não tem permissão para criar atores. Peça ao mestre para liberar \"Criar novos atores\" nas permissões.",
 		"Config": {
@@ -24,6 +25,10 @@
 			"origemDupla": {
 				"Nome": "Homebrew: origem profissional + regional",
 				"Dica": "O personagem escolhe duas origens: uma profissional (livro básico) e uma regional (Atlas de Arton)."
+			},
+			"subirNivel": {
+				"Nome": "Subir de nível",
+				"Dica": "Mostra o botão “Subir de nível” no cabeçalho da ficha de personagens já criados (para o mestre e o dono do personagem). Em desenvolvimento: só classes com progressão cadastrada, sem multiclasse."
 			},
 			"beneficiosOrigemDupla": {
 				"Nome": "Homebrew: benefícios da origem profissional",

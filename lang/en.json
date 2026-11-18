@@ -2,6 +2,7 @@
 	"T20CF": {
 		"CriarPersonagem": "Create character (wizard)",
 		"Construtor": "Builder",
+		"SubirNivel": "Level up",
 		"NovoPersonagem": "New character",
 		"SemPermissao": "You are not allowed to create actors. Ask the GM to enable \"Create New Actors\" in the permissions.",
 		"Config": {
@@ -24,6 +25,10 @@
 			"origemDupla": {
 				"Nome": "Homebrew: professional + regional origin",
 				"Dica": "The character picks two origins: a professional one (core book) and a regional one (Atlas de Arton)."
+			},
+			"subirNivel": {
+				"Nome": "Level up",
+				"Dica": "Shows the “Level up” button in the header of existing characters' sheets (for the GM and the character's owner). In development: only classes with a registered progression, no multiclassing."
 			},
 			"beneficiosOrigemDupla": {
 				"Nome": "Homebrew: professional origin benefits",

@@ -4,7 +4,7 @@
 import { MODULE_ID, ATRIBUTOS } from "./regras.js";
 import { equipamento } from "./dados.js";
 
-function doCompendio(doc) {
+export function doCompendio(doc) {
 	// poder que o suplemento não traz, definido pelo construtor (dados.js → PODERES_DO_CONSTRUTOR)
 	if (doc?.substituto) {
 		const system = foundry.utils.deepClone(doc.system);

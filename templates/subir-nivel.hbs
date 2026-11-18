@@ -1,0 +1,138 @@
+{{#if carregando}}
+<div class="cf-carregando" role="status" aria-live="polite">
+	{{#if erro}}
+	<i class="fa-solid fa-triangle-exclamation"></i>
+	<p>Não foi possível carregar os dados.</p>
+	<p class="cf-nota">{{erro}}</p>
+	{{else}}
+	<i class="fa-solid fa-angles-up cf-carregando-icone"></i>
+	<p>Carregando classes e poderes…</p>
+	<div class="cf-carregando-barra"><span></span></div>
+	{{/if}}
+</div>
+{{else}}
+<section class="cf-principal">
+	<header class="cf-cabecalho cf-nivel-cabecalho">
+		{{#if img}}<img src="{{img}}" alt="">{{/if}}
+		<div class="cf-cabecalho-texto">
+			{{#if bloqueio}}
+			<h2>{{ator}}</h2>
+			<p>{{#if classe}}{{classe}} · {{/if}}{{nivelAtual}}º nível</p>
+			{{else}}
+			<h2>{{classe}} {{nivelClasseAtual}} → {{nivelClasse}}</h2>
+			<p>{{ator}} chega ao {{nivelPersonagem}}º nível de personagem{{#if fonte}} · <span class="cf-fonte">{{fonte}}</span>{{/if}}</p>
+			{{/if}}
+		</div>
+	</header>
+
+	<div class="cf-conteudo">
+		{{#if bloqueio}}
+		<p class="cf-aviso"><i class="fa-solid fa-circle-info"></i> {{bloqueio}}</p>
+		{{else}}
+		{{#if manual}}
+		<p class="cf-aviso"><i class="fa-solid fa-triangle-exclamation"></i> A ficha está com PV/PM em modo manual (configuração de nível do sistema): os máximos não serão recalculados.</p>
+		{{/if}}
+		{{#each avisos}}<p class="cf-aviso"><i class="fa-solid fa-triangle-exclamation"></i> {{this}}</p>{{/each}}
+
+		<div class="cf-nivel-ganhos">
+			<dl class="cf-dados">
+				<dt>Pontos de vida</dt><dd>+{{pv}} <small class="cf-nota">({{classe}} + Constituição; bônus de poderes são somados pela ficha)</small></dd>
+				<dt>Pontos de mana</dt><dd>+{{pm}}</dd>
+				{{#if bonusPericia}}<dt>Perícias</dt><dd>bônus de metade do nível passa a +{{bonusPericia}}</dd>{{/if}}
+				{{#each valores}}<dt>{{nome}}</dt><dd>{{#if de}}{{de}} → {{/if}}{{para}}</dd>{{/each}}
+			</dl>
+			{{#if habilidades.length}}
+			<div class="cf-bloco">
+				<h4>Habilidades do {{nivelClasse}}º nível</h4>
+				{{#each habilidades}}
+				<details class="cf-poder">
+					<summary>{{#if img}}<img src="{{img}}" alt="">{{/if}}<span>{{nome}}</span>
+						{{#if jaTem}}<small class="cf-nota"> · já está na ficha (não será duplicada)</small>{{/if}}
+						{{#if semDoc}}<small class="cf-nota"> · não encontrada no compêndio (não será adicionada)</small>{{/if}}
+					</summary>
+					<div class="cf-descricao">{{{descricao}}}</div>
+				</details>
+				{{/each}}
+			</div>
+			{{/if}}
+		</div>
+
+		{{#if ganhaPoder}}
+		<h4>Poder de {{classe}}</h4>
+		<div class="cf-nivel-abas">
+			<div class="cf-chips">
+				<button type="button" class="cf-chip {{#if abaClasse}}selecionado{{/if}}" data-action="aba" data-aba="classe">Poderes de {{classe}} <small>{{totais.classe}}</small></button>
+				<button type="button" class="cf-chip {{#unless abaClasse}}selecionado{{/unless}}" data-action="aba" data-aba="geral">Poder geral (no lugar) <small>{{totais.geral}}</small></button>
+			</div>
+			<label class="cf-nivel-indisponiveis">
+				<input type="checkbox" data-action="indisponiveis" {{#if mostrarIndisponiveis}}checked{{/if}}> Mostrar indisponíveis
+			</label>
+		</div>
+		<div class="cf-duas">
+			<div class="cf-lista cf-lista-filtravel">
+				<input type="search" class="cf-filtro cf-filtro-lista" placeholder="Buscar poder…" value="{{filtro}}" aria-label="Buscar poder pelo nome">
+				{{#each grupos}}
+				<section class="cf-grupo">
+					{{#unless ../abaClasse}}<h4 class="cf-grupo-titulo">{{titulo}} <small>{{cards.length}}</small></h4>{{/unless}}
+					<div class="cf-cards cf-cards-coluna">
+						{{#each cards}}
+						<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if bloqueado}}bloqueado{{/if}}"
+							data-action="escolher" data-uuid="{{uuid}}" data-busca="{{nome}}" {{#if bloqueado}}disabled{{/if}}>
+							{{#if img}}<img src="{{img}}" alt="">{{/if}}
+							<span class="cf-card-texto">
+								<span class="cf-card-nome">{{nome}}{{#if aviso}} <i class="fa-solid fa-circle-exclamation" title="Tem pré-requisito a conferir"></i>{{/if}}</span>
+								<span class="cf-card-sub">{{sub}}</span>
+							</span>
+						</button>
+						{{/each}}
+					</div>
+				</section>
+				{{/each}}
+				{{#if vazio}}<p class="cf-vazio">Nenhum poder disponível nesta lista.</p>{{/if}}
+				<p class="cf-vazio cf-sem-resultado" hidden>Nenhum poder com esse nome.</p>
+			</div>
+			<aside class="cf-info">
+				{{#if info}}
+				<h3>{{#if info.img}}<img src="{{info.img}}" alt="">{{/if}} {{info.nome}}</h3>
+				{{#if info.fonte}}<p class="cf-fonte">{{info.fonte}} (Suplementos de Arton)</p>{{/if}}
+				<dl class="cf-dados">
+					<dt>Pré-requisito</dt><dd>{{#if info.preRequisito}}{{info.preRequisito}}{{else}}nenhum{{/if}}</dd>
+				</dl>
+				{{#each info.avisos}}<p class="cf-aviso"><i class="fa-solid fa-circle-exclamation"></i> Confira com o mestre: “{{this}}” (não foi possível verificar na ficha).</p>{{/each}}
+				{{#if info.jaTem}}<p class="cf-nota">Você já tem este poder; ele pode ser escolhido outras vezes.</p>{{/if}}
+				{{#if info.pedeEscolha}}
+				<label class="cf-nivel-anotacao">
+					<span>Escolha feita (anotada na descrição do poder)</span>
+					<input type="text" name="anotacao" value="{{anotacao}}" placeholder="Ex.: espada longa">
+				</label>
+				{{/if}}
+				<div class="cf-descricao">{{{info.descricao}}}</div>
+				{{else}}
+				<p class="cf-vazio">Selecione um poder para ver a descrição.</p>
+				{{/if}}
+			</aside>
+		</div>
+		{{/if}}
+		{{/if}}
+	</div>
+
+	<footer class="cf-rodape">
+		{{#if podeDesfazer}}
+		<button type="button" data-action="desfazer" {{#if ocupado}}disabled{{/if}} title="Desfaz {{ultimo}}">
+			<i class="fa-solid fa-rotate-left"></i> Desfazer último nível
+		</button>
+		{{/if}}
+		{{#unless bloqueio}}
+		<span class="cf-pendencia {{#unless pendencia}}ok{{/unless}}">
+			{{#if pendencia}}<i class="fa-solid fa-circle-exclamation"></i> {{pendencia}}
+			{{else}}<i class="fa-solid fa-circle-check"></i> Tudo pronto.{{/if}}
+		</span>
+		<button type="button" class="cf-primario" data-action="aplicar" {{#if pendencia}}disabled{{/if}} {{#if ocupado}}disabled{{/if}}>
+			<i class="fa-solid fa-angles-up"></i> Subir para o {{nivelPersonagem}}º nível
+		</button>
+		{{else}}
+		<span class="cf-pendencia ok"></span>
+		{{/unless}}
+	</footer>
+</section>
+{{/if}}

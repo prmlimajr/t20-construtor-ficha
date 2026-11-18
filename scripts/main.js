@@ -7,11 +7,13 @@
  * - Abre sozinho ao criar um ator do tipo "personagem" (configurável).
  * - Botão "Criar personagem (wizard)" no diretório de Atores.
  * - Botão "Construtor" no cabeçalho da ficha para retomar um rascunho.
+ * - Botão "Subir de nível" no cabeçalho da ficha de personagens já criados (configurável).
  */
 import { MODULE_ID } from "./regras.js";
 import { ConstrutorFicha, TEMPLATES_PASSOS } from "./wizard.js";
 import { invalidarDados, carregarDados } from "./dados.js";
 import { CONTEUDOS_SUPLEMENTO, SUPLEMENTO_ID } from "./suplementos.js";
+import { abrirSubirNivel, TEMPLATES_NIVEL } from "./subir-nivel.js";
 
 const L = (k) => game.i18n.localize(`T20CF.${k}`);
 
@@ -34,6 +36,7 @@ function registrarConfiguracoes() {
 	s("complicacoes", { type: Boolean, default: false });
 	s("idadesVariadas", { type: Boolean, default: false });
 	s("origemDupla", { type: Boolean, default: false });
+	s("subirNivel", { type: Boolean, default: false });
 	s("beneficiosOrigemDupla", {
 		type: Number, default: 1,
 		range: { min: 1, max: 2, step: 1 }
@@ -96,7 +99,7 @@ function envolverRacaDoSistema() {
 
 Hooks.once("init", () => {
 	registrarConfiguracoes();
-	foundry.applications.handlebars.loadTemplates(TEMPLATES_PASSOS);
+	foundry.applications.handlebars.loadTemplates([...TEMPLATES_PASSOS, ...TEMPLATES_NIVEL]);
 });
 
 // Pré-carregamento: alguns segundos depois de o mundo abrir, carrega os compêndios em segundo
@@ -119,7 +122,7 @@ Hooks.once("ready", () => {
 
 Hooks.once("setup", () => {
 	envolverRacaDoSistema();
-	game.modules.get(MODULE_ID).api = { abrir: abrirConstrutor, criarPersonagem };
+	game.modules.get(MODULE_ID).api = { abrir: abrirConstrutor, criarPersonagem, subirNivel: abrirSubirNivel };
 });
 
 Hooks.on("createActor", (actor, options, userId) => {
@@ -151,9 +154,22 @@ Hooks.on("renderActorDirectory", (app, html) => {
 	destino.append(botao);
 });
 
-/* Ficha do sistema (ApplicationV1): botão no cabeçalho */
+/** "Subir de nível": personagem já criado, configuração ligada; mestre ou dono do personagem. */
+function mostraSubirNivel(actor) {
+	return actor?.type === "character" && actor.isOwner && jaConstruido(actor) && game.settings.get(MODULE_ID, "subirNivel");
+}
+
+/* Ficha do sistema (ApplicationV1): botões no cabeçalho */
 Hooks.on("getActorSheetHeaderButtons", (sheet, buttons) => {
 	const actor = sheet.actor;
+	if (mostraSubirNivel(actor)) {
+		buttons.unshift({
+			label: L("SubirNivel"),
+			class: "t20cf-subir-nivel",
+			icon: "fa-solid fa-angles-up",
+			onclick: () => abrirSubirNivel(actor)
+		});
+	}
 	if (!actor || actor.type !== "character" || !actor.isOwner || jaConstruido(actor)) return;
 	buttons.unshift({
 		label: L("Construtor"),
@@ -166,6 +182,14 @@ Hooks.on("getActorSheetHeaderButtons", (sheet, buttons) => {
 /* Caso a ficha seja ApplicationV2 numa versão futura do sistema */
 Hooks.on("getHeaderControlsActorSheetV2", (sheet, controls) => {
 	const actor = sheet.document;
+	if (mostraSubirNivel(actor)) {
+		controls.unshift({
+			label: L("SubirNivel"),
+			icon: "fa-solid fa-angles-up",
+			action: "t20cfSubirNivel",
+			onClick: () => abrirSubirNivel(actor)
+		});
+	}
 	if (!actor || actor.type !== "character" || !actor.isOwner || jaConstruido(actor)) return;
 	controls.unshift({
 		label: L("Construtor"),

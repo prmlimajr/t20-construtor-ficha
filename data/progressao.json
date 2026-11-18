@@ -1,0 +1,17 @@
+{
+  "_comentario": "Progressão por classe (níveis 1–20), a partir das tabelas do livro. 'poder.niveis': níveis em que a classe ganha 'Poder de <classe>' (lista = poderes do compêndio com tipo 'classe' e subtipo = nome da classe; pode ser trocado por um poder geral). 'niveis.N.habilidades': habilidades ganhas no nível N (nomes do compêndio tormenta20.poderes). 'niveis.N.valores': valores da tabela que crescem com o nível (só informativo; o sistema já faz o efeito crescer). 'base': variante herda o que não declarar.",
+  "Guerreiro": {
+    "fonte": "Tormenta20 JdA, p. 64 (Tabela 1-13)",
+    "poder": { "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20] },
+    "niveis": {
+      "1": { "habilidades": ["Ataque Especial"], "valores": { "Ataque Especial": "+4" } },
+      "3": { "habilidades": ["Durão"] },
+      "5": { "valores": { "Ataque Especial": "+8" } },
+      "6": { "habilidades": ["Ataque Extra"] },
+      "9": { "valores": { "Ataque Especial": "+12" } },
+      "13": { "valores": { "Ataque Especial": "+16" } },
+      "17": { "valores": { "Ataque Especial": "+20" } },
+      "20": { "habilidades": ["Campeão"] }
+    }
+  }
+}
