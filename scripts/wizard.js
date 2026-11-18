@@ -7,6 +7,8 @@ import {
 	ARRANJOS_FIXOS, MODOS_VARIADOS, VALKARIA_INICIAL, converterNimb, custoAtributo, pontosGastos, converterRolagem, expandirPericias, normalizar, sinal
 } from "./regras.js";
 import { carregarDados, dadosCarregados, poder, poderesDoGrupo, equipamento, magiaPorNome, poderSelecionavel, fonteDe } from "./dados.js";
+import { poderRacialPermitido } from "./poderes-raciais.js";
+import { poderDistincaoPermitido } from "./distincoes.js";
 import { atributosDinamicosRaca } from "./suplementos.js";
 import { aplicarNaFicha } from "./aplicar.js";
 
@@ -237,6 +239,14 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	get classe() {
 		return this.dados.classes.find((c) => c.uuid === this.estado.classe) ?? null;
+	}
+
+	/**
+	 * Fora das listas de poderes gerais: poderes de outras raças (ex.: Arma Amada (Anão) para um humano)
+	 * e poderes de distinção (exigem a marca da distinção, que ninguém tem no 1º nível).
+	 */
+	poderListavel(p) {
+		return poderRacialPermitido(this.dados, p, this.raca) && poderDistincaoPermitido(this.dados, p);
 	}
 
 	get regrasClasse() {
@@ -1373,7 +1383,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			case "nomes":
 				return arg.split("|").map(equip);
 			case "grupo":
-				return poderesDoGrupo(this.dados, arg).map(poderCard);
+				return poderesDoGrupo(this.dados, arg).filter((p) => this.poderListavel(p)).map(poderCard);
 			case "magiaRacial": {
 				const regra = this.#regraRacial(arg);
 				if (!regra) return [];
@@ -1430,26 +1440,26 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			case "poderGeralOrigem":
 				// poder geral ou poder único de origem do livro básico (Ambição Herdada do meio-elfo)
 				return this.dados.poderes
-					.filter((p) => (p.system.tipo === "geral" && poderSelecionavel(this.dados, p)) || (p.system.tipo === "origem" && !fonteDe(this.dados, p)))
+					.filter((p) => (p.system.tipo === "geral" && poderSelecionavel(this.dados, p) && this.poderListavel(p)) || (p.system.tipo === "origem" && !fonteDe(this.dados, p)))
 					.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")).map(poderCard);
 			case "poderGeralComplicacao": {
 				// poder geral concedido pela complicação: tira os que o personagem já recebe por outras fontes
 				const atual = this.estado.complicacaoPoder;
 				const ja = new Set(this.plano({ semComplicacao: true }).gruposPoderes.flatMap((g) => g.poderes.map((p) => p.name)));
-				return this.dados.poderes.filter((p) => p.system.tipo === "geral" && poderSelecionavel(this.dados, p) && (!ja.has(p.name) || p.name === atual))
+				return this.dados.poderes.filter((p) => p.system.tipo === "geral" && poderSelecionavel(this.dados, p) && this.poderListavel(p) && (!ja.has(p.name) || p.name === atual))
 					.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")).map(poderCard);
 			}
 			case "poderGeralIdade": {
 				// Já Vi Coisas (adulto): poder geral que o personagem ainda não recebe por outra fonte
 				const atual = this.estado.idade?.poderGeral;
 				const ja = new Set(this.plano({ semIdade: true }).gruposPoderes.flatMap((g) => g.poderes.map((p) => p.name)));
-				return this.dados.poderes.filter((p) => p.system.tipo === "geral" && poderSelecionavel(this.dados, p) && (!ja.has(p.name) || p.name === atual))
+				return this.dados.poderes.filter((p) => p.system.tipo === "geral" && poderSelecionavel(this.dados, p) && this.poderListavel(p) && (!ja.has(p.name) || p.name === atual))
 					.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")).map(poderCard);
 			}
 			case "complicacoesIdade":
 				return (this.dados.idades?.complicacoes ?? []).map((n) => poder(this.dados, n)).filter(Boolean).map(poderCard);
 			case "poderGeral":
-				return this.dados.poderes.filter((p) => p.system.tipo === "geral" && poderSelecionavel(this.dados, p))
+				return this.dados.poderes.filter((p) => p.system.tipo === "geral" && poderSelecionavel(this.dados, p) && this.poderListavel(p))
 					.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")).map(poderCard);
 			case "pericia": {
 				const atual = foundry.utils.getProperty(this.estado, this.slideout?.campo ?? "");
@@ -2336,7 +2346,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			if (def.especial === "amnesico") {
 				const todas = Object.keys(CONFIG.T20?.pericias ?? {});
 				const gerais = this.dados.poderes
-					.filter((p) => p.system.tipo === "geral")
+					.filter((p) => p.system.tipo === "geral" && this.poderListavel(p))
 					.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 				amnesico = {
 					lembrancas: await this.#infoPoder(poder(this.dados, "Lembranças Graduais")),

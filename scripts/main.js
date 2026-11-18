@@ -179,6 +179,28 @@ Hooks.on("getActorSheetHeaderButtons", (sheet, buttons) => {
 	});
 });
 
+/*
+ * Botão "+" ao lado da classe e nível na ficha do sistema: por padrão abre o compêndio de classes
+ * (para arrastar a classe e subir de nível). Com "Subir de nível" ligado, abre a janela do construtor;
+ * a janela tem um botão para abrir o compêndio (multiclasse). O hook de render roda depois de o sistema
+ * ligar os handlers, então dá para trocar o dele pelo nosso.
+ */
+Hooks.on("renderActorSheet", (sheet, html) => {
+	const actor = sheet.actor;
+	if (!mostraSubirNivel(actor) || !sheet.isEditable) return;
+	const root = html instanceof HTMLElement ? html : html?.[0];
+	const mais = root?.querySelector(".char-class .class-config.add-classe");
+	if (!mais) return;
+	// o sistema liga o clique com jQuery (html.find(...).click): remove o dele
+	globalThis.jQuery?.(mais).off("click");
+	mais.title = L("SubirNivel");
+	mais.addEventListener("click", (ev) => {
+		ev.preventDefault();
+		ev.stopPropagation();
+		abrirSubirNivel(actor);
+	});
+});
+
 /* Caso a ficha seja ApplicationV2 numa versão futura do sistema */
 Hooks.on("getHeaderControlsActorSheetV2", (sheet, controls) => {
 	const actor = sheet.document;

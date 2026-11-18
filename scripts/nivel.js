@@ -73,9 +73,13 @@ function fichaProjetada(ficha, nomeClasse, habilidades) {
 
 /**
  * Tudo o que o próximo nível da classe concede.
- * @param {object} p { dados, progressao, ficha, classe: {nome, niveis}, lerPreRequisito, selecionavel(doc) }
+ * @param {object} p { dados, progressao, ficha, classe: {nome, niveis}, lerPreRequisito, selecionavel(doc),
+ *   ehGeral(doc): entra na lista de poderes gerais?, grupoGeral(doc): título do grupo na lista }
  */
-export function montarNivel({ dados, progressao, ficha, classe, lerPreRequisito, selecionavel = () => true }) {
+export function montarNivel({
+	dados, progressao, ficha, classe, lerPreRequisito, selecionavel = () => true,
+	ehGeral = (p) => p.system?.tipo === "geral", grupoGeral = (p) => p.system?.subtipo || "Outros"
+}) {
 	const prog = progressaoDe(progressao, classe.nome);
 	if (!prog) return { erro: "semProgressao" };
 	const nivelClasse = classe.niveis + 1;
@@ -124,8 +128,8 @@ export function montarNivel({ dados, progressao, ficha, classe, lerPreRequisito,
 		.filter((p) => p.system?.tipo === "classe" && normalizar(p.system?.subtipo) === normalizar(classeBasica) && selecionavel(p))
 		.map(opcao).sort(ordenar);
 	const poderesGerais = !ganhaPoder ? [] : dados.poderes
-		.filter((p) => p.system?.tipo === "geral" && selecionavel(p))
-		.map((p) => ({ ...opcao(p), grupo: p.system?.subtipo || "Outros" }))
+		.filter((p) => ehGeral(p) && selecionavel(p))
+		.map((p) => ({ ...opcao(p), grupo: grupoGeral(p) }))
 		.sort(ordenar);
 
 	return {

@@ -205,6 +205,8 @@ async function carregar() {
 		/** Conteúdo vindo dos Suplementos de Arton: uuid → nome do compêndio. */
 		fonteSuplemento: sup.fonte,
 		suplementoLigado: sup.ligado,
+		/** Distinções do suplemento: poder → distinção e distinção → marcas (ver distincoes.js). */
+		distincoes: sup.distincoes ?? { porPoder: new Map(), marcas: new Map() },
 		/** Poderes do suplemento só aparecem nas listas de escolha com a chave "Poderes" ligada. */
 		poderesSuplementoSelecionaveis: conteudoLigado("Poderes"),
 		/** Complicações (Heróis de Arton): [{doc, classe}] (classe null = geral). */
