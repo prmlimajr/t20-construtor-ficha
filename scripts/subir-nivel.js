@@ -5,6 +5,8 @@
 import { MODULE_ID, normalizar } from "./regras.js";
 import { carregarDados, poderSelecionavel, fonteDe } from "./dados.js";
 import { lerFicha } from "./ficha-atual.js";
+import { poderRacialPermitido } from "./poderes-raciais.js";
+import { poderDistincaoPermitido, ehPoderDeDistincao, distincaoDoPoder } from "./distincoes.js";
 import { montarNivel, criarLeitorPreRequisitos } from "./nivel.js";
 import { aplicarNivel, desfazerUltimoNivel, podeDesfazer, historico } from "./aplicar-nivel.js";
 
@@ -63,7 +65,8 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			aba: SubirNivel.#trocarAba,
 			indisponiveis: SubirNivel.#alternarIndisponiveis,
 			aplicar: SubirNivel.#aplicar,
-			desfazer: SubirNivel.#desfazer
+			desfazer: SubirNivel.#desfazer,
+			compendioClasses: SubirNivel.#compendioClasses
 		}
 	};
 
@@ -89,14 +92,23 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 	#calcular() {
 		const ficha = lerFicha(this.actor, { regrasClasses: this.dados.regrasClasses, variantes: this.dados.variantes });
 		if (!ficha.classes.length) return { ficha, bloqueio: "Este personagem ainda não tem classe. Use o construtor para criá-lo." };
-		if (ficha.classes.length > 1) return { ficha, bloqueio: "Personagens com mais de uma classe (multiclasse) ainda não são suportados." };
+		if (ficha.classes.length > 1) return { ficha, bloqueio: "Personagens com mais de uma classe (multiclasse) ainda não são suportados pelo assistente. Use “Outra classe (compêndio)” para subir de nível arrastando a classe para a ficha, como no sistema." };
 		const classe = ficha.classes[0];
+		// poderes gerais de outras raças (ex.: Arma Amada (Anão) para um humano) não aparecem
+		const raca = this.actor.items.find((i) => i.type === "race")?.name ?? null;
 		const r = montarNivel({
 			dados: this.dados, progressao: this.progressao, ficha, classe,
 			lerPreRequisito: leitorPreRequisitos,
-			selecionavel: (p) => poderSelecionavel(this.dados, p)
+			selecionavel: (p) => poderSelecionavel(this.dados, p) && poderRacialPermitido(this.dados, p, raca)
+				// poderes de distinção só para quem tem a marca da distinção
+				&& poderDistincaoPermitido(this.dados, p, (nome) => ficha.temPoder(nome)),
+			ehGeral: (p) => p.system?.tipo === "geral" || ehPoderDeDistincao(this.dados, p),
+			grupoGeral: (p) => {
+				const d = distincaoDoPoder(this.dados, p);
+				return d ? `Distinção: ${d}` : p.system?.subtipo || "Outros";
+			}
 		});
-		if (r.erro === "semProgressao") return { ficha, classe, bloqueio: `A progressão de ${classe.nome} ainda não foi cadastrada no construtor.` };
+		if (r.erro === "semProgressao") return { ficha, classe, bloqueio: `A progressão de ${classe.nome} ainda não foi cadastrada no construtor. Use “Outra classe (compêndio)” para subir de nível arrastando a classe para a ficha, como no sistema.` };
 		if (r.erro === "nivelMaximo") return { ficha, classe, bloqueio: "Este personagem já está no 20º nível." };
 		return { ficha, classe, nivel: r };
 	}
@@ -287,6 +299,11 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			this.ocupado = false;
 			this.render();
 		}
+	}
+
+	/** Comportamento original do "+" da ficha: compêndio de classes (para multiclasse, arrastando a classe). */
+	static #compendioClasses() {
+		game.packs.get("tormenta20.classes")?.render(true);
 	}
 
 	static async #desfazer() {

@@ -117,6 +117,9 @@
 	</div>
 
 	<footer class="cf-rodape">
+		<button type="button" data-action="compendioClasses" title="Abre o compêndio de classes do sistema: arraste uma classe para a ficha para multiclasse (sem o assistente)">
+			<i class="fa-solid fa-book"></i> Outra classe (compêndio)
+		</button>
 		{{#if podeDesfazer}}
 		<button type="button" data-action="desfazer" {{#if ocupado}}disabled{{/if}} title="Desfaz {{ultimo}}">
 			<i class="fa-solid fa-rotate-left"></i> Desfazer último nível

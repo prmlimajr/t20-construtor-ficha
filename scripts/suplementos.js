@@ -10,6 +10,7 @@
  * menores) não existem nos dados e são deduzidas ou ficam livres, sempre com aviso.
  */
 import { MODULE_ID, ATRIBUTOS, normalizar, interpretarPericiasClasse } from "./regras.js";
+import { indexarDistincoes } from "./distincoes.js";
 
 export const SUPLEMENTO_ID = "suplementos-de-arton";
 
@@ -401,6 +402,7 @@ export async function carregarSuplementos(base, config) {
 	const fonte = new Map();
 	const pastas = new Map();
 	const docs = [];
+	const daDistincao = [];
 	// os compêndios do suplemento em paralelo
 	const listas = await Promise.all(packs.map((pack) => pack.getDocuments().catch((err) => {
 		console.warn(`${MODULE_ID} | não foi possível ler ${pack.collection}:`, err);
@@ -412,6 +414,9 @@ export async function carregarSuplementos(base, config) {
 			fonte.set(d.uuid, pack.metadata.label);
 			pastas.set(d.uuid, cadeiaPastas(d, pack));
 			docs.push(d);
+			if (pack.metadata?.name === "distincoes" && d.type === "poder") {
+				daDistincao.push({ uuid: d.uuid, name: d.name, pasta: pastas.get(d.uuid), subtipo: d.system?.subtipo });
+			}
 		}
 	}
 	const ignorar = new Set(config.ignorarClasses ?? []);
@@ -429,7 +434,9 @@ export async function carregarSuplementos(base, config) {
 		classes: conteudoLigado("Classes") ? porTipo("classe").filter((c) => !ignorar.has(c.name) && !base.regrasClasses[c.name]) : [],
 		regrasClasses: {},
 		magias: conteudoLigado("Magias") ? porTipo("magia") : [],
-		itens: []
+		itens: [],
+		// poderes de distinção: só para quem tem a marca da distinção (ver distincoes.js)
+		distincoes: indexarDistincoes(daDistincao)
 	};
 	for (const c of out.classes) out.regrasClasses[c.name] = regrasClasseSuplemento(c, poderesSup, base.regrasClasses, config);
 
