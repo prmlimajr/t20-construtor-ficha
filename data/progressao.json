@@ -1,5 +1,101 @@
 {
-  "_comentario": "Progressão por classe (níveis 1–20), a partir das tabelas do livro. 'poder.niveis': níveis em que a classe ganha 'Poder de <classe>' (lista = poderes do compêndio com tipo 'classe' e subtipo = nome da classe; pode ser trocado por um poder geral). 'niveis.N.habilidades': habilidades ganhas no nível N (nomes do compêndio tormenta20.poderes). 'niveis.N.escolhas': [{id, titulo, opcoes: [nomes de habilidades]}], uma das opções entra na ficha. 'niveis.N.anotadas': [{habilidade, titulo, opcoes: [textos]}], a escolha é anotada na descrição da habilidade (criada se ainda não estiver na ficha; acumula a cada vez). 'niveis.N.valores': valores da tabela que crescem com o nível. 'valoresNaFicha': {habilidade: 'rolagem'|'anotacao'}: como o valor vai para a ficha (fórmula da rolagem do poder, ou linha na descrição); sem entrada, o valor é só informativo (o sistema já faz o efeito crescer). 'base': variante herda o que não declarar.",
+  "_comentario": "Progressão por classe (níveis 1–20), a partir das tabelas do livro. 'poder.niveis': níveis em que a classe ganha 'Poder de <classe>' (lista = poderes do compêndio com tipo 'classe' e subtipo = nome da classe; pode ser trocado por um poder geral). 'niveis.N.habilidades': habilidades ganhas no nível N (nomes do compêndio tormenta20.poderes). 'niveis.N.escolhas': [{id, titulo, opcoes: [nomes de habilidades]}], uma das opções entra na ficha. 'niveis.N.anotadas': [{habilidade, titulo, opcoes: [textos]}], a escolha é anotada na descrição da habilidade (criada se ainda não estiver na ficha; acumula a cada vez). 'niveis.N.valores': valores da tabela que crescem com o nível. 'valoresNaFicha': {habilidade: 'rolagem'|'anotacao'}: como o valor vai para a ficha (fórmula da rolagem do poder, ou linha na descrição); sem entrada, o valor é só informativo (o sistema já faz o efeito crescer). 'base': variante herda o que não declarar. 'magias': {tipo: 'arc'|'div', circulos: {nível de classe: círculo}, aprende: 'todo'|'par'|'impar' (1 magia nesses níveis), escolas: nº de escolas escolhidas (Bardo, Druida), porEscolha: {poder: ajustes da regra para quem tem o poder (ex.: Mago → extraPorCirculo: 1)}}. 'poderesConcedem': {poder: {habilidade que a ficha tem: habilidade concedida}} (ex.: Herança Aprimorada + Linhagem Rubra Básica → Linhagem Rubra Aprimorada).",
+  "Arcanista": {
+    "fonte": "Tormenta20 JdA, p. 37 (Tabela 1-5)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "magias": {
+      "tipo": "arc",
+      "circulos": {
+        "1": 1,
+        "5": 2,
+        "9": 3,
+        "13": 4,
+        "17": 5
+      },
+      "aprende": "todo",
+      "porEscolha": {
+        "Caminho do Arcanista: Feiticeiro": {
+          "aprende": "impar"
+        },
+        "Caminho do Arcanista: Mago": {
+          "extraPorCirculo": 1
+        }
+      }
+    },
+    "poderesConcedem": {
+      "Herança Aprimorada": {
+        "Linhagem Dracônica Básica": "Linhagem Dracônica Aprimorada",
+        "Linhagem Feérica Básica": "Linhagem Feérica Aprimorada",
+        "Linhagem Rubra Básica": "Linhagem Rubra Aprimorada"
+      },
+      "Herança Superior": {
+        "Linhagem Dracônica Básica": "Linhagem Dracônica Superior",
+        "Linhagem Feérica Básica": "Linhagem Feérica Superior",
+        "Linhagem Rubra Básica": "Linhagem Rubra Superior"
+      }
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Magias (Arcanista)"]
+      },
+      "20": {
+        "habilidades": ["Alta Arcana"]
+      }
+    }
+  },
+  "Bardo": {
+    "fonte": "Tormenta20 JdA, p. 44 (Tabela 1-7)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "magias": {
+      "tipo": "arc",
+      "circulos": {
+        "1": 1,
+        "6": 2,
+        "10": 3,
+        "14": 4
+      },
+      "aprende": "par",
+      "escolas": 3
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Inspiração", "Magias (Bardo)"],
+        "valores": {
+          "Inspiração": "+1"
+        }
+      },
+      "2": {
+        "habilidades": ["Eclético"]
+      },
+      "5": {
+        "valores": {
+          "Inspiração": "+2"
+        }
+      },
+      "9": {
+        "valores": {
+          "Inspiração": "+3"
+        }
+      },
+      "13": {
+        "valores": {
+          "Inspiração": "+4"
+        }
+      },
+      "17": {
+        "valores": {
+          "Inspiração": "+5"
+        }
+      },
+      "20": {
+        "habilidades": ["Artista Completo"]
+      }
+    }
+  },
   "Bucaneiro": {
     "fonte": "Tormenta20 JdA, p. 47 (Tabela 1-8)",
     "poder": {
@@ -269,6 +365,59 @@
       },
       "20": {
         "habilidades": ["Mestre Caçador"]
+      }
+    }
+  },
+  "Clérigo": {
+    "fonte": "Tormenta20 JdA, p. 57 (Tabela 1-11)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "magias": {
+      "tipo": "div",
+      "circulos": {
+        "1": 1,
+        "5": 2,
+        "9": 3,
+        "13": 4,
+        "17": 5
+      },
+      "aprende": "todo"
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Devoto Fiel (Clérigo)", "Magias (Clérigo)"]
+      },
+      "20": {
+        "habilidades": ["Mão da Divindade"]
+      }
+    }
+  },
+  "Druida": {
+    "fonte": "Tormenta20 JdA, p. 61 (Tabela 1-12)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "magias": {
+      "tipo": "div",
+      "circulos": {
+        "1": 1,
+        "6": 2,
+        "10": 3,
+        "14": 4
+      },
+      "aprende": "par",
+      "escolas": 3
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Devoto Fiel (Druida)", "Empatia Selvagem (Druida)", "Magias (Druida)"]
+      },
+      "2": {
+        "habilidades": ["Caminho dos Ermos"]
+      },
+      "20": {
+        "habilidades": ["Força da Natureza"]
       }
     }
   },

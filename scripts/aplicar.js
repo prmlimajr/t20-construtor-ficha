@@ -110,6 +110,8 @@ export async function aplicarNaFicha(actor, plano, dados) {
 	}
 	for (const k of plano.pericias) update[`system.pericias.${k}.treinado`] = true;
 	if (plano.conjuracao) update["system.attributes.conjuracao"] = plano.conjuracao;
+	// escolas de magia escolhidas (Bardo, Druida), usadas na subida de nível
+	if (plano.escolasMagia?.length) update[`flags.${MODULE_ID}.escolasMagia`] = plano.escolasMagia;
 	// Idades Variadas: faixa etária (e níveis extras a subir) nas notas da ficha
 	if (plano.idade) {
 		const notas = String(actor.system?.detalhes?.info ?? "").trim();

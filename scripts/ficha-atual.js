@@ -2,7 +2,7 @@
  * Estado atual de um personagem, lido da ficha, no formato usado pela subida de nível e pela
  * avaliação de pré-requisitos. Não depende do Foundry: recebe o ator (ou um objeto com o mesmo formato).
  */
-import { ATRIBUTOS, normalizar } from "./regras.js";
+import { ATRIBUTOS, MODULE_ID, normalizar } from "./regras.js";
 
 /** Nome do poder sem o prefixo do construtor ("R - ", "1 - ", "12 - "…). */
 export function nomeBase(nome) {
@@ -80,6 +80,8 @@ export function lerFicha(actor, { regrasClasses = {}, variantes = {} } = {}) {
 		circuloMax,
 		temMagias,
 		poderesPorSubtipo,
+		/** Escolas de magia escolhidas (Bardo, Druida), gravadas pelo construtor; [] se não houver. */
+		escolasMagia: [...(actor.flags?.[MODULE_ID]?.escolasMagia ?? [])],
 		/** Nome da divindade na ficha ("Khalmyr", "Khalmyr (fundamentalista)") ou "". */
 		divindade: String(sys.detalhes?.divindade ?? "").trim(),
 		/** A ficha tem algum poder "Prefixo: …"? (ex.: "armadilha" → "Armadilha: Laço") */

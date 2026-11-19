@@ -82,7 +82,9 @@ export function podeDesfazer(actor) {
  *   escolhidas: [doc],                     opções escolhidas (Caminho do Cavaleiro…)
  *   anotadas: [{doc, texto}],              escolhas anotadas (terreno do Explorador…); atualiza o item se já existe
  *   valores: [{nome, para, modo}],         valores da tabela em habilidades que a ficha já tem
- *   poder: doc|null, anotacao }            poder escolhido e a anotação dele
+ *   poder: doc|null, anotacao,             poder escolhido e a anotação dele
+ *   magias: [doc],                         magias novas
+ *   escolasMagia: [chave]|null }           escolas de magia escolhidas agora (ficha sem as escolas gravadas)
  */
 export async function aplicarNivel(actor, plano) {
 	const classe = actor.items.get(plano.classeId);
@@ -140,6 +142,11 @@ export async function aplicarNivel(actor, plano) {
 		else if (v.modo === "anotacao") alterar(item, CAMPO_DESCRICAO, comValor(valorAtual(item, CAMPO_DESCRICAO), v.para, n));
 	}
 	if (plano.poder) adicionar(plano.poder, { anotacao: plano.anotacao });
+	for (const doc of plano.magias ?? []) {
+		const data = doCompendio(doc);
+		foundry.utils.setProperty(data, `flags.${MODULE_ID}.nivel`, n);
+		itens.push(data);
+	}
 
 	// a classe primeiro: o sistema atualiza o nível do personagem ao mudar system.niveis
 	await classe.update({ "system.niveis": plano.nivelClasse });
@@ -168,12 +175,14 @@ export async function aplicarNivel(actor, plano) {
 		nivelClasse: plano.nivelClasse,
 		itens: criados.map((i) => i.id),
 		alteracoes,
+		...(plano.escolasMagia ? { escolasDefinidas: true } : {}),
 		pv,
 		pm,
 		data: Date.now()
 	});
 	update[`flags.${MODULE_ID}.niveis`] = lista;
 	update[`flags.${MODULE_ID}.ultimoDesfeito`] = false;
+	if (plano.escolasMagia) update[`flags.${MODULE_ID}.escolasMagia`] = [...plano.escolasMagia];
 	await actor.update(update);
 	return { pv, pm, itens: criados };
 }
@@ -204,6 +213,8 @@ export async function desfazerUltimoNivel(actor) {
 	if (classe) await classe.update({ "system.niveis": Math.max(1, ultimo.nivelClasse - 1) });
 
 	const attrs = actor.system.attributes ?? {};
+	// escolas escolhidas no nível desfeito voltam a ficar em aberto
+	if (ultimo.escolasDefinidas) await actor.update({ [`flags.${MODULE_ID}.-=escolasMagia`]: null });
 	await actor.update({
 		"system.attributes.pv.value": (attrs.pv?.value ?? 0) - (ultimo.pv ?? 0),
 		"system.attributes.pm.value": Math.max(0, (attrs.pm?.value ?? 0) - (ultimo.pm ?? 0)),

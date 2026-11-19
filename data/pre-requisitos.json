@@ -1,4 +1,6 @@
 {
   "_comentario": "Correções dos pré-requisitos lidos das descrições dos compêndios: \"Nome do poder\": \"texto que substitui o do compêndio\" (mesmo formato do livro), ou \"\" para nenhum pré-requisito. Use quando o texto do compêndio estiver errado ou não for reconhecido.",
-  "Montaria Corajosa": "Caminho do Cavaleiro: Montaria"
+  "Montaria Corajosa": "Caminho do Cavaleiro: Montaria",
+  "Canalizar Amplo": "Canalizar Energia Positiva/Negativa",
+  "Expulsar/Comandar Mortos-Vivos": "Canalizar Energia Positiva/Negativa"
 }

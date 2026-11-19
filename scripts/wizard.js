@@ -3054,6 +3054,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			dinheiroRolado: e.dinheiro ?? 0,
 			gasto: this.gastoCompras,
 			conjuracao,
+			// escolas de magia (Bardo, Druida): ficam na ficha para a subida de nível
+			escolasMagia: this.conjurador?.escolas ? [...(e.magiasEscolas ?? [])] : null,
 			nome: e.nome?.trim() || this.actor.name,
 			img: e.img ? this.imagens.img : null,
 			tokenImg: (e.img || e.tokenImg || !e.tokenIgual) ? this.imagens.token : null
