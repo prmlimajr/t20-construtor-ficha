@@ -41,6 +41,29 @@ function poderNaFicha(actor, nome) {
 		?? null;
 }
 
+/**
+ * Dados de origem do item (objetos simples). No Foundry, item.system.rolls é uma lista de RollData
+ * (modelos de dados): deepClone não os copia e alterar a cópia mexeria no item preparado em memória.
+ */
+function fonte(item, caminho) {
+	return foundry.utils.getProperty(item.toObject?.() ?? item, caminho);
+}
+
+/**
+ * Os efeitos "ao usar" que somam a rolagem do poder (valor "roll", ex.: Ataque Furtivo) buscam a fórmula
+ * no item de `origin`; nos itens vindos do compêndio, ela aponta para fora da ficha (fórmula original).
+ * Aponta para o próprio item, para valer a rolagem atualizada. Em itens que já estavam na ficha, registra
+ * o valor anterior em `alteracoes` (para o desfazer).
+ */
+async function origemNoProprioItem(item, alteracoes = null) {
+	if (!item?.effects || !item.uuid) return;
+	const efeitos = [...item.effects].filter((e) => e.origin !== item.uuid
+		&& (e.system?.changes ?? e.changes ?? []).some((c) => c.value === "roll"));
+	if (!efeitos.length) return;
+	for (const e of efeitos) alteracoes?.push({ id: item.id, efeito: e.id, caminho: "origin", antes: e.origin ?? null });
+	await item.updateEmbeddedDocuments("ActiveEffect", efeitos.map((e) => ({ _id: e.id, origin: item.uuid })));
+}
+
 export function historico(actor) {
 	return foundry.utils.deepClone(actor.getFlag(MODULE_ID, "niveis") ?? []);
 }
@@ -76,7 +99,10 @@ export async function aplicarNivel(actor, plano) {
 		data.name = `${n} - ${doc.name}`;
 		data.sort = SORT_CLASSE + n * 1000 + itens.length * 10;
 		if (anotacao?.trim()) foundry.utils.setProperty(data, CAMPO_DESCRICAO, comAnotacao(foundry.utils.getProperty(data, CAMPO_DESCRICAO), anotacao, n));
-		if (valor && modo === "rolagem") data.system.rolls = comRolagem(data.system.rolls, valor);
+		if (valor && modo === "rolagem") {
+			data.system.rolls = comRolagem(data.system.rolls, valor);
+			comRolagemAtualizada.add(itens.length);
+		}
 		if (valor && modo === "anotacao") foundry.utils.setProperty(data, CAMPO_DESCRICAO, comValor(foundry.utils.getProperty(data, CAMPO_DESCRICAO), valor, n));
 		foundry.utils.setProperty(data, `flags.${MODULE_ID}.nivel`, n);
 		itens.push(data);
@@ -89,11 +115,12 @@ export async function aplicarNivel(actor, plano) {
 		if (!atualizacoes.has(item.id)) atualizacoes.set(item.id, { _id: item.id });
 		const atual = atualizacoes.get(item.id);
 		if (!alteracoes.some((a) => a.id === item.id && a.caminho === caminho)) {
-			alteracoes.push({ id: item.id, caminho, antes: foundry.utils.deepClone(foundry.utils.getProperty(item, caminho) ?? null) });
+			alteracoes.push({ id: item.id, caminho, antes: foundry.utils.deepClone(fonte(item, caminho) ?? null) });
 		}
 		atual[caminho] = valor;
 	};
-	const valorAtual = (item, caminho) => atualizacoes.get(item.id)?.[caminho] ?? foundry.utils.getProperty(item, caminho);
+	const valorAtual = (item, caminho) => atualizacoes.get(item.id)?.[caminho] ?? fonte(item, caminho);
+	const comRolagemAtualizada = new Set(); // ids (existentes) e índices (novos) de itens com a rolagem trocada
 
 	for (const h of plano.habilidades ?? []) adicionar(h.doc, { valor: h.valor, modo: h.modo });
 	for (const doc of plano.escolhidas ?? []) adicionar(doc);
@@ -106,7 +133,10 @@ export async function aplicarNivel(actor, plano) {
 		if (!v.modo) continue;
 		const item = poderNaFicha(actor, v.nome);
 		if (!item) continue;
-		if (v.modo === "rolagem") alterar(item, "system.rolls", comRolagem(valorAtual(item, "system.rolls"), v.para));
+		if (v.modo === "rolagem") {
+			alterar(item, "system.rolls", comRolagem(valorAtual(item, "system.rolls"), v.para));
+			comRolagemAtualizada.add(item.id);
+		}
 		else if (v.modo === "anotacao") alterar(item, CAMPO_DESCRICAO, comValor(valorAtual(item, CAMPO_DESCRICAO), v.para, n));
 	}
 	if (plano.poder) adicionar(plano.poder, { anotacao: plano.anotacao });
@@ -115,6 +145,11 @@ export async function aplicarNivel(actor, plano) {
 	await classe.update({ "system.niveis": plano.nivelClasse });
 	const criados = itens.length ? await actor.createEmbeddedDocuments("Item", itens) : [];
 	if (atualizacoes.size) await actor.updateEmbeddedDocuments("Item", [...atualizacoes.values()]);
+	for (const chave of comRolagemAtualizada) {
+		// itens novos são apagados no desfazer: não precisam do registro
+		if (typeof chave === "number") await origemNoProprioItem(criados[chave]);
+		else await origemNoProprioItem(actor.items.get(chave), alteracoes);
+	}
 
 	// PV e PM atuais sobem o mesmo que os máximos (que o sistema recalcula com a classe e os poderes novos).
 	// reset() em vez de prepareData(): ver o comentário em aplicar.js.
@@ -152,12 +187,19 @@ export async function desfazerUltimoNivel(actor) {
 	const existentes = ultimo.itens.filter((id) => actor.items.has(id));
 	if (existentes.length) await actor.deleteEmbeddedDocuments("Item", existentes);
 	const restaurar = new Map();
+	const efeitos = new Map(); // item → [{_id, campo: valor}] (alterações em efeitos do item)
 	for (const a of ultimo.alteracoes ?? []) {
 		if (!actor.items.has(a.id)) continue;
+		if (a.efeito) {
+			if (!efeitos.has(a.id)) efeitos.set(a.id, []);
+			efeitos.get(a.id).push({ _id: a.efeito, [a.caminho]: a.antes });
+			continue;
+		}
 		if (!restaurar.has(a.id)) restaurar.set(a.id, { _id: a.id });
 		restaurar.get(a.id)[a.caminho] = a.antes;
 	}
 	if (restaurar.size) await actor.updateEmbeddedDocuments("Item", [...restaurar.values()]);
+	for (const [id, lista] of efeitos) await actor.items.get(id)?.updateEmbeddedDocuments("ActiveEffect", lista);
 	const classe = actor.items.get(ultimo.classeId);
 	if (classe) await classe.update({ "system.niveis": Math.max(1, ultimo.nivelClasse - 1) });
 
