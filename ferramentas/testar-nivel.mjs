@@ -12,7 +12,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { normalizar } from "../scripts/regras.js";
 import { lerFicha, nomeBase } from "../scripts/ficha-atual.js";
-import { montarNivel, criarLeitorPreRequisitos, montarPlano, pendenciaNivel, progressaoDe, magiasDisponiveis, circuloDe, variantesDe } from "../scripts/nivel.js";
+import { montarNivel, criarLeitorPreRequisitos, montarPlano, pendenciaNivel, progressaoDe, magiasDisponiveis, circuloDe, variantesDe, classesParaSubir, vagasEfetivas, atributoEfetivo, escolhaAtiva } from "../scripts/nivel.js";
 
 const aqui = path.dirname(fileURLToPath(import.meta.url));
 const raizModulo = path.resolve(aqui, "..");
@@ -424,6 +424,111 @@ for (const c of classes) {
 			ventanista(comPreNivelLadino.name, (a) => (classe(a).system.niveis = min - 2), false);
 			ventanista(comPreNivelLadino.name, (a) => (classe(a).system.niveis = min - 1), true);
 		}
+	}
+}
+
+/* ---------- 4. Multiclasse ---------- */
+{
+	console.log("\nMulticlasse:");
+	const variantes = variantesDe(progressao);
+	const doc = (nome) => dados.poderesPorNome.get(normalizar(nome));
+	const docClasse = (nome) => dados.classes.find((c) => c.name === nome);
+	/** Ator com uma classe já no nível n (habilidades de 1º nível + extras). */
+	const atorEm = (classe, n, extras = []) => {
+		const prog = progressaoDe(progressao, classe);
+		const nomes = [...(prog.niveis?.["1"]?.habilidades ?? []).filter((h) => typeof h === "string"), ...extras];
+		const a = novoAtor(classe, nomes.map(doc).filter(Boolean));
+		a.items.find((i) => i.type === "classe").system.niveis = n;
+		a.reset();
+		a.system.attributes.pv.value = a.system.attributes.pv.max;
+		a.system.attributes.pm.value = a.system.attributes.pm.max;
+		return a;
+	};
+	const calcular = (a, classe) => {
+		const ficha = lerFicha(a, { regrasClasses, variantes });
+		return { ficha, r: montarNivel({ dados, progressao, ficha, classe, lerPreRequisito, regrasPoderesClasse, regrasClasses }) };
+	};
+	const nova = (nome) => ({ nome, niveis: 0, nova: true, doc: docClasse(nome) });
+	const ok = (cond, msg) => { if (conferir(cond, msg)) console.log(`  ✓ ${msg}`); };
+
+	// A. Arcanista (Bruxo) 3 → Paladino 1
+	{
+		const a = atorEm("Arcanista", 3, ["Caminho do Arcanista: Bruxo"]);
+		const fichaA = lerFicha(a, { regrasClasses, variantes });
+		const op = classesParaSubir(dados, progressao, fichaA, variantes);
+		ok(op.novas.some((c) => c.nome === "Paladino" && !c.bloqueio), "Arcanista pode começar Paladino");
+		if (sup) ok(op.novas.find((c) => c.nome === "Necromante")?.bloqueio, "Arcanista não pode começar Necromante (variante)");
+		const { r } = calcular(a, nova("Paladino"));
+		ok(r.nivelClasse === 1 && r.nivelPersonagem === 4 && !r.ganhaPoder, "Paladino 1 = personagem 4, sem poder de classe");
+		ok(["Abençoado", "Código do Herói", "Golpe Divino"].every((n) => r.habilidades.some((h) => h.nome === n)), "habilidades de 1º nível do paladino");
+		ok(r.notas.some((t) => /perícias treinadas nem as proficiências/.test(t)) && r.notas.some((t) => /devotos/.test(t)), "avisos de multiclasse e de devoção");
+		const antes = fotografia(a);
+		await aplicarNivel(a, montarPlano(r, { classeId: null }));
+		const pal = a.items.find((i) => i.type === "classe" && i.name === "Paladino");
+		ok(pal && pal.system.niveis === 1 && pal.system.inicial === false && a.nivel === 4, "classe nova com 1 nível, não inicial");
+		ok(a.items.some((i) => i.name === "4 - Golpe Divino") && a.system.attributes.nivel.value === 4, "habilidades com prefixo do nível e nível do personagem atualizado");
+		await desfazerUltimoNivel(a);
+		ok(fotografia(a) === antes && !a.items.some((i) => i.name === "Paladino"), "desfazer remove a classe nova e restaura a ficha");
+	}
+
+	// B. Guerreiro 5 → Clérigo 1 → Clérigo 2
+	{
+		const a = atorEm("Guerreiro", 5);
+		a.system.detalhes = { divindade: "Khalmyr" };
+		let { ficha, r } = calcular(a, nova("Clérigo"));
+		ok(r.magias && r.magias.vagas.length === 3 && r.magias.circulo === 1 && r.magias.atributo === "sab", "Clérigo 1: 3 magias iniciais de 1º círculo, atributo Sab");
+		ok(!r.notas.some((t) => /devotos/.test(t)), "sem aviso de devoção (ficha já é devota)");
+		const lista = magiasDisponiveis(dados, r.magias, ficha);
+		const escolhidas = lista.filter((m) => circuloDe(m) === 1).slice(0, 3);
+		ok(!pendenciaNivel(r, { magias: escolhidas }), "sem pendência com as 3 magias");
+		await aplicarNivel(a, montarPlano(r, { classeId: null, magias: escolhidas }));
+		const naFicha = a.items.filter((i) => i.type === "magia");
+		ok(naFicha.length === 3 && naFicha.every((m) => !m.system.resistencia || m.system.resistencia.atributo === "sab"), "magias gravadas com o atributo Sab");
+		const cle = a.items.find((i) => i.type === "classe" && i.name === "Clérigo");
+		({ ficha, r } = calcular(a, { nome: "Clérigo", niveis: cle.system.niveis, id: cle.id }));
+		ok(r.nivelClasse === 2 && r.nivelPersonagem === 7 && r.magias.vagas.length === 1 && r.magias.circulo === 1, "Clérigo 2 (personagem 7): 1 magia de 1º círculo (círculo pelo nível de classe)");
+		ok(r.poderesClasse.length > 0 && r.poderesClasse.every((o) => o.doc.system.subtipo === "Clérigo" || o.doc.system.subtipo === "Clerigo"), "poderes de clérigo no 2º nível de clérigo");
+	}
+
+	// C. Guerreiro 2 → Arcanista 1: Caminho, Linhagem só para Feiticeiro, Mago com 4 magias
+	{
+		const a = atorEm("Guerreiro", 2);
+		const { r } = calcular(a, nova("Arcanista"));
+		const caminho = r.escolhas.find((e) => e.id === "caminho");
+		const linhagem = r.escolhas.find((e) => e.id === "linhagem");
+		const uuid = (nome) => caminho.opcoes.find((o) => o.nome === nome).doc.uuid;
+		ok(caminho && linhagem && !escolhaAtiva(linhagem, { caminho: uuid("Caminho do Arcanista: Mago") }) && escolhaAtiva(linhagem, { caminho: uuid("Caminho do Arcanista: Feiticeiro") }), "Linhagem só vale para o Feiticeiro");
+		const mago = { caminho: uuid("Caminho do Arcanista: Mago") };
+		ok(vagasEfetivas(r.magias, mago).length === 4 && atributoEfetivo(r.magias, mago) === "int", "Mago: 4 magias iniciais, atributo Int");
+		const feit = { caminho: uuid("Caminho do Arcanista: Feiticeiro") };
+		ok(vagasEfetivas(r.magias, feit).length === 3 && atributoEfetivo(r.magias, feit) === "car", "Feiticeiro: 3 magias iniciais, atributo Car");
+		ok(/Linhagem/.test(pendenciaNivel(r, { selecoes: feit, magias: [] }) ?? ""), "Feiticeiro sem linhagem fica pendente");
+	}
+
+	// D. Guerreiro 3 → Bardo 1: escolas por classe
+	{
+		const a = atorEm("Guerreiro", 3);
+		const { ficha, r } = calcular(a, nova("Bardo"));
+		ok(r.magias.escolas === 3 && !r.magias.escolasFicha.length, "Bardo novo pede as 3 escolas");
+		const escolas = ["enc", "ilu", "adv"];
+		const mags = magiasDisponiveis(dados, r.magias, ficha, escolas).filter((m) => circuloDe(m) === 1).slice(0, 2);
+		ok(!pendenciaNivel(r, { magias: mags, escolas }), "sem pendência com escolas e 2 magias");
+		const antes = fotografia(a);
+		await aplicarNivel(a, montarPlano(r, { classeId: null, magias: mags, escolas }));
+		const fl = a.flags["t20-construtor-ficha"];
+		ok(JSON.stringify(fl.escolasMagiaPorClasse?.Bardo) === JSON.stringify(escolas) && !fl.escolasMagia, "escolas gravadas por classe (não como as da classe inicial)");
+		ok(a.items.filter((i) => i.type === "magia").every((m) => !m.system.resistencia || m.system.resistencia.atributo === "car"), "magias do bardo com Car");
+		await desfazerUltimoNivel(a);
+		ok(fotografia(a) === antes && !a.flags["t20-construtor-ficha"].escolasMagiaPorClasse?.Bardo, "desfazer apaga as escolas do bardo");
+	}
+
+	// E. básica × variante
+	if (sup) {
+		const ladino = lerFicha(atorEm("Ladino", 2), { regrasClasses, variantes });
+		ok(classesParaSubir(dados, progressao, ladino, variantes).novas.find((c) => c.nome === "Ventanista")?.bloqueio, "Ladino não pode começar Ventanista");
+		const vent = lerFicha(atorEm("Ventanista", 2), { regrasClasses, variantes });
+		const opV = classesParaSubir(dados, progressao, vent, variantes);
+		ok(opV.novas.find((c) => c.nome === "Ladino")?.bloqueio && !opV.novas.find((c) => c.nome === "Ermitão")?.bloqueio, "Ventanista não pode começar Ladino, mas pode Ermitão");
 	}
 }
 

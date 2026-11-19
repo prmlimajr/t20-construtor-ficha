@@ -112,6 +112,8 @@ export async function aplicarNaFicha(actor, plano, dados) {
 	if (plano.conjuracao) update["system.attributes.conjuracao"] = plano.conjuracao;
 	// escolas de magia escolhidas (Bardo, Druida), usadas na subida de nível
 	if (plano.escolasMagia?.length) update[`flags.${MODULE_ID}.escolasMagia`] = plano.escolasMagia;
+	// Idades Variadas: níveis extras da faixa etária (o assistente de subir de nível mostra quantos faltam)
+	if (plano.niveisExtras > 0) update[`flags.${MODULE_ID}.niveisExtras`] = plano.niveisExtras;
 	// Idades Variadas: faixa etária (e níveis extras a subir) nas notas da ficha
 	if (plano.idade) {
 		const notas = String(actor.system?.detalhes?.info ?? "").trim();
@@ -150,7 +152,12 @@ export async function aplicarNaFicha(actor, plano, dados) {
 			itens.push(data);
 		});
 	});
-	for (const m of plano.magias) itens.push(doCompendio(m));
+	for (const m of plano.magias) {
+		const data = doCompendio(m);
+		// as magias do compêndio vêm com um atributo fixo (Int nas arcanas, Sab nas divinas): vale o da classe
+		if (plano.conjuracao && data.system?.resistencia) data.system.resistencia.atributo = plano.conjuracao;
+		itens.push(data);
+	}
 	for (const { doc } of plano.magiasPoderesClasse ?? []) itens.push(doCompendio(doc));
 	for (const { doc, atributo } of plano.magiasRaciais ?? []) {
 		const data = doCompendio(doc);

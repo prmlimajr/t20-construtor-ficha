@@ -8,6 +8,12 @@ import {
 } from "./regras.js";
 import { carregarDados, dadosCarregados, poder, poderesDoGrupo, equipamento, magiaPorNome, poderSelecionavel, fonteDe } from "./dados.js";
 import { poderRacialPermitido } from "./poderes-raciais.js";
+import { statsMagia, aprimoramentosMagia } from "./magias-info.js";
+import { categoriaPoder, agruparPorCategoria } from "./categorias-poder.js";
+import { carregarDadosNivel, leitorPreRequisitos } from "./dados-nivel.js";
+import { lerFicha } from "./ficha-atual.js";
+import { avaliarPreRequisito } from "./pre-requisitos.js";
+import { variantesDe } from "./nivel.js";
 import { poderDistincaoPermitido } from "./distincoes.js";
 import { atributosDinamicosRaca } from "./suplementos.js";
 import { aplicarNaFicha } from "./aplicar.js";
@@ -114,19 +120,12 @@ function tipoMelhoria(doc) {
 }
 
 /**
- * Aprimoramento sem custo em PM: é um truque (custo vazio no compêndio, ou texto "em vez do normal"),
- * exceto as automações "Maximiza..." e as variantes de efeito (ex.: formas de Animar Objetos, "+2 em Força").
- */
-function ehTruque(custo, html) {
-	const texto = String(html ?? "").replace(/<[^>]+>/g, " ").trim();
-	if (/^maximiza/i.test(texto)) return false;
-	return custo === null || /^muda\b/i.test(texto) || /em vez d[oae]/i.test(texto);
-}
-
-/**
  * Círculo da magia como número. Magias de suplementos feitos para o Tormenta20 1.5 (ex.: Heróis de
  * Arton) guardam o círculo como texto ("1"); sem converter, elas sumiriam das listas por círculo.
  */
+/** Listas de slideout com poderes gerais (pré-requisito conferido; ver #ctxSlideout). */
+const LISTAS_PODERES_GERAIS = new Set(["grupo", "poderGeral", "poderes", "poderGeralOrigem", "poderGeralComplicacao", "poderGeralIdade"]);
+
 function circuloMagia(m) {
 	return Number(m?.system?.circulo);
 }
@@ -203,6 +202,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			colocarDado: ConstrutorFicha.#colocarDado,
 			fecharSlideout: ConstrutorFicha.#fecharSlideout,
 			focarSlideout: ConstrutorFicha.#focarSlideout,
+			alternarIndisponiveisSlideout: ConstrutorFicha.#alternarIndisponiveisSlideout,
 			confirmarSlideout: ConstrutorFicha.#confirmarSlideout,
 			focarPericia: ConstrutorFicha.#focarPericia,
 			focarDivindade: ConstrutorFicha.#focarDivindade,
@@ -996,7 +996,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 					const pend = this.pendencia(p);
 					if (pend) return `${p.titulo}: ${pend}`;
 				}
-				return null;
+				return this.#pendenciaPreRequisitos();
 			}
 		}
 		return null;
@@ -1025,6 +1025,15 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 	async #inicializar() {
 		if (this.dados && this.estado) return;
 		this.dados = await carregarDados();
+		// pré-requisitos dos poderes gerais (mesmo leitor do assistente de subir de nível); sem eles, as
+		// listas só não são filtradas
+		try {
+			this.dadosNivel = await carregarDadosNivel();
+			this.lerPreRequisito = leitorPreRequisitos(this.dados, this.dadosNivel.correcoes);
+		} catch (err) {
+			console.warn(`${MODULE_ID} | pré-requisitos dos poderes indisponíveis:`, err);
+			this.lerPreRequisito = null;
+		}
 		const salvo = this.actor.getFlag(MODULE_ID, "rascunho");
 		let estado = null;
 		if (salvo) {
@@ -1096,6 +1105,10 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 				if (this.slideout) this.slideout.filtro = filtro.value;
 				for (const card of this.element.querySelectorAll(".cf-slideout .cf-card")) {
 					card.hidden = !!termo && !normalizar(card.dataset.busca).includes(termo);
+				}
+				// lista por categoria: some o título da categoria sem resultado
+				for (const grupo of this.element.querySelectorAll(".cf-slideout .cf-grupo")) {
+					grupo.hidden = ![...grupo.querySelectorAll(".cf-card")].some((c) => !c.hidden);
 				}
 			};
 			filtro.addEventListener("input", aplicar);
@@ -1367,6 +1380,66 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	/* ---------------- Slideout (submenus de escolha) ---------------- */
 
+	/* ---------------- Pré-requisitos dos poderes gerais ---------------- */
+
+	/**
+	 * Ficha provisória com o que já foi escolhido (raça, atributos, classe no 1º nível, perícias, poderes,
+	 * magias, devoção), no formato de ficha-atual.js, para conferir pré-requisitos.
+	 * @param {object} opcoesPlano  repassadas a plano() (ex.: semComplicacao para a lista da complicação)
+	 */
+	#fichaProvisoria(opcoesPlano = {}) {
+		const plano = this.plano(opcoesPlano);
+		const itens = [];
+		if (this.classe) itens.push({ type: "classe", name: this.classe.name, system: { niveis: 1, inicial: true } });
+		if (this.raca) itens.push({ type: "race", name: this.raca.name, system: {} });
+		for (const g of plano.gruposPoderes) for (const p of g.poderes) itens.push({ type: "poder", name: p.name, system: p.system ?? {} });
+		const magias = [...(plano.magias ?? []), ...(plano.magiasRaciais ?? []).map((x) => x.doc), ...(plano.magiasPoderesClasse ?? []).map((x) => x.doc)];
+		for (const m of magias.filter(Boolean)) itens.push({ type: "magia", name: m.name, system: m.system ?? {} });
+		const ator = {
+			items: itens,
+			system: {
+				atributos: Object.fromEntries(ATRIBUTOS.map((k) => [k, { value: (plano.atributos?.[k]?.base ?? 0) + (plano.atributos?.[k]?.racial ?? 0) }])),
+				pericias: Object.fromEntries((plano.pericias ?? []).map((k) => [k, { treinado: true }])),
+				tracos: {},
+				detalhes: { divindade: plano.divindade ?? "" },
+				attributes: { conjuracao: plano.conjuracao ?? null }
+			},
+			flags: { [MODULE_ID]: { escolasMagia: [...(this.estado.magiasEscolas ?? [])] } }
+		};
+		return lerFicha(ator, { regrasClasses: this.dados.regrasClasses, variantes: variantesDe(this.dadosNivel?.progressao, this.dados.variantes) });
+	}
+
+	/** Pré-requisito de um poder geral contra a ficha: {texto, ok, falhas} (null se não tem). */
+	#preRequisito(p, ficha) {
+		if (!this.lerPreRequisito || p?.system?.tipo !== "geral") return null;
+		const req = this.lerPreRequisito(p);
+		if (!req) return null;
+		const r = avaliarPreRequisito(req, ficha);
+		return { texto: req.texto, ok: r.ok, falhas: r.falhas, avisos: r.avisos };
+	}
+
+	/**
+	 * Nas listas de poderes gerais, os de pré-requisito não atendido somem a partir do passo Origem
+	 * (atributos, classe e perícias já escolhidos); antes disso, só ganham um aviso.
+	 */
+	get #listasFiltramPreRequisito() {
+		const iPericias = this.passos().findIndex((p) => p.id === "pericias");
+		return iPericias >= 0 && this.indice > iPericias;
+	}
+
+	/** Revisão: algum poder geral escolhido não atende o pré-requisito com a ficha final? */
+	#pendenciaPreRequisitos() {
+		if (!this.lerPreRequisito) return null;
+		const ficha = this.#fichaProvisoria();
+		for (const g of this.plano().gruposPoderes) {
+			for (const p of g.poderes) {
+				const r = this.#preRequisito(p, ficha);
+				if (r && !r.ok) return `Pré-requisito não atendido: ${p.name} (${r.falhas.join(", ")}). Troque o poder ou ajuste a ficha.`;
+			}
+		}
+		return null;
+	}
+
 	/** Opções de uma lista de slideout: [{valor, nome, img, sub}] */
 	#opcoesSlideout(lista) {
 		const [tipo, arg = ""] = lista.split(/:(.*)/s);
@@ -1374,7 +1447,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			const f = this.#fichaEquip(nome);
 			return { valor: nome, nome: f.nome, img: f.img, sub: f.sub };
 		};
-		const poderCard = (p) => ({ valor: p.name, nome: p.name, img: p.img, sub: [p.system.subtipo, fonteDe(this.dados, p)].filter(Boolean).join(" · ") });
+		// grupo: categoria do poder (Combate, Destino…), para listar agrupado quando a lista mistura categorias
+		const poderCard = (p) => ({ valor: p.name, nome: p.name, img: p.img, grupo: categoriaPoder(p), sub: [p.system.subtipo, fonteDe(this.dados, p)].filter(Boolean).join(" · ") });
 		switch (tipo) {
 			case "arma": {
 				const cats = arg.split(",");
@@ -1506,7 +1580,12 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			const p = poder(this.dados, valor);
 			if (!p) return null;
 			const i = await this.#infoPoder(p);
-			return { ...i, stats: [{ rotulo: "Tipo", valor: p.system.subtipo }] };
+			const stats = [{ rotulo: "Tipo", valor: p.system.subtipo }];
+			const r = this.lerPreRequisito ? this.#preRequisito(p, this.#fichaProvisoria({ semComplicacao: tipo === "poderGeralComplicacao", semIdade: tipo === "poderGeralIdade" })) : null;
+			if (r) stats.push({ rotulo: "Pré-requisito", valor: r.ok ? r.texto : `${r.texto} — não atendido: ${r.falhas.join(", ")}` });
+			// a partir do passo Origem, não dá para escolher um poder com pré-requisito não atendido
+			const bloqueado = r && !r.ok && this.#listasFiltramPreRequisito;
+			return { ...i, stats, bloqueado, avisos: r?.avisos ?? [] };
 		}
 		if (tipo === "pericia" || tipo === "periciaRacial" || tipo === "pericias") {
 			const cfg = CONFIG.T20?.pericias?.[valor];
@@ -1530,11 +1609,28 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		if (so.tipo === "venda") return this.#ctxSlideoutVenda();
 		const atual = foundry.utils.getProperty(this.estado, so.campo) ?? "";
 		const ehLista = Array.isArray(atual);
-		const cards = this.#opcoesSlideout(so.lista).map((c) => ({
+		let cards = this.#opcoesSlideout(so.lista).map((c) => ({
 			...c,
 			selecionado: ehLista ? atual.includes(c.valor) : c.valor === atual,
 			foco: c.valor === so.foco
 		}));
+		// poderes gerais: pré-requisito conferido contra o que já foi escolhido
+		const tipoLista = so.lista.split(":")[0];
+		let indisponiveis = 0;
+		if (LISTAS_PODERES_GERAIS.has(tipoLista) && this.lerPreRequisito) {
+			const filtrar = this.#listasFiltramPreRequisito;
+			// a lista da complicação/idade não conta o poder que ela mesma dá
+			const ficha = this.#fichaProvisoria({ semComplicacao: tipoLista === "poderGeralComplicacao", semIdade: tipoLista === "poderGeralIdade" });
+			cards = cards.map((c) => {
+				const r = this.#preRequisito(poder(this.dados, c.valor), ficha);
+				if (!r || r.ok) return c;
+				if (!filtrar) return { ...c, sub: `⚠ Pré-requisito ainda não conferido: ${r.texto}`, aviso: true };
+				indisponiveis++;
+				return { ...c, indisponivel: true, sub: `Pré-requisito não atendido: ${r.falhas.join(", ")}` };
+			});
+			// o já escolhido continua visível (para poder trocar), mesmo se deixou de atender
+			if (filtrar && !so.mostrarIndisponiveis) cards = cards.filter((c) => !c.indisponivel || c.selecionado);
+		}
 		const info = so.foco ? await this.#infoSlideout(so.lista, so.foco) : null;
 		if (info) {
 			info.valor = so.foco;
@@ -1542,7 +1638,15 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		}
 		const animar = so.animar;
 		so.animar = false;
-		return { titulo: so.titulo, cards, info, animar, filtro: so.filtro, longa: cards.length > 8 };
+		// poderes de mais de uma categoria (ex.: poder geral da complicação): listados por categoria
+		const categorias = new Set(cards.map((c) => c.grupo).filter(Boolean));
+		const grupos = categorias.size > 1
+			? agruparPorCategoria(cards, (c) => c.grupo).map((g) => ({ titulo: g.titulo, cards: g.itens.map((c) => ({ ...c, sub: c.sub.split(" · ").filter((x) => x !== c.grupo && x.toLowerCase() !== c.grupo.toLowerCase()).join(" · ") })) }))
+			: null;
+		return {
+			titulo: so.titulo, cards, grupos, info, animar, filtro: so.filtro, longa: cards.length > 8,
+			indisponiveis, mostrarIndisponiveis: !!so.mostrarIndisponiveis
+		};
 	}
 
 	/** Slideout de venda: marcar vários itens iniciais, ver o total e confirmar de uma vez. */
@@ -2097,43 +2201,13 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	/** Ficha resumida de uma magia (execução, alcance, alvo, duração, resistência). */
 	#statsMagia(m) {
-		const s = m.system;
-		const T = CONFIG.T20 ?? {};
-		const loc = (mapa, k) => (k && mapa?.[k] ? game.i18n.localize(mapa[k]) : "");
-		const stats = [];
-		const custo = s.ativacao?.custo;
-		if (custo) stats.push(["Custo", `${custo} PM`]);
-		const exec = loc(T.abilityActivationTypes, s.ativacao?.execucao);
-		if (exec) stats.push(["Execução", exec]);
-		const alcance = loc(T.distanceUnits, s.alcance);
-		if (alcance && s.alcance !== "none") stats.push(["Alcance", alcance]);
-		if (s.alvo) stats.push(["Alvo", s.alvo]);
-		if (s.area) stats.push(["Área", s.area]);
-		if (s.efeito) stats.push(["Efeito", s.efeito]);
-		const u = s.duracao?.units;
-		let dur = loc(T.timePeriods, u);
-		if (["round", "turn", "minute", "hour", "day"].includes(u) && s.duracao?.value) dur = `${s.duracao.value} ${dur.toLowerCase()}`;
-		if (s.duracao?.special) dur = dur ? `${dur} (${s.duracao.special})` : s.duracao.special;
-		if (dur) stats.push(["Duração", dur]);
-		if (s.resistencia?.txt) stats.push(["Resistência", s.resistencia.txt]);
-		return stats.map(([rotulo, valor]) => ({ rotulo, valor }));
+		return statsMagia(m);
 	}
 
 	/** Aprimoramentos da magia: efeitos "ao usar" com custo em PM e descrição. */
 	async #aprimoramentos(m) {
-		const efeitos = [...(m.effects ?? [])]
-			.map((ef, ordem) => ({ ef, ordem }))
-			.filter(({ ef }) => ef.system?.onuse && (ef.description || ef.system?.abilityUse?.description));
-		efeitos.sort((a, b) => (a.ef.system.abilityUse?.custo ?? 0) - (b.ef.system.abilityUse?.custo ?? 0) || a.ordem - b.ordem);
-		const out = [];
-		for (const { ef } of efeitos) {
-			const html = ef.description || ef.system.abilityUse.description;
-			const custo = ef.system.abilityUse?.custo ?? null;
-			const texto = await this.#html(`${m.uuid}.${ef.id ?? ef._id}`, html);
-			const circulo = /Requer (\d)º círculo/i.exec(html)?.[1] ?? null;
-			out.push({ custo: custo ? `+${custo} PM` : (ehTruque(custo, html) ? "Truque" : "Variante"), texto, circulo, bloqueado: circulo && Number(circulo) > 1 });
-		}
-		return out;
+		// no 1º nível só se lançam magias de 1º círculo
+		return aprimoramentosMagia(m, (chave, html) => this.#html(chave, html), 1);
 	}
 
 	/** Descrição da perícia vinda do diário "Perícias" do sistema (Ofícios usam a página "Ofício"). */
@@ -2877,7 +2951,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const partes = [faixa.nome];
 		if (Number.isFinite(anos) && anos > 0) partes.push(`${anos} anos`);
 		let txt = `Idade: ${partes.join(", ")}`;
-		if (faixa.niveisExtras) txt += ` — começa ${faixa.niveisExtras === 1 ? "1 nível" : `${faixa.niveisExtras} níveis`} acima do grupo (suba de nível na ficha)`;
+		if (faixa.niveisExtras) txt += ` — começa ${faixa.niveisExtras === 1 ? "1 nível" : `${faixa.niveisExtras} níveis`} acima do grupo`;
 		return txt;
 	}
 
@@ -3046,6 +3120,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			// a faixa etária (Idades Variadas) entra no valor base
 			atributos: Object.fromEntries(ATRIBUTOS.map((k) => [k, { base: (this.base(k) ?? 0) + this.idadeAtr(k), racial: this.racial(k) }])),
 			idade: faixa ? this.#textoIdade(faixa) : null,
+			// Idades Variadas: níveis a subir depois da criação (o assistente de subir de nível mostra quantos faltam)
+			niveisExtras: faixa?.niveisExtras ?? 0,
 			origem: this.origensAtivas().map((o) => o.def.nome).join(" / "),
 			divindade: this.textoDivindade,
 			dinheiro: Math.round(((e.dinheiro ?? 0) + vendas.total - this.gastoCompras) * 100) / 100,
@@ -3439,6 +3515,12 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		this.render();
 	}
 
+	static #alternarIndisponiveisSlideout() {
+		if (!this.slideout) return;
+		this.slideout.mostrarIndisponiveis = !this.slideout.mostrarIndisponiveis;
+		this.render();
+	}
+
 	static #focarSlideout(event, target) {
 		if (!this.slideout) return;
 		this.slideout.foco = target.dataset.valor;
@@ -3449,6 +3531,13 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		if (!this.slideout) return;
 		const { campo, limite } = this.slideout;
 		const valor = target.dataset.valor ?? this.slideout.foco;
+		// a partir do passo Origem, poder geral com pré-requisito não atendido não pode ser escolhido
+		const tipoLista = this.slideout.lista.split(":")[0];
+		if (LISTAS_PODERES_GERAIS.has(tipoLista) && this.#listasFiltramPreRequisito) {
+			const ficha = this.#fichaProvisoria({ semComplicacao: tipoLista === "poderGeralComplicacao", semIdade: tipoLista === "poderGeralIdade" });
+			const r = this.#preRequisito(poder(this.dados, valor), ficha);
+			if (r && !r.ok) return ui.notifications.warn(`Pré-requisito não atendido: ${r.falhas.join(", ")}.`);
+		}
 		const atual = foundry.utils.getProperty(this.estado, campo);
 		// campo de lista (ex.: magias): adiciona o item em vez de substituir
 		if (Array.isArray(atual)) {
@@ -3725,10 +3814,16 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		}
 		target.disabled = true;
 		try {
-			await aplicarNaFicha(this.actor, this.plano(), this.dados);
+			const plano = this.plano();
+			await aplicarNaFicha(this.actor, plano, this.dados);
 			ui.notifications.info(`${this.actor.name} está pronto para a aventura!`);
 			await this.close();
 			this.actor.sheet.render(true);
+			// Idades Variadas: faixas que começam acima do 1º nível abrem o assistente de subir de nível
+			if (plano.niveisExtras > 0 && game.settings.get(MODULE_ID, "subirNivel")) {
+				ui.notifications.info(`${this.actor.name} começa ${plano.niveisExtras === 1 ? "1 nível" : `${plano.niveisExtras} níveis`} acima do grupo pela idade: suba agora no assistente.`);
+				game.modules.get(MODULE_ID).api?.subirNivel?.(this.actor);
+			}
 		} catch (err) {
 			console.error(`${MODULE_ID} |`, err);
 			ui.notifications.error(`Erro ao criar a ficha: ${err.message}`);

@@ -25,6 +25,7 @@ const PROF_DO_SISTEMA = { pes: "pesada", esc: "escudo", marcial: "marcial", exot
 export function lerFicha(actor, { regrasClasses = {}, variantes = {} } = {}) {
 	const itens = [...(actor.items ?? [])];
 	const sys = actor.system ?? {};
+	const flags = actor.flags?.[MODULE_ID] ?? {};
 
 	const classes = itens
 		.filter((i) => i.type === "classe")
@@ -86,7 +87,14 @@ export function lerFicha(actor, { regrasClasses = {}, variantes = {} } = {}) {
 		temMagias,
 		poderesPorSubtipo,
 		/** Escolas de magia escolhidas (Bardo, Druida), gravadas pelo construtor; [] se não houver. */
-		escolasMagia: [...(actor.flags?.[MODULE_ID]?.escolasMagia ?? [])],
+		/** Escolas de magia de todas as classes (para pré-requisitos "X como uma de suas escolas"). */
+		escolasMagia: [...new Set([...(flags.escolasMagia ?? []), ...Object.values(flags.escolasMagiaPorClasse ?? {}).flat()])],
+		/** Escolas de magia de uma classe: as gravadas para ela, ou as da criação se for a classe inicial. */
+		escolasDe: (nome) => [...(flags.escolasMagiaPorClasse?.[nome] ?? (normalizar(inicial?.nome) === normalizar(nome) ? flags.escolasMagia ?? [] : []))],
+		/** Idades Variadas: níveis extras da faixa etária, gravados na criação (0 se não houver). */
+		niveisExtras: Number(flags.niveisExtras) || 0,
+		/** Atributo-chave de magias da ficha (system.attributes.conjuracao). */
+		conjuracao: sys.attributes?.conjuracao || null,
 		/** Tipos das magias da ficha (arc, div, uni). */
 		tiposMagia: new Set(magiasItens.map((m) => m.system?.tipo).filter(Boolean)),
 		/** Nome da raça da ficha ou "". */

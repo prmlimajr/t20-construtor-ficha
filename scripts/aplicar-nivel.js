@@ -102,8 +102,8 @@ export function podeDesfazer(actor) {
  *   escolasMagia: [chave]|null }           escolas de magia escolhidas agora (ficha sem as escolas gravadas)
  */
 export async function aplicarNivel(actor, plano) {
-	const classe = actor.items.get(plano.classeId);
-	if (!classe) throw new Error("classe não encontrada na ficha");
+	const classeExistente = plano.classeNova ? null : actor.items.get(plano.classeId);
+	if (!plano.classeNova && !classeExistente) throw new Error("classe não encontrada na ficha");
 	if (actor.nivel + 1 !== plano.nivelPersonagem) throw new Error("a ficha mudou desde que a janela foi aberta");
 
 	const pvAntes = actor.system.attributes?.pv?.max ?? 0;
@@ -160,12 +160,24 @@ export async function aplicarNivel(actor, plano) {
 	if (plano.poder) adicionar(plano.poder, { anotacao: plano.anotacao });
 	for (const doc of plano.magias ?? []) {
 		const data = doCompendio(doc);
+		// as magias do compêndio vêm com um atributo fixo (Int nas arcanas, Sab nas divinas): vale o da classe
+		if (plano.atributoMagia && data.system?.resistencia) data.system.resistencia.atributo = plano.atributoMagia;
 		foundry.utils.setProperty(data, `flags.${MODULE_ID}.nivel`, n);
 		itens.push(data);
 	}
 
-	// a classe primeiro: o sistema atualiza o nível do personagem ao mudar system.niveis
-	await classe.update({ "system.niveis": plano.nivelClasse });
+	// a classe primeiro: o sistema atualiza o nível do personagem ao mudar system.niveis; a classe nova
+	// (multiclasse) entra com 1 nível e sem ser a inicial (PV de nível seguinte)
+	let classe = classeExistente;
+	if (plano.classeNova) {
+		const data = doCompendio(plano.classeNova);
+		foundry.utils.setProperty(data, "system.niveis", 1);
+		foundry.utils.setProperty(data, "system.inicial", false);
+		foundry.utils.setProperty(data, `flags.${MODULE_ID}.nivel`, n);
+		[classe] = await actor.createEmbeddedDocuments("Item", [data]);
+	} else {
+		await classe.update({ "system.niveis": plano.nivelClasse });
+	}
 	const criados = itens.length ? await actor.createEmbeddedDocuments("Item", itens) : [];
 	if (atualizacoes.size) await actor.updateEmbeddedDocuments("Item", [...atualizacoes.values()]);
 	for (const chave of comRolagemAtualizada) {
@@ -191,14 +203,21 @@ export async function aplicarNivel(actor, plano) {
 		nivelClasse: plano.nivelClasse,
 		itens: criados.map((i) => i.id),
 		alteracoes,
-		...(plano.escolasMagia ? { escolasDefinidas: true } : {}),
+		...(plano.classeNova ? { classeNova: true } : {}),
+		...(plano.escolasMagia ? { escolasDefinidas: plano.classe ?? true } : {}),
 		pv,
 		pm,
 		data: Date.now()
 	});
 	update[`flags.${MODULE_ID}.niveis`] = lista;
 	update[`flags.${MODULE_ID}.ultimoDesfeito`] = false;
-	if (plano.escolasMagia) update[`flags.${MODULE_ID}.escolasMagia`] = [...plano.escolasMagia];
+	// escolas por classe (multiclasse com dois conjuradores de escolas); a da classe inicial também no campo antigo
+	if (plano.escolasMagia) {
+		update[`flags.${MODULE_ID}.escolasMagiaPorClasse.${plano.classe}`] = [...plano.escolasMagia];
+		if (classe.system?.inicial) update[`flags.${MODULE_ID}.escolasMagia`] = [...plano.escolasMagia];
+	}
+	// criar uma classe não atualiza o nível do personagem no sistema (só mudar system.niveis)
+	update["system.attributes.nivel.value"] = actor.nivel;
 	await actor.update(update);
 	return { pv, pm, itens: criados };
 }
@@ -209,7 +228,8 @@ export async function desfazerUltimoNivel(actor) {
 	const lista = historico(actor);
 	const ultimo = lista.pop();
 
-	const existentes = ultimo.itens.filter((id) => actor.items.has(id));
+	// 1º nível de uma classe (multiclasse): a classe sai junto
+	const existentes = [...ultimo.itens, ...(ultimo.classeNova ? [ultimo.classeId] : [])].filter((id) => actor.items.has(id));
 	if (existentes.length) await actor.deleteEmbeddedDocuments("Item", existentes);
 	const restaurar = new Map();
 	const efeitos = new Map(); // item → [{_id, campo: valor}] (alterações em efeitos do item)
@@ -225,13 +245,18 @@ export async function desfazerUltimoNivel(actor) {
 	}
 	if (restaurar.size) await actor.updateEmbeddedDocuments("Item", [...restaurar.values()]);
 	for (const [id, lista] of efeitos) await actor.items.get(id)?.updateEmbeddedDocuments("ActiveEffect", lista);
-	const classe = actor.items.get(ultimo.classeId);
+	const classe = ultimo.classeNova ? null : actor.items.get(ultimo.classeId);
 	if (classe) await classe.update({ "system.niveis": Math.max(1, ultimo.nivelClasse - 1) });
 
 	const attrs = actor.system.attributes ?? {};
 	// escolas escolhidas no nível desfeito voltam a ficar em aberto
-	if (ultimo.escolasDefinidas) await actor.update({ [`flags.${MODULE_ID}.-=escolasMagia`]: null });
+	if (ultimo.escolasDefinidas) {
+		const porClasse = typeof ultimo.escolasDefinidas === "string" ? { [`flags.${MODULE_ID}.escolasMagiaPorClasse.-=${ultimo.escolasDefinidas}`]: null } : {};
+		const inicial = !ultimo.classeNova && actor.items.get(ultimo.classeId)?.system?.inicial;
+		await actor.update({ ...porClasse, ...(inicial || typeof ultimo.escolasDefinidas !== "string" ? { [`flags.${MODULE_ID}.-=escolasMagia`]: null } : {}) });
+	}
 	await actor.update({
+		"system.attributes.nivel.value": actor.nivel,
 		"system.attributes.pv.value": (attrs.pv?.value ?? 0) - (ultimo.pv ?? 0),
 		"system.attributes.pm.value": Math.max(0, (attrs.pm?.value ?? 0) - (ultimo.pm ?? 0)),
 		[`flags.${MODULE_ID}.niveis`]: lista,

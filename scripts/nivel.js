@@ -101,12 +101,15 @@ function fichaProjetada(ficha, nomesClasse, habilidades) {
  *   ehGeral(doc): entra na lista de poderes gerais?, grupoGeral(doc): título do grupo na lista }
  */
 export function montarNivel({
-	dados, progressao, ficha, classe, lerPreRequisito, selecionavel = () => true, regrasPoderesClasse = {},
+	dados, progressao, ficha, classe, lerPreRequisito, selecionavel = () => true, regrasPoderesClasse = {}, regrasClasses = {},
 	ehGeral = (p) => p.system?.tipo === "geral", grupoGeral = (p) => p.system?.subtipo || "Outros"
 }) {
 	const prog = progressaoDe(progressao, classe.nome);
 	if (!prog) return { erro: "semProgressao" };
-	const nivelClasse = classe.niveis + 1;
+	// classe nova (multiclasse): o 1º nível dela, com as escolhas de 1º nível da classe (classes.json)
+	const nova = !!classe.nova;
+	const regra = regrasClasses[classe.nome] ?? null;
+	const nivelClasse = nova ? 1 : classe.niveis + 1;
 	const nivelPersonagem = ficha.nivel + 1;
 	if (nivelPersonagem > NIVEL_MAXIMO) return { erro: "nivelMaximo" };
 
@@ -148,11 +151,21 @@ export function montarNivel({
 		.filter(([nome]) => !habilidades.some((h) => normalizar(h.nome) === normalizar(nome)))
 		.map(([nome, valor]) => ({ nome, de: valorAte(prog, nome, nivelClasse - 1), para: valor, modo: modoValor(nome) }));
 
-	// escolha entre habilidades (ex.: Caminho do Cavaleiro: Bastião ou Montaria); some se a ficha já tem uma
-	const escolhas = (entrada.escolhas ?? []).map((e) => {
-		const opcoes = e.opcoes.map((nome) => ({ nome, doc: buscar(nome) })).filter((o) => o.doc).map((o) => ({ nome: o.doc.name, doc: o.doc }));
-		return { id: e.id, titulo: e.titulo, opcoes, jaTem: opcoes.find((o) => ficha.temPoder(o.nome))?.nome ?? null };
+	// escolha entre habilidades (ex.: Caminho do Cavaleiro: Bastião ou Montaria); some se a ficha já tem uma.
+	// Na classe nova, também as escolhas de 1º nível de classes.json (ex.: Caminho do Arcanista → Linhagem,
+	// que só aparece para o Feiticeiro: "requer")
+	const defsEscolhas = [...(entrada.escolhas ?? []), ...(nova ? escolhasDeClasse(regra) : [])];
+	const escolhas = defsEscolhas.map((e) => {
+		const opcoes = e.opcoes.map((nome) => ({ nome, doc: buscar(nome) })).filter((o) => o.doc)
+			.map((o) => ({ nome: o.doc.name, doc: o.doc, conjuracao: e.conjuracao?.[o.nome] ?? null, magiasExtra: regrasPoderesClasse[o.nome]?.magiasExtra ?? 0 }));
+		return { id: e.id, titulo: e.titulo, opcoes, requer: e.requer ?? null, jaTem: opcoes.find((o) => ficha.temPoder(o.nome))?.nome ?? null };
 	}).filter((e) => !e.jaTem && e.opcoes.length);
+	// "requer" por nome → pelo uuid da opção (é o que a janela guarda nas seleções)
+	for (const e of escolhas) {
+		if (!e.requer) continue;
+		const pai = escolhas.find((x) => x.id === e.requer.id);
+		e.requer = { id: e.requer.id, uuid: pai?.opcoes.find((o) => normalizar(o.nome) === normalizar(e.requer.opcao))?.doc.uuid ?? null };
+	}
 
 	// habilidade com uma escolha anotada que se acumula (ex.: terreno do Explorador a cada 4 níveis)
 	const anotadas = (entrada.anotadas ?? []).map((a) => {
@@ -169,7 +182,17 @@ export function montarNivel({
 	}
 
 	const ganhaPoder = (prog.poder?.niveis ?? []).includes(nivelClasse);
-	const magias = magiasDoNivel(prog, ficha, nivelClasse, regrasPoderesClasse);
+	const magias = magiasDoNivel(prog, ficha, nivelClasse, regrasPoderesClasse, { classe: classe.nome, inicial: nova ? regra?.conjurador?.quantidade ?? 0 : null });
+	if (magias) {
+		// atributo-chave das magias desta classe: o da escolha que a ficha tem (Caminho), o da classe, o da ficha
+		const daEscolha = (regra?.escolhas ?? []).flatMap((e) => e.opcoes).find((o) => o.conjuracao && ficha.temPoder(o.poder))?.conjuracao;
+		magias.atributo = daEscolha ?? regra?.conjurador?.atributo ?? ficha.conjuracao ?? null;
+		// classe nova: o Caminho escolhido agora muda o atributo e pode dar magias a mais (Mago)
+		magias.porEscolha = {};
+		for (const e of escolhas) for (const o of e.opcoes) {
+			if (o.conjuracao || o.magiasExtra) magias.porEscolha[o.doc.uuid] = { atributo: o.conjuracao, extra: o.magiasExtra };
+		}
+	}
 	// Usurpar e afins: todas as magias do círculo novo entram sozinhas
 	if (magias?.todas && magias.circuloNovo) magias.automaticas = magiasDisponiveis(dados, magias, ficha).filter((m) => circuloDe(m) === magias.circuloNovo);
 	const projetada = fichaProjetada(ficha, [classe.nome, prog.base], habilidades.map((h) => h.nome));
@@ -196,6 +219,16 @@ export function montarNivel({
 		};
 	};
 	const ordenar = (a, b) => a.nome.localeCompare(b.nome, "pt-BR");
+	// multiclasse: o que a classe nova não dá e o que o assistente não pede
+	const notas = [];
+	if (nova) {
+		notas.push(`Multiclasse: o 1º nível de ${classe.nome} dá os PV de um nível seguinte e não dá as perícias treinadas nem as proficiências da classe.`);
+		if (regra?.devocao?.obrigatoria && !ficha.divindade) notas.push(`${classe.nome}s precisam ser devotos: defina a divindade e os poderes concedidos na ficha.`);
+		const pedemEscolha = [...habilidades.map((h) => h.nome), ...escolhas.flatMap((e) => e.opcoes.map((o) => o.nome))]
+			.filter((n) => regrasPoderesClasse[n]?.tipo || regrasPoderesClasse[n]?.extras);
+		if (pedemEscolha.length) notas.push(`Escolhas internas que o assistente não pede (complete na ficha): ${pedemEscolha.join(", ")}.`);
+	}
+
 	// poderes da classe básica, da própria classe (variante) e listas extras (ex.: Melhor Amigo do treinador)
 	const listas = new Set([classeBasica, classe.nome, ...(prog.poder?.listas ?? []), ...(prog.poder?.listasPorNivel?.[nivelClasse] ?? [])].map(normalizar));
 	const poderesClasse = !ganhaPoder ? [] : dados.poderes
@@ -208,6 +241,8 @@ export function montarNivel({
 
 	return {
 		classe: classe.nome,
+		classeNova: nova ? classe.doc ?? null : null,
+		notas,
 		fonte: prog.fonte ?? "",
 		nivelClasse,
 		nivelPersonagem,
@@ -235,15 +270,17 @@ export function montarNivel({
 export function pendenciaNivel(nivel, { poder = null, selecoes = {}, magias = [], escolas = null } = {}) {
 	const faltam = [];
 	const m = nivel.magias;
+	for (const e of (nivel.escolhas ?? []).filter((x) => escolhaAtiva(x, selecoes))) if (!e.opcoes.some((o) => o.doc.uuid === selecoes[e.id])) faltam.push(e.titulo);
 	if (m) {
 		const esc = escolasEfetivas(m, escolas);
+		const vagas = vagasEfetivas(m, selecoes);
 		if (m.escolas && esc.length !== m.escolas) faltam.push(`${m.escolas} escolas de magia`);
-		else if (m.vagas.length) {
-			const r = conferirVagas(m.vagas, magias);
+		else if (vagas.length) {
+			const r = conferirVagas(vagas, magias);
 			if (r.faltam.length) faltam.push(r.faltam.join(", "));
+			if (r.sobram) faltam.push(`desmarcar ${r.sobram} magia(s) a mais`);
 		}
 	}
-	for (const e of nivel.escolhas ?? []) if (!e.opcoes.some((o) => o.doc.uuid === selecoes[e.id])) faltam.push(e.titulo);
 	for (const a of nivel.anotadas ?? []) if (!a.opcoes.includes(selecoes[a.id])) faltam.push(a.titulo);
 	if (nivel.ganhaPoder && !poder?.disponivel) faltam.push("um poder");
 	return faltam.length ? `Escolha: ${faltam.join(", ")}.` : null;
@@ -254,6 +291,9 @@ export function montarPlano(nivel, { classeId, poder = null, anotacao = "", sele
 	const concedido = poder?.disponivel && poder.concede ? [{ doc: poder.concede }] : [];
 	const m = nivel.magias;
 	return {
+		classe: nivel.classe,
+		classeNova: nivel.classeNova,
+		atributoMagia: m ? atributoEfetivo(m, selecoes) : null,
 		magias: [...magias, ...(m?.automaticas ?? [])],
 		// escolas escolhidas agora (personagem sem as escolas gravadas na ficha)
 		escolasMagia: m?.escolas && !m.escolasFicha?.length && escolas?.length === m.escolas ? [...escolas] : null,
@@ -261,7 +301,7 @@ export function montarPlano(nivel, { classeId, poder = null, anotacao = "", sele
 		nivelPersonagem: nivel.nivelPersonagem,
 		nivelClasse: nivel.nivelClasse,
 		habilidades: [...nivel.habilidades.filter((h) => h.doc && !h.jaTem).map((h) => ({ doc: h.doc, valor: h.valor, modo: h.modo, corrigir: h.corrigir })), ...concedido],
-		escolhidas: (nivel.escolhas ?? []).map((e) => e.opcoes.find((o) => o.doc.uuid === selecoes[e.id])?.doc).filter(Boolean),
+		escolhidas: (nivel.escolhas ?? []).filter((e) => escolhaAtiva(e, selecoes)).map((e) => e.opcoes.find((o) => o.doc.uuid === selecoes[e.id])?.doc).filter(Boolean),
 		anotadas: (nivel.anotadas ?? []).filter((a) => selecoes[a.id]).map((a) => ({ doc: a.doc, texto: `${a.titulo}: ${selecoes[a.id]}` })),
 		valores: nivel.valores.filter((v) => v.modo),
 		poder: poder?.disponivel ? poder.doc : null,
@@ -301,7 +341,7 @@ export function regraMagias(prog, ficha, regrasPoderesClasse = {}) {
  * Magias que o nível concede: vagas ({ate: círculo máximo} ou {circulo: exato}), círculo acessível e escolas.
  * Null se a classe não conjura. Vagas vazias = nível sem magia nova (ex.: bardo em nível ímpar).
  */
-export function magiasDoNivel(prog, ficha, nivelClasse, regrasPoderesClasse = {}) {
+export function magiasDoNivel(prog, ficha, nivelClasse, regrasPoderesClasse = {}, { classe = null, inicial = null } = {}) {
 	const r = regraMagias(prog, ficha, regrasPoderesClasse);
 	if (!r) return null;
 	const circulo = circuloAte(r.circulos, nivelClasse);
@@ -309,7 +349,8 @@ export function magiasDoNivel(prog, ficha, nivelClasse, regrasPoderesClasse = {}
 	const qtd = r.todas ? 0 : r.aprende === "todo" ? 1
 		: r.aprende === "par" ? (nivelClasse % 2 === 0 ? 1 : 0)
 			: r.aprende === "impar" ? (nivelClasse % 2 === 1 && nivelClasse >= 3 ? 1 : 0) : 0;
-	const vagas = Array.from({ length: qtd }, () => ({ ate: circulo }));
+	// 1º nível de uma classe nova (multiclasse): as magias iniciais da classe
+	const vagas = Array.from({ length: inicial !== null && !r.todas ? inicial : qtd }, () => ({ ate: circulo }));
 	if (circuloNovo && r.extraPorCirculo) for (let i = 0; i < r.extraPorCirculo; i++) vagas.push({ circulo: circuloNovo, motivo: "círculo novo" });
 	return {
 		tipo: r.tipo,
@@ -317,7 +358,7 @@ export function magiasDoNivel(prog, ficha, nivelClasse, regrasPoderesClasse = {}
 		circulo,
 		circuloNovo,
 		escolas: r.escolas,
-		escolasFicha: ficha.escolasMagia ?? [],
+		escolasFicha: classe ? ficha.escolasDe(classe) : ficha.escolasMagia ?? [],
 		dicaEscolas: prog.magias?.dicaEscolas ?? null,
 		aprende: r.aprende,
 		todas: r.todas,
@@ -359,4 +400,65 @@ export function conferirVagas(vagas, magias) {
 		else naoUsadas.push(mag);
 	}
 	return { ok: !livres.length && !naoUsadas.length, faltam: livres.map(textoVaga), sobram: naoUsadas.length };
+}
+
+/* ---------- Multiclasse ---------- */
+
+/** Escolhas de 1º nível de classes.json no formato da progressão (Caminho do Arcanista, Linhagem…). */
+function escolhasDeClasse(regra) {
+	const lista = regra?.escolhas ?? [];
+	return lista.map((e) => {
+		// a escolha "somenteSub" só aparece quando a opção que a pede (subescolha) foi escolhida
+		const pai = lista.find((x) => x.opcoes.some((o) => o.subescolha === e.id));
+		const opcaoPai = pai?.opcoes.find((o) => o.subescolha === e.id);
+		return {
+			id: e.id,
+			titulo: e.titulo,
+			opcoes: e.opcoes.map((o) => o.poder),
+			conjuracao: Object.fromEntries(e.opcoes.filter((o) => o.conjuracao).map((o) => [o.poder, o.conjuracao])),
+			requer: e.somenteSub && pai ? { id: pai.id, opcao: opcaoPai.poder } : null
+		};
+	});
+}
+
+/** A escolha está valendo? (as que dependem de outra só valem com a opção certa escolhida) */
+export function escolhaAtiva(e, selecoes = {}) {
+	return !e.requer || selecoes[e.requer.id] === e.requer.uuid;
+}
+
+/** Vagas de magia com as magias a mais da escolha feita agora (ex.: Mago começa com 4, não 3). */
+export function vagasEfetivas(m, selecoes = {}) {
+	if (!m) return [];
+	const extra = Object.entries(m.porEscolha ?? {}).filter(([u]) => Object.values(selecoes).includes(u)).reduce((n, [, x]) => n + (x.extra ?? 0), 0);
+	return [...m.vagas, ...Array.from({ length: m.vagas.length ? extra : 0 }, () => ({ ate: m.circulo }))];
+}
+
+/** Atributo-chave das magias: o da escolha feita agora (Caminho), senão o da classe. */
+export function atributoEfetivo(m, selecoes = {}) {
+	const escolhido = Object.entries(m?.porEscolha ?? {}).find(([u, x]) => x.atributo && Object.values(selecoes).includes(u));
+	return escolhido?.[1].atributo ?? m?.atributo ?? null;
+}
+
+/**
+ * Classes que o personagem pode subir: as que já tem e as novas (multiclasse), com o motivo de bloqueio.
+ * Não se pode ter ao mesmo tempo uma classe básica e uma variante dela.
+ */
+export function classesParaSubir(dados, progressao, ficha, variantes = {}) {
+	const basica = (n) => normalizar(variantes[n] ?? n);
+	const tidas = new Set(ficha.classes.map((c) => normalizar(c.nome)));
+	const vistas = new Set();
+	const novas = [];
+	for (const doc of dados.classes) {
+		const k = normalizar(doc.name);
+		if (tidas.has(k) || vistas.has(k) || !progressaoDe(progressao, doc.name)) continue;
+		vistas.add(k);
+		const b = basica(doc.name);
+		const conflito = ficha.classes.find((c) => basica(c.nome) === b && (normalizar(c.nome) === b || k === b));
+		novas.push({
+			nome: doc.name, doc,
+			bloqueio: conflito ? `Não é possível ter ${doc.name} e ${conflito.nome}: uma é variante da outra.` : null
+		});
+	}
+	novas.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+	return { existentes: ficha.classes.filter((c) => progressaoDe(progressao, c.nome)), semProgressao: ficha.classes.filter((c) => !progressaoDe(progressao, c.nome)), novas };
 }
