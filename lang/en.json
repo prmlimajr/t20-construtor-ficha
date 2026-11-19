@@ -28,7 +28,7 @@
 			},
 			"subirNivel": {
 				"Nome": "Level up",
-				"Dica": "Shows the “Level up” button in the header of existing characters' sheets (for the GM and the character's owner). In development: only classes with a registered progression, no multiclassing."
+				"Dica": "Level-up assistant (for the GM and the character's owner): button in the sheet header and on the “+” next to the class. Level abilities and choices, class or general power, spells, multiclassing and undoing the last level. When off, the “+” opens the class compendium again."
 			},
 			"beneficiosOrigemDupla": {
 				"Nome": "Homebrew: professional origin benefits",

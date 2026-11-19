@@ -1,6 +1,6 @@
 # T20 — Construtor de Ficha
 
-Wizard passo a passo para criar personagens de **Tormenta20** (nível 1) no Foundry VTT.
+Wizard passo a passo para criar personagens de **Tormenta20** no Foundry VTT e assistente para **subir de nível** (habilidades, poderes, magias e multiclasse).
 
 Requer Foundry **v14** e o sistema **Tormenta20 ≥ 1.6.7**.
 
@@ -11,6 +11,7 @@ Requer Foundry **v14** e o sistema **Tormenta20 ≥ 1.6.7**.
 - Na ficha de um personagem ainda sem raça/classe, o botão **Construtor** no cabeçalho reabre o wizard.
 - As escolhas ficam salvas como rascunho no ator: dá para fechar e continuar depois.
 - Nada é gravado na ficha até clicar em **Criar personagem** no último passo.
+- Num personagem já criado, o botão **Subir de nível** no cabeçalho da ficha (ou o **+** ao lado da classe e nível) abre o assistente de subir de nível. Veja [Subir de nível](#subir-de-nível).
 
 Jogadores precisam da permissão **"Criar novos atores"** (Configurações → Permissões do usuário). Para escolher retrato e token pelo navegador de arquivos, também precisam de **"Navegar por arquivos"** (e **"Enviar arquivos"** para subir imagens novas).
 
@@ -41,11 +42,25 @@ Jogadores precisam da permissão **"Criar novos atores"** (Configurações → P
 9. **Dinheiro**: 4d6 T$, rolado no chat, uma vez só.
 10. **Revisão**: nome, retrato e token (pelo navegador de arquivos do Foundry ou colando o caminho; o token pode usar o retrato) e resumo de tudo.
 
+## Subir de nível
+
+Assistente em passos, com a mesma barra lateral do construtor; só aparecem os passos que o nível tiver. Podem usar o mestre e o dono do personagem. Configuração **Subir de nível** (ligada por padrão); desligada, o **+** da ficha volta a abrir o compêndio de classes.
+
+1. **Classe**: continuar numa classe que o personagem já tem ou começar uma nova (**multiclasse**). Não é possível ter uma classe básica e uma variante dela (as bloqueadas aparecem com o motivo). O 1º nível da classe nova dá os PV de um nível seguinte, não dá as perícias nem as proficiências dela e pede as escolhas de 1º nível (ex.: Caminho do Arcanista; a Linhagem só para o Feiticeiro).
+2. **Nível**: PV, PM, bônus de perícia, círculo de magia novo, habilidades fixas do nível e os valores que crescem (ex.: Ataque Especial +8). Escolhas de habilidades: Caminho do Cavaleiro, Bênção da Justiça, Escola de Duelo, Lorde do vassalo… e escolhas anotadas que se acumulam (terreno do Explorador).
+3. **Poder**: um poder de classe ou, no lugar, um poder geral. Os pré-requisitos são lidos das descrições dos poderes nos compêndios e conferidos na ficha (atributo, nível de classe ou de personagem, perícia, poder, magia, devoção, escola…); o que não dá para conferir aparece como aviso, sem bloquear. Poderes repetíveis ou com escolha ("escolha uma arma") têm um campo de anotação. Poderes gerais de outras raças não aparecem; poderes de distinção só aparecem para quem tem a marca da distinção (as marcas são postas à mão).
+4. **Magias**: as magias que o nível ensina (Feiticeiro só em nível ímpar, Mago +1 do círculo novo, Bardo e Druida em nível par e só das suas escolas; Usurpar recebe todas as do círculo novo). Fichas criadas antes desta versão escolhem as escolas uma vez. As magias novas recebem o atributo-chave da classe.
+5. **Revisão**: tudo o que vai entrar na ficha.
+
+Na ficha, os poderes ganhos recebem o nível como prefixo (`4 - Esgrimista (Guerreiro)`). Quando o sistema não faz um valor crescer sozinho, o assistente atualiza a rolagem do poder (Ataque Furtivo, Palavras Afiadas, Domar Criatura) ou anota o valor na descrição (Briga, Fabricar Item Superior). **Desfazer último nível** (na barra lateral) remove o que o nível acrescentou e restaura o que ele alterou, inclusive a classe nova da multiclasse; só o último nível pode ser desfeito. Ao subir, uma animação de "level up" aparece para quem subiu.
+
+Classes com progressão: as 14 do livro básico e, com os Suplementos de Arton, Treinador, Frade, Samurai, Místico, Miragem e as 14 variantes do *Heróis de Arton*. Classes sem progressão cadastrada continuam subindo pelo sistema (botão **Outra classe (compêndio)**).
+
 ## Regras opcionais do sistema
 
 - **Raças Abertas** (configuração do sistema Tormenta20): quando ligada, cada modificador de atributo da raça pode ir para qualquer atributo, no máximo um modificador por atributo (um anão distribui +2, +1 e −1; um aggelus, +2 e +1). Raças com +1 flexível entram com seus +1 nessa mesma distribuição (o lefou distribui +1, +1, +1 e −1). O construtor lê a configuração do sistema; nada a ligar no módulo.
 - **Usar Complicações** (configuração do construtor, desligada por padrão; requer os Suplementos de Arton): acrescenta a etapa **Complicações**, depois da Devoção, com as complicações gerais e as da classe escolhida (variantes usam as da classe básica), lidas do Heróis de Arton. É opcional escolher uma; quem escolhe recebe também um poder geral. Na ficha, os dois entram com o prefixo "C - ", depois dos poderes de classe. Complicações nunca aparecem nas listas de poder geral.
-- **Usar Idades Variadas** (configuração do construtor, desligada por padrão): acrescenta a etapa **Idade**, depois de Complicações, com as faixas etárias do Tormenta20 (cap. 4): Criança, Adolescente, Jovem (padrão, sem modificadores), Adulto, Maduro, Velho e Ancião. As idades de cada faixa são ajustadas pela raça (anões, meio-elfos e qareen ×2 a partir de adulto; elfos, dahllan, duendes, eiradaan, golens, osteon, sátiros e sílfides ×5; goblins e trogs ×0,7). Os modificadores de atributo da faixa entram no valor base (e aparecem na coluna "Idade" da tabela de atributos). **Criança**: Tamanho Menor (uma categoria abaixo da raça), Protegido dos Deuses (+2 Defesa, +5 em resistências) e Sem Origem (os passos de origem somem). **Adolescente**: Ímpeto Juvenil (+3 PM) e Origem em Construção (1 benefício; com origem mundana, uma perícia de classe a menos). **Adulto**: Já Vi Coisas, um poder geral opcional que traz uma complicação de idade. **Maduro/Velho/Ancião**: 2/3/4 complicações de idade obrigatórias, entre as 19 do livro (as numéricas já têm efeito na ficha, ex.: Catarata –5 em Percepção e Pontaria). Os níveis extras dessas faixas não são aplicados (o construtor cria a ficha no 1º nível): a faixa, a idade em anos e os níveis a subir ficam nas Notas da ficha. Na ficha, as habilidades da faixa recebem o prefixo "I - " e as complicações de idade (e o poder de Já Vi Coisas), "C - ".
+- **Usar Idades Variadas** (configuração do construtor, desligada por padrão): acrescenta a etapa **Idade**, depois de Complicações, com as faixas etárias do Tormenta20 (cap. 4): Criança, Adolescente, Jovem (padrão, sem modificadores), Adulto, Maduro, Velho e Ancião. As idades de cada faixa são ajustadas pela raça (anões, meio-elfos e qareen ×2 a partir de adulto; elfos, dahllan, duendes, eiradaan, golens, osteon, sátiros e sílfides ×5; goblins e trogs ×0,7). Os modificadores de atributo da faixa entram no valor base (e aparecem na coluna "Idade" da tabela de atributos). **Criança**: Tamanho Menor (uma categoria abaixo da raça), Protegido dos Deuses (+2 Defesa, +5 em resistências) e Sem Origem (os passos de origem somem). **Adolescente**: Ímpeto Juvenil (+3 PM) e Origem em Construção (1 benefício; com origem mundana, uma perícia de classe a menos). **Adulto**: Já Vi Coisas, um poder geral opcional que traz uma complicação de idade. **Maduro/Velho/Ancião**: 2/3/4 complicações de idade obrigatórias, entre as 19 do livro (as numéricas já têm efeito na ficha, ex.: Catarata –5 em Percepção e Pontaria). A faixa e a idade em anos ficam nas Notas da ficha; os níveis extras da faixa são subidos no assistente de subir de nível, que abre ao terminar a criação e mostra quantos ainda faltam. Na ficha, as habilidades da faixa recebem o prefixo "I - " e as complicações de idade (e o poder de Já Vi Coisas), "C - ".
 - **Atributos Variados** (configuração do construtor, desligada por padrão): acrescenta às modalidades de atributos os métodos Clássica (3d6 por atributo), Épica (3d6, descarta o menor, +6), Valkaria (atributos começam em 8; 7d6 aplicados como o jogador quiser, vários dados no mesmo atributo), Khalmyr (3, 3, 2, 1, 0, −1) e Nimb (7d20 descartando o menor; 1–3 → −3, 18–19 → +4, 20 → +5). Todos convertem pela tabela de Tormenta20, p. 17, e as rolagens vão para o chat, uma vez só. A configuração **Clássica em ordem** faz a Clássica cair direto em For, Des, Con, Int, Sab, Car, sem distribuir.
 
 ## Dados
@@ -56,6 +71,8 @@ Raças, classes, poderes, magias e equipamentos vêm dos compêndios do sistema.
 | ------------------------ | ----------------------------------------------------------------------------------------------- |
 | `racas.json`             | escolhas das habilidades raciais e magias raciais fixas                                         |
 | `poderes-classe.json`    | escolhas das habilidades de classe de 1º nível                                                  |
+| `progressao.json`        | subir de nível: habilidades, escolhas, valores e magias de cada nível (1–20) por classe         |
+| `pre-requisitos.json`    | subir de nível: correções dos pré-requisitos lidos das descrições dos compêndios                |
 | `suplementos.json`       | Suplementos de Arton: variantes de classe, regras de classes e classes ignoradas                |
 | `classes.json`           | perícias, proficiências, habilidades de 1º nível, magias iniciais, devoção, itens extras        |
 | `origens.json`           | descrição, itens e benefícios das 35 origens do livro básico                                    |
@@ -92,10 +109,20 @@ O suplemento foi feito para Foundry v13 / Tormenta20 1.5. O Foundry converte os 
 
 ## Limitações conhecidas
 
-- Somente nível 1.
+- Subir de nível: escolhas internas de algumas habilidades não são pedidas (ex.: tipo de dano da Linhagem Dracônica na multiclasse, magias da Linhagem Rubra Aprimorada, truques do Melhor Amigo, Poder Capturado); itens concedidos por habilidades (item superior do Inventor, montarias) ficam só na descrição.
+- Subir de nível com os Suplementos de Arton: muitos efeitos do suplemento (feito para Tormenta20 1.5) têm valores fixos que deveriam crescer; o valor da tabela vai para a descrição do poder. A Afinidade do místico não fica registrada, então os pré-requisitos "Afinidade (…)" são aviso.
+- Classes da *Dragão Brasil* (Capanga, Cruzado, Comandante, Sentinela) não estão nos compêndios e não são suportadas.
 - Somente conteúdo do livro básico (Jogo do Ano), a menos que a integração com os Suplementos de Arton esteja ligada.
 - Clérigo devoto do Panteão: a escolha entre energia positiva e negativa não é registrada.
 - Foco do Bruxo e grimório do Mago não são adicionados como itens.
 - _Espólio_ oferece só itens da loja do livro básico (não monta itens superiores).
 - _Memória Póstuma_: a alternativa "osteon de outra raça" (ganhar uma habilidade dessa raça) não é oferecida.
 - Para não abrir o diálogo de atributos raciais do sistema, o módulo substitui `_onCreateOwnedRace` apenas para raças criadas pelo construtor.
+
+## Desenvolvimento
+
+Ferramentas em `ferramentas/` (fora do `module.zip`):
+
+- `node ferramentas/testar-nivel.mjs [Classe…] [-v]`: sobe cada classe de 1 a 20 com os compêndios do sistema (repositório Tormenta20 em `../Tormenta20`) e roda o código real de gravação e desfazer contra um ator simulado; também confere casos de pré-requisito e de multiclasse.
+- `(cd ferramentas && npm install) && node ferramentas/extrair-suplemento.mjs`: extrai os compêndios do Suplementos de Arton (repositório em `../Suplementos-de-Arton`) para o cache usado pelo teste. Sem o cache, as classes do suplemento são puladas.
+- `ferramentas/previa-animacao.html`: prévia da animação de subir de nível (sirva a pasta do módulo por HTTP).

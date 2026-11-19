@@ -91,6 +91,8 @@ export function lerFicha(actor, { regrasClasses = {}, variantes = {} } = {}) {
 		escolasMagia: [...new Set([...(flags.escolasMagia ?? []), ...Object.values(flags.escolasMagiaPorClasse ?? {}).flat()])],
 		/** Escolas de magia de uma classe: as gravadas para ela, ou as da criação se for a classe inicial. */
 		escolasDe: (nome) => [...(flags.escolasMagiaPorClasse?.[nome] ?? (normalizar(inicial?.nome) === normalizar(nome) ? flags.escolasMagia ?? [] : []))],
+		/** Idades Variadas: níveis extras da faixa etária, gravados na criação (0 se não houver). */
+		niveisExtras: Number(flags.niveisExtras) || 0,
 		/** Atributo-chave de magias da ficha (system.attributes.conjuracao). */
 		conjuracao: sys.attributes?.conjuracao || null,
 		/** Tipos das magias da ficha (arc, div, uni). */

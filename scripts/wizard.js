@@ -2877,7 +2877,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const partes = [faixa.nome];
 		if (Number.isFinite(anos) && anos > 0) partes.push(`${anos} anos`);
 		let txt = `Idade: ${partes.join(", ")}`;
-		if (faixa.niveisExtras) txt += ` — começa ${faixa.niveisExtras === 1 ? "1 nível" : `${faixa.niveisExtras} níveis`} acima do grupo (suba de nível na ficha)`;
+		if (faixa.niveisExtras) txt += ` — começa ${faixa.niveisExtras === 1 ? "1 nível" : `${faixa.niveisExtras} níveis`} acima do grupo`;
 		return txt;
 	}
 
@@ -3046,6 +3046,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			// a faixa etária (Idades Variadas) entra no valor base
 			atributos: Object.fromEntries(ATRIBUTOS.map((k) => [k, { base: (this.base(k) ?? 0) + this.idadeAtr(k), racial: this.racial(k) }])),
 			idade: faixa ? this.#textoIdade(faixa) : null,
+			// Idades Variadas: níveis a subir depois da criação (o assistente de subir de nível mostra quantos faltam)
+			niveisExtras: faixa?.niveisExtras ?? 0,
 			origem: this.origensAtivas().map((o) => o.def.nome).join(" / "),
 			divindade: this.textoDivindade,
 			dinheiro: Math.round(((e.dinheiro ?? 0) + vendas.total - this.gastoCompras) * 100) / 100,
@@ -3725,10 +3727,16 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		}
 		target.disabled = true;
 		try {
-			await aplicarNaFicha(this.actor, this.plano(), this.dados);
+			const plano = this.plano();
+			await aplicarNaFicha(this.actor, plano, this.dados);
 			ui.notifications.info(`${this.actor.name} está pronto para a aventura!`);
 			await this.close();
 			this.actor.sheet.render(true);
+			// Idades Variadas: faixas que começam acima do 1º nível abrem o assistente de subir de nível
+			if (plano.niveisExtras > 0 && game.settings.get(MODULE_ID, "subirNivel")) {
+				ui.notifications.info(`${this.actor.name} começa ${plano.niveisExtras === 1 ? "1 nível" : `${plano.niveisExtras} níveis`} acima do grupo pela idade: suba agora no assistente.`);
+				game.modules.get(MODULE_ID).api?.subirNivel?.(this.actor);
+			}
 		} catch (err) {
 			console.error(`${MODULE_ID} |`, err);
 			ui.notifications.error(`Erro ao criar a ficha: ${err.message}`);

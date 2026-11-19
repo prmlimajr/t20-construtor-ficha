@@ -1,7 +1,7 @@
 {
   "id": "t20-construtor-ficha",
   "title": "T20 — Construtor de Ficha",
-  "description": "Wizard passo a passo para criar personagens de Tormenta20 (nível 1): raça, atributos (pontos, rolagem ou valores fixos), classe, magias, perícias, origem, devoção, equipamento e tibares iniciais.",
+  "description": "Wizard passo a passo para criar personagens de Tormenta20 (raça, atributos, classe, magias, perícias, origem, devoção, equipamento e tibares iniciais) e assistente para subir de nível (habilidades, poderes, magias e multiclasse), com suporte opcional aos Suplementos de Arton.",
   "version": "0.1.0",
   "authors": [
     {

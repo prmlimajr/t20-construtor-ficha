@@ -28,7 +28,7 @@
 			},
 			"subirNivel": {
 				"Nome": "Subir de nível",
-				"Dica": "Mostra o botão “Subir de nível” no cabeçalho da ficha de personagens já criados (para o mestre e o dono do personagem). Em desenvolvimento: só classes com progressão cadastrada, sem multiclasse."
+				"Dica": "Assistente de subir de nível (para o mestre e o dono do personagem): botão no cabeçalho da ficha e no “+” ao lado da classe. Habilidades e escolhas do nível, poder de classe ou geral, magias, multiclasse e desfazer o último nível. Desligado, o “+” volta a abrir o compêndio de classes."
 			},
 			"beneficiosOrigemDupla": {
 				"Nome": "Homebrew: benefícios da origem profissional",

@@ -271,6 +271,9 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			{ rotulo: "PV", valor: `+${pv}` },
 			{ rotulo: "PM", valor: `+${pm}` },
 			...(nivel.ganhaPoder ? [{ rotulo: "Poder", valor: poder?.nome ?? "—" }] : []),
+			// Idades Variadas: níveis extras da faixa etária que ainda faltam subir
+			...(ficha.niveisExtras && 1 + ficha.niveisExtras - ficha.nivel > 0
+				? [{ rotulo: "Idade", valor: `faltam ${1 + ficha.niveisExtras - ficha.nivel} nível(is)` }] : []),
 			...(nivel.magias?.vagas.length ? [{ rotulo: "Magias", valor: `${magiasEsc.length}/${vagasEfetivas(nivel.magias, this.selecoes).length}` }] : [])
 		];
 
