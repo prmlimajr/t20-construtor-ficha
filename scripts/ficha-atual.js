@@ -2,7 +2,7 @@
  * Estado atual de um personagem, lido da ficha, no formato usado pela subida de nível e pela
  * avaliação de pré-requisitos. Não depende do Foundry: recebe o ator (ou um objeto com o mesmo formato).
  */
-import { ATRIBUTOS, normalizar } from "./regras.js";
+import { ATRIBUTOS, MODULE_ID, normalizar } from "./regras.js";
 
 /** Nome do poder sem o prefixo do construtor ("R - ", "1 - ", "12 - "…). */
 export function nomeBase(nome) {
@@ -62,6 +62,11 @@ export function lerFicha(actor, { regrasClasses = {}, variantes = {} } = {}) {
 	}
 
 	// prefixos de poderes com "Prefixo: Nome" (ex.: "Armadilha: Laço" → "armadilha")
+	// poderes de um grupo: pelo subtipo ("Grupo") ou pelo começo do nome ("Combinação: …", "Brado: …", "Ditame da …")
+	const contarGrupo = (grupo) => {
+		const g = normalizar(grupo).replace(/s$/, "");
+		return poderes.filter((p) => normalizar(p.system?.subtipo) === g || normalizar(nomeBase(p.name)).startsWith(g)).length;
+	};
 	const prefixos = new Set(poderes.map((p) => normalizar(nomeBase(p.name))).filter((n) => n.includes(":")).map((n) => n.split(":")[0].trim()));
 
 	const magiasItens = itens.filter((i) => i.type === "magia");
@@ -80,6 +85,13 @@ export function lerFicha(actor, { regrasClasses = {}, variantes = {} } = {}) {
 		circuloMax,
 		temMagias,
 		poderesPorSubtipo,
+		/** Escolas de magia escolhidas (Bardo, Druida), gravadas pelo construtor; [] se não houver. */
+		escolasMagia: [...(actor.flags?.[MODULE_ID]?.escolasMagia ?? [])],
+		/** Tipos das magias da ficha (arc, div, uni). */
+		tiposMagia: new Set(magiasItens.map((m) => m.system?.tipo).filter(Boolean)),
+		/** Nome da raça da ficha ou "". */
+		raca: itens.find((i) => i.type === "race")?.name ?? "",
+		contarGrupo,
 		/** Nome da divindade na ficha ("Khalmyr", "Khalmyr (fundamentalista)") ou "". */
 		divindade: String(sys.detalhes?.divindade ?? "").trim(),
 		/** A ficha tem algum poder "Prefixo: …"? (ex.: "armadilha" → "Armadilha: Laço") */

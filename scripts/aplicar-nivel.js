@@ -31,6 +31,21 @@ function comRolagem(rolls, valor) {
 	return copia;
 }
 
+/**
+ * Corrige trechos das fórmulas dos efeitos (erros de dados do suplemento, ex.: Casca Grossa do atleta
+ * usando @nvl.lutador). Vale para os dois formatos de efeito (changes no topo, da v13, e system.changes).
+ */
+function corrigirFormulas(data, trocas) {
+	for (const ef of data.effects ?? []) {
+		for (const lista of [ef.changes, ef.system?.changes]) {
+			for (const c of lista ?? []) {
+				if (typeof c.value !== "string") continue;
+				for (const [de, para] of Object.entries(trocas)) c.value = c.value.split(de).join(para);
+			}
+		}
+	}
+}
+
 /** Item da ficha com o poder, pelo nome (sem prefixo; com ou sem o complemento entre parênteses). */
 function poderNaFicha(actor, nome) {
 	const alvo = normalizar(nome);
@@ -82,7 +97,9 @@ export function podeDesfazer(actor) {
  *   escolhidas: [doc],                     opções escolhidas (Caminho do Cavaleiro…)
  *   anotadas: [{doc, texto}],              escolhas anotadas (terreno do Explorador…); atualiza o item se já existe
  *   valores: [{nome, para, modo}],         valores da tabela em habilidades que a ficha já tem
- *   poder: doc|null, anotacao }            poder escolhido e a anotação dele
+ *   poder: doc|null, anotacao,             poder escolhido e a anotação dele
+ *   magias: [doc],                         magias novas
+ *   escolasMagia: [chave]|null }           escolas de magia escolhidas agora (ficha sem as escolas gravadas)
  */
 export async function aplicarNivel(actor, plano) {
 	const classe = actor.items.get(plano.classeId);
@@ -94,8 +111,9 @@ export async function aplicarNivel(actor, plano) {
 
 	const n = plano.nivelPersonagem;
 	const itens = [];
-	const adicionar = (doc, { anotacao = "", valor = null, modo = null } = {}) => {
+	const adicionar = (doc, { anotacao = "", valor = null, modo = null, corrigir = null } = {}) => {
 		const data = doCompendio(doc);
+		if (corrigir) corrigirFormulas(data, corrigir);
 		data.name = `${n} - ${doc.name}`;
 		data.sort = SORT_CLASSE + n * 1000 + itens.length * 10;
 		if (anotacao?.trim()) foundry.utils.setProperty(data, CAMPO_DESCRICAO, comAnotacao(foundry.utils.getProperty(data, CAMPO_DESCRICAO), anotacao, n));
@@ -122,7 +140,7 @@ export async function aplicarNivel(actor, plano) {
 	const valorAtual = (item, caminho) => atualizacoes.get(item.id)?.[caminho] ?? fonte(item, caminho);
 	const comRolagemAtualizada = new Set(); // ids (existentes) e índices (novos) de itens com a rolagem trocada
 
-	for (const h of plano.habilidades ?? []) adicionar(h.doc, { valor: h.valor, modo: h.modo });
+	for (const h of plano.habilidades ?? []) adicionar(h.doc, { valor: h.valor, modo: h.modo, corrigir: h.corrigir });
 	for (const doc of plano.escolhidas ?? []) adicionar(doc);
 	for (const a of plano.anotadas ?? []) {
 		const item = poderNaFicha(actor, a.doc.name);
@@ -140,6 +158,11 @@ export async function aplicarNivel(actor, plano) {
 		else if (v.modo === "anotacao") alterar(item, CAMPO_DESCRICAO, comValor(valorAtual(item, CAMPO_DESCRICAO), v.para, n));
 	}
 	if (plano.poder) adicionar(plano.poder, { anotacao: plano.anotacao });
+	for (const doc of plano.magias ?? []) {
+		const data = doCompendio(doc);
+		foundry.utils.setProperty(data, `flags.${MODULE_ID}.nivel`, n);
+		itens.push(data);
+	}
 
 	// a classe primeiro: o sistema atualiza o nível do personagem ao mudar system.niveis
 	await classe.update({ "system.niveis": plano.nivelClasse });
@@ -168,12 +191,14 @@ export async function aplicarNivel(actor, plano) {
 		nivelClasse: plano.nivelClasse,
 		itens: criados.map((i) => i.id),
 		alteracoes,
+		...(plano.escolasMagia ? { escolasDefinidas: true } : {}),
 		pv,
 		pm,
 		data: Date.now()
 	});
 	update[`flags.${MODULE_ID}.niveis`] = lista;
 	update[`flags.${MODULE_ID}.ultimoDesfeito`] = false;
+	if (plano.escolasMagia) update[`flags.${MODULE_ID}.escolasMagia`] = [...plano.escolasMagia];
 	await actor.update(update);
 	return { pv, pm, itens: criados };
 }
@@ -204,6 +229,8 @@ export async function desfazerUltimoNivel(actor) {
 	if (classe) await classe.update({ "system.niveis": Math.max(1, ultimo.nivelClasse - 1) });
 
 	const attrs = actor.system.attributes ?? {};
+	// escolas escolhidas no nível desfeito voltam a ficar em aberto
+	if (ultimo.escolasDefinidas) await actor.update({ [`flags.${MODULE_ID}.-=escolasMagia`]: null });
 	await actor.update({
 		"system.attributes.pv.value": (attrs.pv?.value ?? 0) - (ultimo.pv ?? 0),
 		"system.attributes.pm.value": Math.max(0, (attrs.pm?.value ?? 0) - (ultimo.pm ?? 0)),

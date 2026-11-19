@@ -1152,3 +1152,11 @@
 	.t20cf-lu-clarao, .t20cf-lu-texto, .t20cf-lu-detalhe { animation: t20cf-lu-entra 0.3s ease-out both; }
 }
 .t20cf-nivel .cf-nivel-escolha h4 { margin: 4px 0 6px; }
+.t20cf-nivel .cf-nivel-lateral-acoes { margin-top: auto; display: flex; flex-direction: column; gap: 6px; }
+.t20cf-nivel .cf-nivel-lateral-acoes .cf-recomecar { margin-top: 0; }
+.t20cf-nivel .cf-nivel-vagas { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; }
+.t20cf-nivel .cf-nivel-vagas .cf-chip { cursor: default; }
+.t20cf-nivel .cf-nivel-vagas button.cf-chip { cursor: pointer; }
+.t20cf-nivel .cf-nivel-revisao { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.t20cf-nivel .cf-nivel-revisao li { display: flex; align-items: center; gap: 8px; }
+.t20cf-nivel .cf-nivel-revisao .cf-chip { min-width: 84px; text-align: center; cursor: default; }

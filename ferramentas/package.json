@@ -1,0 +1,9 @@
+{
+  "name": "t20-construtor-ficha-ferramentas",
+  "private": true,
+  "description": "Ferramentas de desenvolvimento do construtor (não entram no module.zip).",
+  "type": "module",
+  "devDependencies": {
+    "classic-level": "1.4.1"
+  }
+}

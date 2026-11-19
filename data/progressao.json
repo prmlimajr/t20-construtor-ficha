@@ -1,5 +1,246 @@
 {
-  "_comentario": "Progressão por classe (níveis 1–20), a partir das tabelas do livro. 'poder.niveis': níveis em que a classe ganha 'Poder de <classe>' (lista = poderes do compêndio com tipo 'classe' e subtipo = nome da classe; pode ser trocado por um poder geral). 'niveis.N.habilidades': habilidades ganhas no nível N (nomes do compêndio tormenta20.poderes). 'niveis.N.escolhas': [{id, titulo, opcoes: [nomes de habilidades]}], uma das opções entra na ficha. 'niveis.N.anotadas': [{habilidade, titulo, opcoes: [textos]}], a escolha é anotada na descrição da habilidade (criada se ainda não estiver na ficha; acumula a cada vez). 'niveis.N.valores': valores da tabela que crescem com o nível. 'valoresNaFicha': {habilidade: 'rolagem'|'anotacao'}: como o valor vai para a ficha (fórmula da rolagem do poder, ou linha na descrição); sem entrada, o valor é só informativo (o sistema já faz o efeito crescer). 'base': variante herda o que não declarar.",
+  "_comentario": "Progressão por classe (níveis 1–20), a partir das tabelas do livro. 'poder.niveis': níveis em que a classe ganha 'Poder de <classe>' (lista = poderes do compêndio com tipo 'classe' e subtipo = nome da classe; pode ser trocado por um poder geral). 'niveis.N.habilidades': habilidades ganhas no nível N (nomes do compêndio tormenta20.poderes). 'niveis.N.escolhas': [{id, titulo, opcoes: [nomes de habilidades]}], uma das opções entra na ficha. 'niveis.N.anotadas': [{habilidade, titulo, opcoes: [textos]}], a escolha é anotada na descrição da habilidade (criada se ainda não estiver na ficha; acumula a cada vez). 'niveis.N.valores': valores da tabela que crescem com o nível. 'valoresNaFicha': {habilidade: 'rolagem'|'anotacao'}: como o valor vai para a ficha (fórmula da rolagem do poder, ou linha na descrição); sem entrada, o valor é só informativo (o sistema já faz o efeito crescer). 'base': variante herda o que não declarar. 'magias': {tipo: 'arc'|'div', circulos: {nível de classe: círculo}, aprende: 'todo'|'par'|'impar' (1 magia nesses níveis), escolas: nº de escolas escolhidas (Bardo, Druida), porEscolha: {poder: ajustes da regra para quem tem o poder (ex.: Mago → extraPorCirculo: 1)}}. 'poderesConcedem': {poder: {habilidade que a ficha tem: habilidade concedida}} (ex.: Herança Aprimorada + Linhagem Rubra Básica → Linhagem Rubra Aprimorada). 'niveis.N.conforme': [{habilidade que a ficha tem: habilidade concedida}] (ex.: Técnica Avançada conforme a Escola de Duelo). 'niveis.N.ausentes': habilidades da tabela sem item em nenhum compêndio (só aviso). 'poder.listas': listas de poderes extras (subtipos). 'magias.todas': todas as magias do círculo novo entram sozinhas (Usurpar); 'magias.dicaEscolas': texto de ajuda na escolha das escolas. 'corrigirFormulas': {habilidade: {trecho: substituto}} aplicado nos efeitos quando a habilidade entra na ficha (erros de dados do suplemento). Variantes herdam da básica o poder e as magias, não a tabela de níveis. 'niveis.N.habilidades' aceita {nome, classe} para habilidades/poderes de outra classe (ex.: Golpe Divino do paladino). 'poder.listasPorNivel': {nível: [listas extras só nesse nível]}.",
+  "Alquimista": {
+    "base": "Inventor",
+    "fonte": "Heróis de Arton, p. 23 (Tabela 1-3)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Engenhosidade", "Laboratório Pessoal"]
+      },
+      "2": {
+        "habilidades": [
+          {
+            "nome": "Alquimista Iniciado",
+            "classe": "Inventor"
+          }
+        ]
+      },
+      "3": {
+        "habilidades": ["Mistura Básica"]
+      },
+      "5": {
+        "habilidades": ["Aplicação Rápida"]
+      },
+      "7": {
+        "habilidades": ["Magia Engarrafada"]
+      },
+      "8": {
+        "habilidades": ["Odores Alquímicos"]
+      },
+      "9": {
+        "habilidades": ["Fabricar Emulsão"],
+        "valores": {
+          "Fabricar Emulsão": "1 encanto"
+        }
+      },
+      "10": {
+        "habilidades": [
+          {
+            "nome": "Mestre Alquimista",
+            "classe": "Inventor"
+          }
+        ]
+      },
+      "11": {
+        "habilidades": ["Bombardeio Eficiente"]
+      },
+      "13": {
+        "valores": {
+          "Fabricar Emulsão": "2 encantos"
+        }
+      },
+      "17": {
+        "valores": {
+          "Fabricar Emulsão": "3 encantos"
+        }
+      },
+      "20": {
+        "habilidades": ["Pedra Filosofal"]
+      }
+    },
+    "valoresNaFicha": {
+      "Fabricar Emulsão": "anotacao"
+    }
+  },
+  "Arcanista": {
+    "fonte": "Tormenta20 JdA, p. 37 (Tabela 1-5)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "magias": {
+      "tipo": "arc",
+      "circulos": {
+        "1": 1,
+        "5": 2,
+        "9": 3,
+        "13": 4,
+        "17": 5
+      },
+      "aprende": "todo",
+      "porEscolha": {
+        "Caminho do Arcanista: Feiticeiro": {
+          "aprende": "impar"
+        },
+        "Caminho do Arcanista: Mago": {
+          "extraPorCirculo": 1
+        }
+      }
+    },
+    "poderesConcedem": {
+      "Herança Aprimorada": {
+        "Linhagem Dracônica Básica": "Linhagem Dracônica Aprimorada",
+        "Linhagem Feérica Básica": "Linhagem Feérica Aprimorada",
+        "Linhagem Rubra Básica": "Linhagem Rubra Aprimorada"
+      },
+      "Herança Superior": {
+        "Linhagem Dracônica Básica": "Linhagem Dracônica Superior",
+        "Linhagem Feérica Básica": "Linhagem Feérica Superior",
+        "Linhagem Rubra Básica": "Linhagem Rubra Superior"
+      }
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Magias (Arcanista)"]
+      },
+      "20": {
+        "habilidades": ["Alta Arcana"]
+      }
+    }
+  },
+  "Atleta": {
+    "base": "Lutador",
+    "fonte": "Heróis de Arton, p. 25 (Tabela 1-4)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Briga"],
+        "valores": {
+          "Briga": "1d6"
+        }
+      },
+      "2": {
+        "habilidades": ["Arremesso Atlético", "Poderio Muscular"]
+      },
+      "3": {
+        "habilidades": ["Casca Grossa"],
+        "valores": {
+          "Casca Grossa": "Con"
+        }
+      },
+      "5": {
+        "habilidades": ["Mais Alto e Mais Rápido"],
+        "valores": {
+          "Briga": "1d8"
+        }
+      },
+      "7": {
+        "valores": {
+          "Casca Grossa": "Con+1"
+        }
+      },
+      "9": {
+        "habilidades": ["Disciplina Atlética"],
+        "valores": {
+          "Briga": "1d10"
+        }
+      },
+      "11": {
+        "valores": {
+          "Casca Grossa": "Con+2"
+        }
+      },
+      "13": {
+        "valores": {
+          "Briga": "2d6"
+        }
+      },
+      "15": {
+        "valores": {
+          "Casca Grossa": "Con+3"
+        }
+      },
+      "17": {
+        "valores": {
+          "Briga": "2d8"
+        }
+      },
+      "19": {
+        "valores": {
+          "Casca Grossa": "Con+4"
+        }
+      },
+      "20": {
+        "habilidades": ["Corpo Ideal"],
+        "valores": {
+          "Briga": "2d10"
+        }
+      }
+    },
+    "valoresNaFicha": {
+      "Briga": "anotacao"
+    },
+    "corrigirFormulas": {
+      "Casca Grossa": {
+        "@nvl.lutador": "@nvl.atleta"
+      }
+    }
+  },
+  "Bardo": {
+    "fonte": "Tormenta20 JdA, p. 44 (Tabela 1-7)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "magias": {
+      "tipo": "arc",
+      "circulos": {
+        "1": 1,
+        "6": 2,
+        "10": 3,
+        "14": 4
+      },
+      "aprende": "par",
+      "escolas": 3
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Inspiração", "Magias (Bardo)"],
+        "valores": {
+          "Inspiração": "+1"
+        }
+      },
+      "2": {
+        "habilidades": ["Eclético"]
+      },
+      "5": {
+        "valores": {
+          "Inspiração": "+2"
+        }
+      },
+      "9": {
+        "valores": {
+          "Inspiração": "+3"
+        }
+      },
+      "13": {
+        "valores": {
+          "Inspiração": "+4"
+        }
+      },
+      "17": {
+        "valores": {
+          "Inspiração": "+5"
+        }
+      },
+      "20": {
+        "habilidades": ["Artista Completo"]
+      }
+    }
+  },
   "Bucaneiro": {
     "fonte": "Tormenta20 JdA, p. 47 (Tabela 1-8)",
     "poder": {
@@ -47,6 +288,62 @@
       "20": {
         "habilidades": ["Sorte do Louco"]
       }
+    }
+  },
+  "Burguês": {
+    "base": "Nobre",
+    "fonte": "Heróis de Arton, p. 26 (Tabela 1-5)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Meios de Produção", "Orgulho", "Poder Monetário"]
+      },
+      "2": {
+        "habilidades": ["Desmoralizar"],
+        "valores": {
+          "Desmoralizar": "–1"
+        }
+      },
+      "3": {
+        "habilidades": ["Negociante Nato"]
+      },
+      "4": {
+        "habilidades": ["Suborno"]
+      },
+      "5": {
+        "habilidades": ["Ostentação"]
+      },
+      "6": {
+        "valores": {
+          "Desmoralizar": "–2"
+        }
+      },
+      "9": {
+        "habilidades": ["Novo Rico"]
+      },
+      "10": {
+        "valores": {
+          "Desmoralizar": "–3"
+        }
+      },
+      "14": {
+        "valores": {
+          "Desmoralizar": "–4"
+        }
+      },
+      "18": {
+        "valores": {
+          "Desmoralizar": "–5"
+        }
+      },
+      "20": {
+        "habilidades": ["Magnata"]
+      }
+    },
+    "valoresNaFicha": {
+      "Desmoralizar": "anotacao"
     }
   },
   "Bárbaro": {
@@ -272,6 +569,207 @@
       }
     }
   },
+  "Clérigo": {
+    "fonte": "Tormenta20 JdA, p. 57 (Tabela 1-11)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "magias": {
+      "tipo": "div",
+      "circulos": {
+        "1": 1,
+        "5": 2,
+        "9": 3,
+        "13": 4,
+        "17": 5
+      },
+      "aprende": "todo"
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Devoto Fiel (Clérigo)", "Magias (Clérigo)"]
+      },
+      "20": {
+        "habilidades": ["Mão da Divindade"]
+      }
+    }
+  },
+  "Druida": {
+    "fonte": "Tormenta20 JdA, p. 61 (Tabela 1-12)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "magias": {
+      "tipo": "div",
+      "circulos": {
+        "1": 1,
+        "6": 2,
+        "10": 3,
+        "14": 4
+      },
+      "aprende": "par",
+      "escolas": 3
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Devoto Fiel (Druida)", "Empatia Selvagem (Druida)", "Magias (Druida)"]
+      },
+      "2": {
+        "habilidades": ["Caminho dos Ermos"]
+      },
+      "20": {
+        "habilidades": ["Força da Natureza"]
+      }
+    }
+  },
+  "Duelista": {
+    "base": "Bucaneiro",
+    "fonte": "Heróis de Arton, p. 27 (Tabela 1-6)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Duelo", "Insolência"],
+        "valores": {
+          "Duelo": "+2"
+        }
+      },
+      "2": {
+        "escolhas": [
+          {
+            "id": "escolaDuelo",
+            "titulo": "Escola de Duelo",
+            "opcoes": ["Escola de Duelo: Ambidestra", "Escola de Duelo: Clássica", "Escola de Duelo: Tiro"]
+          }
+        ]
+      },
+      "3": {
+        "habilidades": ["Esquiva Sagaz"],
+        "valores": {
+          "Esquiva Sagaz": "+1"
+        }
+      },
+      "4": {
+        "habilidades": ["Truques de Capa"]
+      },
+      "6": {
+        "valores": {
+          "Duelo": "+3"
+        }
+      },
+      "7": {
+        "valores": {
+          "Esquiva Sagaz": "+2"
+        }
+      },
+      "10": {
+        "conforme": [
+          {
+            "Escola de Duelo: Ambidestra": "Técnica Avançada: Escola Ambidestra",
+            "Escola de Duelo: Clássica": "Técnica Avançada: Escola Clássica",
+            "Escola de Duelo: Tiro": "Técnica Avançada: Escola de Tiro"
+          }
+        ]
+      },
+      "11": {
+        "valores": {
+          "Duelo": "+4",
+          "Esquiva Sagaz": "+3"
+        }
+      },
+      "15": {
+        "valores": {
+          "Esquiva Sagaz": "+4"
+        }
+      },
+      "16": {
+        "valores": {
+          "Duelo": "+5"
+        }
+      },
+      "19": {
+        "valores": {
+          "Esquiva Sagaz": "+5"
+        }
+      },
+      "20": {
+        "habilidades": ["Duelista Lendário"]
+      }
+    }
+  },
+  "Ermitão": {
+    "base": "Druida",
+    "fonte": "Heróis de Arton, p. 29 (Tabela 1-7)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "magias": {
+      "tipo": "div",
+      "circulos": {
+        "1": 1,
+        "6": 2,
+        "10": 3,
+        "14": 4
+      },
+      "aprende": "par",
+      "escolas": 3
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Devoto Fiel", "Empatia Selvagem", "Magias (Ermitão)"]
+      },
+      "3": {
+        "habilidades": ["Sítio Sagrado"]
+      },
+      "5": {
+        "habilidades": ["Vínculo com a Terra"]
+      },
+      "11": {
+        "habilidades": ["Temperado pelo Clima"]
+      },
+      "20": {
+        "habilidades": ["Eixo de Pedras"]
+      }
+    }
+  },
+  "Frade": {
+    "fonte": "classe-frade.pdf, p. 40 (Tabela 1-1)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "magias": {
+      "tipo": "div",
+      "circulos": {
+        "1": 1,
+        "5": 2,
+        "9": 3,
+        "13": 4,
+        "17": 5
+      },
+      "aprende": "todo"
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Devoto Fiel (Frade)", "Erudição", "Magias (Frade)"]
+      },
+      "2": {
+        "habilidades": ["Versiculário"]
+      },
+      "5": {
+        "escolhas": [
+          {
+            "id": "dadivaFe",
+            "titulo": "Dádiva da Fé (conforme a energia do seu deus)",
+            "opcoes": ["Dádiva da Fé: Proteção Sagrada", "Dádiva da Fé: Cólera Divina"]
+          }
+        ]
+      },
+      "20": {
+        "habilidades": ["Solo Santificado"]
+      }
+    }
+  },
   "Guerreiro": {
     "fonte": "Tormenta20 JdA, p. 65 (Tabela 1-13)",
     "poder": {
@@ -312,6 +810,56 @@
       },
       "20": {
         "habilidades": ["Campeão"]
+      }
+    }
+  },
+  "Inovador": {
+    "base": "Guerreiro",
+    "fonte": "Heróis de Arton, p. 31 (Tabela 1-8)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Do Bom e do Melhor", "Sequência Especial"],
+        "valores": {
+          "Sequência Especial": "+2"
+        }
+      },
+      "2": {
+        "habilidades": ["Bombardeio Sequencial"]
+      },
+      "3": {
+        "habilidades": ["Acrobacia Defensiva"]
+      },
+      "4": {
+        "habilidades": ["Domínio Excêntrico"]
+      },
+      "5": {
+        "valores": {
+          "Sequência Especial": "+4"
+        }
+      },
+      "7": {
+        "habilidades": ["Técnica Revolucionária"]
+      },
+      "9": {
+        "valores": {
+          "Sequência Especial": "+6"
+        }
+      },
+      "13": {
+        "valores": {
+          "Sequência Especial": "+8"
+        }
+      },
+      "17": {
+        "valores": {
+          "Sequência Especial": "+10"
+        }
+      },
+      "20": {
+        "habilidades": ["Estilo Único"]
       }
     }
   },
@@ -527,6 +1075,330 @@
       "Briga": "anotacao"
     }
   },
+  "Machado de Pedra": {
+    "base": "Bárbaro",
+    "fonte": "Heróis de Arton, p. 32 (Tabela 1-9)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Fúria", "Grunhidos", "Machado de Pedra", "Tanga de Peles"],
+        "valores": {
+          "Fúria": "+2",
+          "Tanga de Peles": "Con"
+        }
+      },
+      "2": {
+        "habilidades": ["Fúria Primitiva"]
+      },
+      "3": {
+        "habilidades": ["Instinto Selvagem"],
+        "valores": {
+          "Instinto Selvagem": "+1",
+          "Tanga de Peles": "Def +1"
+        }
+      },
+      "5": {
+        "habilidades": ["Resiliência Primal"],
+        "valores": {
+          "Resiliência Primal": "3"
+        }
+      },
+      "6": {
+        "valores": {
+          "Fúria": "+3"
+        }
+      },
+      "7": {
+        "valores": {
+          "Tanga de Peles": "Def +2"
+        }
+      },
+      "8": {
+        "valores": {
+          "Resiliência Primal": "6"
+        }
+      },
+      "9": {
+        "valores": {
+          "Instinto Selvagem": "+2"
+        }
+      },
+      "11": {
+        "valores": {
+          "Fúria": "+4",
+          "Resiliência Primal": "9",
+          "Tanga de Peles": "Def +3"
+        }
+      },
+      "14": {
+        "valores": {
+          "Resiliência Primal": "12"
+        }
+      },
+      "15": {
+        "valores": {
+          "Instinto Selvagem": "+3",
+          "Tanga de Peles": "Def +4"
+        }
+      },
+      "16": {
+        "valores": {
+          "Fúria": "+5"
+        }
+      },
+      "17": {
+        "valores": {
+          "Resiliência Primal": "15"
+        }
+      },
+      "19": {
+        "valores": {
+          "Tanga de Peles": "Def +5"
+        }
+      },
+      "20": {
+        "habilidades": ["Fúria Rústica"]
+      }
+    },
+    "valoresNaFicha": {
+      "Resiliência Primal": "anotacao"
+    }
+  },
+  "Magimarcialista": {
+    "base": "Bardo",
+    "fonte": "Heróis de Arton, p. 33 (Tabela 1-10)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "magias": {
+      "tipo": "arc",
+      "circulos": {
+        "1": 1,
+        "6": 2,
+        "10": 3,
+        "14": 4
+      },
+      "aprende": "par",
+      "escolas": 3
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Cadência Magimarcial", "Magificação", "Magias (Magimarcialista)"],
+        "valores": {
+          "Magificação": "+2"
+        }
+      },
+      "2": {
+        "habilidades": ["Bravado Magimarcial"]
+      },
+      "3": {
+        "habilidades": ["Dança Defensiva"]
+      },
+      "6": {
+        "valores": {
+          "Magificação": "+3"
+        }
+      },
+      "7": {
+        "habilidades": ["Arte Sublime"]
+      },
+      "11": {
+        "valores": {
+          "Magificação": "+4"
+        }
+      },
+      "16": {
+        "valores": {
+          "Magificação": "+5"
+        }
+      },
+      "20": {
+        "habilidades": ["Crescendo Vitorioso"]
+      }
+    },
+    "valoresNaFicha": {
+      "Magificação": "anotacao"
+    }
+  },
+  "Miragem": {
+    "base": "Caçador",
+    "fonte": "classe-miragem.pdf, p. 14",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Dança da Areia", "Rastreador"],
+        "valores": {
+          "Dança da Areia": "+1d4"
+        }
+      },
+      "3": {
+        "anotadas": [
+          {
+            "habilidade": "Explorador",
+            "titulo": "Terreno",
+            "opcoes": ["aquático", "ártico", "colina", "deserto", "floresta", "montanha", "pântano", "planície", "subterrâneo", "urbano"]
+          }
+        ]
+      },
+      "5": {
+        "habilidades": ["Caminho do Explorador"],
+        "valores": {
+          "Dança da Areia": "+1d6"
+        }
+      },
+      "7": {
+        "habilidades": ["Cortina de Poeira"]
+      },
+      "9": {
+        "habilidades": ["Passo do Deserto"],
+        "valores": {
+          "Dança da Areia": "+1d8"
+        }
+      },
+      "13": {
+        "valores": {
+          "Dança da Areia": "+1d10"
+        }
+      },
+      "17": {
+        "valores": {
+          "Dança da Areia": "+1d12"
+        }
+      },
+      "20": {
+        "habilidades": ["Mestre do Deserto"]
+      }
+    }
+  },
+  "Místico": {
+    "fonte": "classes-samurai-mistico.pdf (Tabela 1-2)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "magias": {
+      "tipo": "arc",
+      "circulos": {
+        "1": 1,
+        "6": 2,
+        "10": 3,
+        "14": 4
+      },
+      "aprende": "par",
+      "escolas": 3,
+      "dicaEscolas": "evocação, a escola da sua Afinidade e uma terceira à sua escolha"
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Afinidade", "Ataque Elemental"],
+        "valores": {
+          "Ataque Elemental": "+1d8"
+        }
+      },
+      "2": {
+        "habilidades": ["Língua Primordial"]
+      },
+      "3": {
+        "habilidades": ["Tradição Oral"],
+        "valores": {
+          "Tradição Oral": "+2"
+        }
+      },
+      "4": {
+        "habilidades": ["Sexto Sentido"]
+      },
+      "6": {
+        "valores": {
+          "Ataque Elemental": "+2d8"
+        }
+      },
+      "9": {
+        "valores": {
+          "Tradição Oral": "+4"
+        }
+      },
+      "10": {
+        "valores": {
+          "Ataque Elemental": "+3d8"
+        }
+      },
+      "13": {
+        "valores": {
+          "Tradição Oral": "+6"
+        }
+      },
+      "14": {
+        "valores": {
+          "Ataque Elemental": "+4d8"
+        }
+      },
+      "20": {
+        "habilidades": ["Comunhão Suprema"]
+      }
+    }
+  },
+  "Necromante": {
+    "base": "Arcanista",
+    "fonte": "Heróis de Arton, p. 34 (Tabela 1-11)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "magias": {
+      "tipo": "arc",
+      "circulos": {
+        "1": 1,
+        "5": 2,
+        "9": 3,
+        "13": 4,
+        "17": 5
+      },
+      "aprende": "todo"
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Falar com Mortos", "Magias (Necromante)"]
+      },
+      "2": {
+        "habilidades": ["Animar Cadáver"]
+      },
+      "3": {
+        "habilidades": ["Necrologia"],
+        "valores": {
+          "Necrologia": "+2"
+        }
+      },
+      "4": {
+        "habilidades": ["Distorção Necrótica"]
+      },
+      "5": {
+        "habilidades": ["Necropotência"]
+      },
+      "8": {
+        "valores": {
+          "Necrologia": "+3"
+        }
+      },
+      "13": {
+        "valores": {
+          "Necrologia": "+4"
+        }
+      },
+      "18": {
+        "valores": {
+          "Necrologia": "+5"
+        }
+      },
+      "20": {
+        "habilidades": ["Domínio Sobre a Morte"]
+      }
+    },
+    "valoresNaFicha": {
+      "Necrologia": "anotacao"
+    }
+  },
   "Nobre": {
     "fonte": "Tormenta20 JdA, p. 79 (Tabela 1-17)",
     "poder": {
@@ -650,6 +1522,501 @@
       "20": {
         "habilidades": ["Vingador Sagrado"]
       }
+    }
+  },
+  "Samurai": {
+    "fonte": "classes-samurai-mistico.pdf (Tabela 1-4)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Arma Ancestral", "Grito de Kiai"],
+        "valores": {
+          "Arma Ancestral": "1 melhoria",
+          "Grito de Kiai": "+1d4"
+        }
+      },
+      "3": {
+        "habilidades": ["Olhar Assustador"],
+        "valores": {
+          "Olhar Assustador": "+1"
+        }
+      },
+      "4": {
+        "valores": {
+          "Arma Ancestral": "2 melhorias"
+        }
+      },
+      "5": {
+        "valores": {
+          "Grito de Kiai": "+1d6"
+        }
+      },
+      "6": {
+        "valores": {
+          "Arma Ancestral": "3 melhorias"
+        }
+      },
+      "8": {
+        "valores": {
+          "Arma Ancestral": "4 melhorias"
+        }
+      },
+      "9": {
+        "valores": {
+          "Grito de Kiai": "+1d8",
+          "Olhar Assustador": "+2"
+        }
+      },
+      "10": {
+        "habilidades": ["Arma Espiritual"],
+        "valores": {
+          "Arma Espiritual": "1 encanto"
+        }
+      },
+      "12": {
+        "valores": {
+          "Arma Espiritual": "2 encantos"
+        }
+      },
+      "13": {
+        "valores": {
+          "Grito de Kiai": "+1d10"
+        }
+      },
+      "14": {
+        "valores": {
+          "Arma Espiritual": "3 encantos"
+        }
+      },
+      "15": {
+        "valores": {
+          "Olhar Assustador": "+3"
+        }
+      },
+      "17": {
+        "valores": {
+          "Grito de Kiai": "+1d12"
+        }
+      },
+      "20": {
+        "habilidades": ["Shogun"]
+      }
+    },
+    "valoresNaFicha": {
+      "Arma Ancestral": "anotacao",
+      "Arma Espiritual": "anotacao"
+    }
+  },
+  "Santo": {
+    "base": "Paladino",
+    "fonte": "Heróis de Arton, p. 37 (Tabela 1-12)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Abençoado", "Código do Herói", "Ladainha de Combate"],
+        "valores": {
+          "Ladainha de Combate": "+1"
+        }
+      },
+      "2": {
+        "habilidades": ["Santo Curandeiro"]
+      },
+      "3": {
+        "habilidades": ["Vaso do Espírito"]
+      },
+      "5": {
+        "valores": {
+          "Ladainha de Combate": "+2, sacra"
+        }
+      },
+      "6": {
+        "habilidades": ["Mártir"]
+      },
+      "8": {
+        "habilidades": ["Pira Santa"]
+      },
+      "9": {
+        "valores": {
+          "Ladainha de Combate": "+3, veloz"
+        }
+      },
+      "13": {
+        "valores": {
+          "Ladainha de Combate": "+4"
+        }
+      },
+      "17": {
+        "valores": {
+          "Ladainha de Combate": "+5"
+        }
+      },
+      "20": {
+        "habilidades": ["Vingador Santificado"]
+      }
+    },
+    "valoresNaFicha": {
+      "Ladainha de Combate": "anotacao"
+    }
+  },
+  "Seteiro": {
+    "base": "Caçador",
+    "fonte": "Heróis de Arton, p. 38 (Tabela 1-13)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Caminho do Atirador", "Marca da Presa", "Tiro de Supressão"],
+        "valores": {
+          "Marca da Presa": "+1d4"
+        }
+      },
+      "3": {
+        "habilidades": ["Evasão"]
+      },
+      "5": {
+        "habilidades": ["Disparo Constritor"],
+        "valores": {
+          "Marca da Presa": "+1d8"
+        }
+      },
+      "9": {
+        "valores": {
+          "Marca da Presa": "+1d12"
+        }
+      },
+      "10": {
+        "ausentes": ["Rajada de Flechas"]
+      },
+      "13": {
+        "habilidades": ["Evasão Aprimorada"],
+        "valores": {
+          "Marca da Presa": "+2d8"
+        }
+      },
+      "15": {
+        "habilidades": ["Sentinela"]
+      },
+      "17": {
+        "valores": {
+          "Marca da Presa": "+2d10"
+        }
+      },
+      "20": {
+        "habilidades": ["Mestre do Disparo"]
+      }
+    }
+  },
+  "Treinador": {
+    "fonte": "Heróis de Arton, p. 18 (Tabela 1-1)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+      "listas": ["Melhor Amigo"]
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Direcionar", "Melhor Amigo"],
+        "valores": {
+          "Melhor Amigo (truques)": "2"
+        }
+      },
+      "2": {
+        "habilidades": ["Domar Criatura"],
+        "valores": {
+          "Domar Criatura": "2d8"
+        }
+      },
+      "4": {
+        "valores": {
+          "Melhor Amigo (truques)": "3"
+        }
+      },
+      "5": {
+        "escolhas": [
+          {
+            "id": "treinoEspecializado",
+            "titulo": "Treino Especializado",
+            "opcoes": ["Conquistar pelos Números", "Treino Intensivo (Treinador)"]
+          }
+        ],
+        "valores": {
+          "Domar Criatura (duração)": "cena"
+        }
+      },
+      "6": {
+        "habilidades": ["Sincronia de Combate"],
+        "valores": {
+          "Domar Criatura": "4d8"
+        }
+      },
+      "7": {
+        "valores": {
+          "Melhor Amigo (truques)": "4"
+        }
+      },
+      "8": {
+        "valores": {
+          "Domar Criatura (duração)": "dia"
+        }
+      },
+      "10": {
+        "valores": {
+          "Domar Criatura": "6d8",
+          "Melhor Amigo (truques)": "5"
+        }
+      },
+      "13": {
+        "valores": {
+          "Melhor Amigo (truques)": "6"
+        }
+      },
+      "14": {
+        "valores": {
+          "Domar Criatura": "8d8"
+        }
+      },
+      "16": {
+        "valores": {
+          "Melhor Amigo (truques)": "7"
+        }
+      },
+      "18": {
+        "valores": {
+          "Domar Criatura": "10d8"
+        }
+      },
+      "19": {
+        "valores": {
+          "Melhor Amigo (truques)": "8"
+        }
+      },
+      "20": {
+        "habilidades": ["Sincronia Perfeita"]
+      }
+    },
+    "valoresNaFicha": {
+      "Domar Criatura": "rolagem"
+    }
+  },
+  "Usurpador": {
+    "base": "Clérigo",
+    "fonte": "Heróis de Arton, p. 40 (Tabela 1-14)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "magias": {
+      "tipo": "div",
+      "circulos": {
+        "1": 1,
+        "5": 2,
+        "9": 3,
+        "13": 4,
+        "17": 5
+      },
+      "todas": true
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Inimigo dos Deuses", "Magias (Usurpador)", "Usurpar"]
+      },
+      "2": {
+        "habilidades": ["Canalização Falsa"]
+      },
+      "3": {
+        "habilidades": ["Discrição Divina"],
+        "valores": {
+          "Discrição Divina": "+1"
+        }
+      },
+      "4": {
+        "habilidades": ["Poder Capturado"]
+      },
+      "9": {
+        "valores": {
+          "Discrição Divina": "+2"
+        }
+      },
+      "15": {
+        "valores": {
+          "Discrição Divina": "+3"
+        }
+      },
+      "20": {
+        "habilidades": ["Roubo Divino"]
+      }
+    }
+  },
+  "Vassalo": {
+    "base": "Cavaleiro",
+    "fonte": "Heróis de Arton, p. 42 (Tabela 1-15)",
+    "poder": {
+      "niveis": [2, 4, 6, 7, 9, 12, 14, 16, 18],
+      "listasPorNivel": {
+        "7": ["Guerreiro"],
+        "9": ["Nobre", "Guerreiro"]
+      }
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Baluarte", "Código de Honra", "Jovem Pajem", "Suserano"],
+        "valores": {
+          "Baluarte": "+2"
+        }
+      },
+      "2": {
+        "habilidades": ["Valete"]
+      },
+      "3": {
+        "habilidades": ["Escudeiro Aprendiz"]
+      },
+      "4": {
+        "habilidades": ["Guarda do Castelo"]
+      },
+      "5": {
+        "habilidades": ["Vigilante de Estradas"],
+        "valores": {
+          "Baluarte": "+4"
+        }
+      },
+      "6": {
+        "habilidades": ["Cavaleiro do Reino"]
+      },
+      "7": {
+        "habilidades": ["Sargento do Reino"]
+      },
+      "8": {
+        "habilidades": [
+          "Capitão do Reino",
+          {
+            "nome": "Escudeiro",
+            "classe": "Cavaleiro"
+          },
+          {
+            "nome": "Golpe Divino",
+            "classe": "Paladino"
+          }
+        ]
+      },
+      "9": {
+        "escolhas": [
+          {
+            "id": "lorde",
+            "titulo": "Lorde",
+            "opcoes": ["Lorde: Caminho do Governante", "Lorde: Caminho do Soldado"]
+          }
+        ],
+        "valores": {
+          "Baluarte": "+6"
+        },
+        "habilidades": [
+          {
+            "nome": "Autoridade Feudal (Cavaleiro)",
+            "classe": "Cavaleiro"
+          }
+        ]
+      },
+      "10": {
+        "habilidades": [
+          "Barão",
+          {
+            "nome": "Título (Cavaleiro)",
+            "classe": "Cavaleiro"
+          }
+        ]
+      },
+      "11": {
+        "habilidades": ["Visconde"]
+      },
+      "12": {
+        "habilidades": ["Conde"]
+      },
+      "13": {
+        "habilidades": ["Marquês"],
+        "valores": {
+          "Baluarte": "+8"
+        }
+      },
+      "14": {
+        "habilidades": ["Duque"]
+      },
+      "15": {
+        "habilidades": ["Arquiduque"]
+      },
+      "16": {
+        "habilidades": ["Conselheiro Real"]
+      },
+      "17": {
+        "habilidades": ["Rei Mercenário"],
+        "valores": {
+          "Baluarte": "+10"
+        }
+      },
+      "18": {
+        "habilidades": ["Rei"]
+      },
+      "19": {
+        "habilidades": ["Alto Rei"]
+      },
+      "20": {
+        "habilidades": ["Imperador"]
+      }
+    },
+    "notas": "Títulos que dão poder: Valete (2), Guarda do Castelo (4), Cavaleiro do Reino (6), Sargento do Reino (7, cavaleiro ou guerreiro), Lorde (9, nobre se Governante, guerreiro se Soldado), Conde (12, cavaleiro ou geral: o geral já é sempre oferecido), Duque (14), Conselheiro Real (16; a magia divina de até 4º círculo não é pedida), Rei (18)."
+  },
+  "Ventanista": {
+    "base": "Ladino",
+    "fonte": "Heróis de Arton, p. 45 (Tabela 1-16)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Charme", "Truques do Ofício"]
+      },
+      "2": {
+        "habilidades": ["Evasão"]
+      },
+      "3": {
+        "habilidades": ["Disfarce Elaborado"],
+        "valores": {
+          "Disfarce Elaborado": "1 poder"
+        }
+      },
+      "4": {
+        "habilidades": ["Esquiva Sobrenatural"]
+      },
+      "7": {
+        "habilidades": ["Virar a Casaca"]
+      },
+      "8": {
+        "habilidades": ["Olhos nas Costas"]
+      },
+      "9": {
+        "valores": {
+          "Disfarce Elaborado": "2 poderes"
+        }
+      },
+      "10": {
+        "habilidades": ["Evasão Aprimorada"]
+      },
+      "11": {
+        "habilidades": ["Provocação Ousada"]
+      },
+      "15": {
+        "valores": {
+          "Disfarce Elaborado": "3 poderes"
+        }
+      },
+      "20": {
+        "ausentes": ["O Grande Golpe"]
+      }
+    },
+    "valoresNaFicha": {
+      "Disfarce Elaborado": "anotacao"
     }
   }
 }

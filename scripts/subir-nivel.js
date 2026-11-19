@@ -1,13 +1,16 @@
 /**
- * Janela "Subir de nível": mostra o que o próximo nível da classe concede, deixa escolher o poder
- * (de classe ou geral) e grava tudo de uma vez. Também desfaz o último nível aplicado.
+ * Janela "Subir de nível": assistente em passos (Nível → Poder → Magias → Revisão, só os que o nível
+ * tiver), com a mesma barra lateral do construtor. Grava tudo de uma vez e desfaz o último nível aplicado.
  */
 import { MODULE_ID, normalizar } from "./regras.js";
 import { carregarDados, poderSelecionavel, fonteDe } from "./dados.js";
 import { lerFicha } from "./ficha-atual.js";
 import { poderRacialPermitido } from "./poderes-raciais.js";
 import { poderDistincaoPermitido, ehPoderDeDistincao, distincaoDoPoder } from "./distincoes.js";
-import { montarNivel, criarLeitorPreRequisitos, pendenciaNivel, montarPlano } from "./nivel.js";
+import {
+	montarNivel, criarLeitorPreRequisitos, pendenciaNivel, montarPlano, variantesDe,
+	magiasDisponiveis, escolasEfetivas, conferirVagas, circuloDe
+} from "./nivel.js";
 import { aplicarNivel, desfazerUltimoNivel, podeDesfazer, historico } from "./aplicar-nivel.js";
 import { animarSubidaDeNivel } from "./animacao-nivel.js";
 
@@ -15,6 +18,15 @@ const TPL = `modules/${MODULE_ID}/templates`;
 export const TEMPLATES_NIVEL = [`${TPL}/subir-nivel.hbs`];
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
+const TITULOS_PASSOS = { nivel: "Nível", poder: "Poder", magias: "Magias", revisao: "Revisão" };
+const DICAS_PASSOS = {
+	nivel: "O que este nível concede e as escolhas das habilidades de classe.",
+	poder: "Um poder de classe ou, no lugar dele, um poder geral.",
+	magias: "Magias novas que você aprende neste nível.",
+	revisao: "Confira tudo o que vai entrar na ficha."
+};
+const TIPOS_MAGIA = { arc: "Arcana", div: "Divina", uni: "Universal" };
 
 /* ---------- Dados próprios da subida de nível (progressões e correções de pré-requisitos) ---------- */
 
@@ -42,31 +54,48 @@ async function enriquecer(html) {
 	return foundry.applications.ux.TextEditor.implementation.enrichHTML(limpo, { async: true });
 }
 
+const rotuloEscola = (k) => game.i18n.localize(CONFIG.T20?.spellSchools?.[k] ?? k);
+
 export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 	constructor(actor, options = {}) {
 		super({ id: `t20cf-nivel-${actor.id}`, ...options });
 		this.actor = actor;
 		this.dados = null;
+		this.ocupado = false;
+		this._html = new Map();
+		this.#limparEscolhas();
+	}
+
+	/** Estado das escolhas (volta ao início depois de aplicar um nível). */
+	#limparEscolhas() {
+		this.passo = "nivel";
 		this.escolha = null; // uuid do poder escolhido
 		this.aba = "classe";
 		this.mostrarIndisponiveis = false;
 		this.anotacao = "";
-		this.selecoes = {}; // escolhas do nível: id → uuid (escolha entre habilidades) ou texto (escolha anotada)
-		this.filtro = "";
-		this.ocupado = false;
-		this._html = new Map();
+		this.selecoes = {}; // id → uuid (escolha entre habilidades) ou texto (escolha anotada)
+		this.magias = []; // uuids das magias escolhidas
+		this.escolas = []; // escolas escolhidas agora (ficha sem as escolas gravadas)
+		this.focoMagia = null;
+		this.filtros = {};
 	}
 
 	static DEFAULT_OPTIONS = {
 		classes: ["t20-construtor", "t20cf-nivel"],
 		tag: "div",
 		window: { icon: "fa-solid fa-angles-up", resizable: true },
-		position: { width: 960, height: 720 },
+		position: { width: 1040, height: 760 },
 		actions: {
+			irPara: SubirNivel.#irPara,
+			avancar: SubirNivel.#avancar,
+			voltar: SubirNivel.#voltar,
 			escolher: SubirNivel.#escolher,
 			selecionar: SubirNivel.#selecionar,
 			aba: SubirNivel.#trocarAba,
 			indisponiveis: SubirNivel.#alternarIndisponiveis,
+			escola: SubirNivel.#alternarEscola,
+			magia: SubirNivel.#alternarMagia,
+			focarMagia: SubirNivel.#focarMagia,
 			aplicar: SubirNivel.#aplicar,
 			desfazer: SubirNivel.#desfazer,
 			compendioClasses: SubirNivel.#compendioClasses
@@ -93,7 +122,8 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	/** Situação atual: ficha, classe e o que o próximo nível concede (ou o motivo de não poder subir). */
 	#calcular() {
-		const ficha = lerFicha(this.actor, { regrasClasses: this.dados.regrasClasses, variantes: this.dados.variantes });
+		// a variante conta como a classe básica nos pré-requisitos ("5º nível de ladino" para o ventanista)
+		const ficha = lerFicha(this.actor, { regrasClasses: this.dados.regrasClasses, variantes: variantesDe(this.progressao, this.dados.variantes) });
 		if (!ficha.classes.length) return { ficha, bloqueio: "Este personagem ainda não tem classe. Use o construtor para criá-lo." };
 		if (ficha.classes.length > 1) return { ficha, bloqueio: "Personagens com mais de uma classe (multiclasse) ainda não são suportados pelo assistente. Use “Outra classe (compêndio)” para subir de nível arrastando a classe para a ficha, como no sistema." };
 		const classe = ficha.classes[0];
@@ -102,6 +132,7 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 		const r = montarNivel({
 			dados: this.dados, progressao: this.progressao, ficha, classe,
 			lerPreRequisito: leitorPreRequisitos,
+			regrasPoderesClasse: this.dados.regrasPoderesClasse,
 			// poderes de distinção: só para quem tem a marca, e para quem tem, sempre (mesmo com a chave
 			// "Poderes" do suplemento desligada: a marca foi posta na ficha pelo mestre)
 			selecionavel: (p) => (distincaoDoPoder(this.dados, p) || poderSelecionavel(this.dados, p))
@@ -116,6 +147,34 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 		if (r.erro === "semProgressao") return { ficha, classe, bloqueio: `A progressão de ${classe.nome} ainda não foi cadastrada no construtor. Use “Outra classe (compêndio)” para subir de nível arrastando a classe para a ficha, como no sistema.` };
 		if (r.erro === "nivelMaximo") return { ficha, classe, bloqueio: "Este personagem já está no 20º nível." };
 		return { ficha, classe, nivel: r };
+	}
+
+	/** Poder escolhido (opção de poderesClasse/poderesGerais), se ainda for válido. */
+	#poderEscolhido(nivel) {
+		return [...nivel.poderesClasse, ...nivel.poderesGerais].find((o) => o.doc.uuid === this.escolha && o.disponivel) ?? null;
+	}
+
+	#magiasEscolhidas() {
+		return this.magias.map((u) => this.dados.magias.find((m) => m.uuid === u)).filter(Boolean);
+	}
+
+	/** Passos deste nível (só os que têm o que escolher, mais a revisão). */
+	#passos(nivel) {
+		const m = nivel.magias;
+		const temMagias = !!m && (m.vagas.length > 0 || (m.escolas && !m.escolasFicha.length));
+		return ["nivel", ...(nivel.ganhaPoder ? ["poder"] : []), ...(temMagias ? ["magias"] : []), "revisao"];
+	}
+
+	/** Pendência de um passo (ou de tudo, sem passo). */
+	#pendencia(nivel, passo = null) {
+		const ctx = { poder: this.#poderEscolhido(nivel), selecoes: this.selecoes, magias: this.#magiasEscolhidas(), escolas: this.escolas };
+		const so = {
+			nivel: { ...nivel, magias: null, ganhaPoder: false },
+			poder: { ...nivel, escolhas: [], anotadas: [], magias: null },
+			magias: { ...nivel, escolhas: [], anotadas: [], ganhaPoder: false },
+			revisao: nivel
+		};
+		return pendenciaNivel(passo ? so[passo] : nivel, ctx);
 	}
 
 	async #descricao(doc) {
@@ -139,17 +198,68 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 		const base = {
 			ator: this.actor.name,
 			classe: classe?.nome,
+			img: classe?.item?.img,
 			nivelAtual: ficha.nivel,
 			podeDesfazer: pdDesfazer,
 			ultimo: pdDesfazer ? `${ultimo.classe} ${ultimo.nivelClasse} (nível ${ultimo.nivel})` : null,
 			manual: !!this.actor.getFlag("tormenta20", "lvlconfig")?.manual,
 			ocupado: this.ocupado
 		};
-		if (bloqueio) return { ...base, bloqueio };
+		if (bloqueio) return { ...base, bloqueio, resumo: [] };
 
-		const classeDoc = classe.item;
-		const sysClasse = classeDoc.system ?? {};
-		const con = ficha.atributos.con ?? 0;
+		const sysClasse = classe.item.system ?? {};
+		const pv = Math.max(1, (Number(sysClasse.pvPorNivel) || 0) + (ficha.atributos.con ?? 0));
+		const pm = Number(sysClasse.pmPorNivel) || 0;
+
+		// passos
+		const ids = this.#passos(nivel);
+		if (!ids.includes(this.passo)) this.passo = "nivel";
+		const atual = ids.indexOf(this.passo);
+		const primeiroPendente = ids.findIndex((id) => id !== "revisao" && this.#pendencia(nivel, id));
+		const passos = ids.map((id, i) => ({
+			id, titulo: TITULOS_PASSOS[id], numero: i + 1,
+			atual: i === atual,
+			feito: i < atual && !this.#pendencia(nivel, id),
+			// dá para pular para trás e para frente até o primeiro passo com pendência
+			acessivel: i <= atual || primeiroPendente < 0 || i <= primeiroPendente
+		}));
+
+		const poder = this.#poderEscolhido(nivel);
+		const magiasEsc = this.#magiasEscolhidas();
+		const resumo = [
+			{ rotulo: "Classe", valor: `${classe.nome} ${classe.niveis} → ${nivel.nivelClasse}` },
+			{ rotulo: "Personagem", valor: `${ficha.nivel}º → ${nivel.nivelPersonagem}º nível` },
+			{ rotulo: "PV", valor: `+${pv}` },
+			{ rotulo: "PM", valor: `+${pm}` },
+			...(nivel.ganhaPoder ? [{ rotulo: "Poder", valor: poder?.nome ?? "—" }] : []),
+			...(nivel.magias?.vagas.length ? [{ rotulo: "Magias", valor: `${magiasEsc.length}/${nivel.magias.vagas.length}` }] : [])
+		];
+
+		const ctx = {
+			...base,
+			fonte: nivel.fonte,
+			nivelClasseAtual: classe.niveis,
+			nivelClasse: nivel.nivelClasse,
+			nivelPersonagem: nivel.nivelPersonagem,
+			passos,
+			passo: this.passo,
+			passoTitulo: TITULOS_PASSOS[this.passo],
+			passoDica: DICAS_PASSOS[this.passo],
+			primeiro: atual === 0,
+			ultimoPasso: atual === ids.length - 1,
+			pendencia: this.passo === "revisao" ? this.#pendencia(nivel) : this.#pendencia(nivel, this.passo),
+			resumo,
+			pv, pm,
+			avisos: nivel.avisos
+		};
+		if (this.passo === "nivel") Object.assign(ctx, await this.#ctxNivel(nivel));
+		if (this.passo === "poder") Object.assign(ctx, await this.#ctxPoder(nivel, classe));
+		if (this.passo === "magias") Object.assign(ctx, await this.#ctxMagias(nivel, ficha));
+		if (this.passo === "revisao") Object.assign(ctx, this.#ctxRevisao(nivel, poder, magiasEsc));
+		return ctx;
+	}
+
+	async #ctxNivel(nivel) {
 		const habilidades = await Promise.all(nivel.habilidades.map(async (h) => ({
 			nome: h.nome + (h.valor ? ` ${h.valor}` : ""),
 			img: h.doc?.img,
@@ -157,46 +267,6 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			jaTem: h.jaTem,
 			semDoc: !h.doc
 		})));
-
-		// lista de poderes da aba atual
-		const lista = this.aba === "geral" ? nivel.poderesGerais : nivel.poderesClasse;
-		const visiveis = lista.filter((o) => o.disponivel || this.mostrarIndisponiveis);
-		const escolhida = [...nivel.poderesClasse, ...nivel.poderesGerais].find((o) => o.doc.uuid === this.escolha) ?? null;
-		if (escolhida && !escolhida.disponivel) this.escolha = null;
-		const card = (o) => ({
-			uuid: o.doc.uuid,
-			nome: o.nome,
-			img: o.doc.img,
-			sub: o.disponivel ? (o.preRequisito ? `Pré-requisito: ${o.preRequisito}` : "Sem pré-requisito") : o.motivo,
-			selecionado: o.doc.uuid === this.escolha,
-			bloqueado: !o.disponivel,
-			aviso: o.avisos.length > 0,
-			fonte: fonteDe(this.dados, o.doc)
-		});
-		let grupos;
-		if (this.aba === "geral") {
-			const porGrupo = new Map();
-			for (const o of visiveis) {
-				if (!porGrupo.has(o.grupo)) porGrupo.set(o.grupo, []);
-				porGrupo.get(o.grupo).push(card(o));
-			}
-			grupos = [...porGrupo.entries()].sort(([a], [b]) => a.localeCompare(b, "pt-BR")).map(([titulo, cards]) => ({ titulo, cards }));
-		} else {
-			grupos = [{ titulo: `Poderes de ${classe.nome}`, cards: visiveis.map(card) }];
-		}
-
-		const info = escolhida && escolhida.disponivel ? {
-			nome: escolhida.nome,
-			img: escolhida.doc.img,
-			fonte: fonteDe(this.dados, escolhida.doc),
-			preRequisito: escolhida.preRequisito,
-			avisos: escolhida.avisos,
-			repetivel: escolhida.repetivel,
-			jaTem: escolhida.jaTem,
-			pedeEscolha: escolhida.repetivel || /\bescolha\b/i.test(escolhida.doc.system?.description?.value ?? ""),
-			descricao: await this.#descricao(escolhida.doc)
-		} : null;
-
 		const escolhas = await Promise.all(nivel.escolhas.map(async (e) => {
 			const marcada = e.opcoes.find((o) => o.doc.uuid === this.selecoes[e.id]);
 			return {
@@ -216,23 +286,57 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			descricao: a.jaTem ? "" : await this.#descricao(a.doc),
 			img: a.doc?.img
 		})));
-		const pendencia = pendenciaNivel(nivel, { poder: escolhida, selecoes: this.selecoes });
+		const m = nivel.magias;
 		return {
-			...base,
-			img: classeDoc.img,
-			fonte: nivel.fonte,
-			nivelClasseAtual: classe.niveis,
-			nivelClasse: nivel.nivelClasse,
-			nivelPersonagem: nivel.nivelPersonagem,
-			pv: Math.max(1, (Number(sysClasse.pvPorNivel) || 0) + con),
-			pm: Number(sysClasse.pmPorNivel) || 0,
 			bonusPericia: nivel.bonusPericia,
-			habilidades,
 			valores: nivel.valores,
+			habilidades,
 			escolhas,
 			anotadas,
-			avisos: nivel.avisos,
-			ganhaPoder: nivel.ganhaPoder,
+			circuloNovo: m?.circuloNovo ?? null,
+			tipoMagia: m ? TIPOS_MAGIA[m.tipo]?.toLowerCase() : null,
+			ausentes: nivel.ausentes,
+			automaticas: (m?.automaticas ?? []).map((x) => x.name).sort((a, b) => a.localeCompare(b, "pt-BR"))
+		};
+	}
+
+	async #ctxPoder(nivel, classe) {
+		const lista = this.aba === "geral" ? nivel.poderesGerais : nivel.poderesClasse;
+		const visiveis = lista.filter((o) => o.disponivel || this.mostrarIndisponiveis);
+		const escolhida = [...nivel.poderesClasse, ...nivel.poderesGerais].find((o) => o.doc.uuid === this.escolha) ?? null;
+		if (escolhida && !escolhida.disponivel) this.escolha = null;
+		const card = (o) => ({
+			uuid: o.doc.uuid,
+			nome: o.nome,
+			img: o.doc.img,
+			sub: o.disponivel ? (o.preRequisito ? `Pré-requisito: ${o.preRequisito}` : "Sem pré-requisito") : o.motivo,
+			selecionado: o.doc.uuid === this.escolha,
+			bloqueado: !o.disponivel,
+			aviso: o.avisos.length > 0
+		});
+		let grupos;
+		if (this.aba === "geral") {
+			const porGrupo = new Map();
+			for (const o of visiveis) {
+				if (!porGrupo.has(o.grupo)) porGrupo.set(o.grupo, []);
+				porGrupo.get(o.grupo).push(card(o));
+			}
+			grupos = [...porGrupo.entries()].sort(([a], [b]) => a.localeCompare(b, "pt-BR")).map(([titulo, cards]) => ({ titulo, cards }));
+		} else {
+			grupos = [{ titulo: `Poderes de ${classe.nome}`, cards: visiveis.map(card) }];
+		}
+		const info = escolhida && escolhida.disponivel ? {
+			nome: escolhida.nome,
+			img: escolhida.doc.img,
+			fonte: fonteDe(this.dados, escolhida.doc),
+			preRequisito: escolhida.preRequisito,
+			avisos: escolhida.avisos,
+			jaTem: escolhida.jaTem,
+			concede: escolhida.concede?.name ?? null,
+			pedeEscolha: escolhida.repetivel || /\bescolha\b/i.test(escolhida.doc.system?.description?.value ?? ""),
+			descricao: await this.#descricao(escolhida.doc)
+		} : null;
+		return {
 			aba: this.aba,
 			abaClasse: this.aba === "classe",
 			totais: {
@@ -242,21 +346,93 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			mostrarIndisponiveis: this.mostrarIndisponiveis,
 			grupos,
 			vazio: !visiveis.length,
-			filtro: this.filtro,
+			filtro: this.filtros.poder ?? "",
 			info,
-			anotacao: this.anotacao,
-			pendencia
+			anotacao: this.anotacao
 		};
+	}
+
+	async #ctxMagias(nivel, ficha) {
+		const m = nivel.magias;
+		const precisaEscolas = !!m.escolas && !m.escolasFicha.length;
+		const esc = escolasEfetivas(m, this.escolas);
+		const escolasProntas = !m.escolas || esc.length === m.escolas;
+
+		// escolas: só quando a ficha ainda não as tem (personagem criado antes de o construtor gravá-las)
+		let escolas = null;
+		if (precisaEscolas) {
+			const todasDoTipo = magiasDisponiveis(this.dados, { ...m, escolas: 0 }, ficha);
+			const conhecidas = new Set(this.actor.items.filter((i) => i.type === "magia").map((i) => i.system?.escola));
+			escolas = Object.keys(CONFIG.T20?.spellSchools ?? {}).map((k) => ({
+				chave: k,
+				nome: rotuloEscola(k),
+				qtd: todasDoTipo.filter((x) => x.system?.escola === k).length,
+				conhecida: conhecidas.has(k),
+				selecionado: this.escolas.includes(k)
+			}));
+		}
+
+		const escolhidas = this.#magiasEscolhidas();
+		const vagas = conferirVagas(m.vagas, escolhidas);
+		const lista = escolasProntas ? magiasDisponiveis(this.dados, m, ficha, this.escolas) : [];
+		const porCirculo = new Map();
+		for (const x of lista) {
+			const c = circuloDe(x);
+			if (!porCirculo.has(c)) porCirculo.set(c, []);
+			porCirculo.get(c).push({
+				uuid: x.uuid, nome: x.name, img: x.img,
+				sub: `${rotuloEscola(x.system?.escola)} · ${TIPOS_MAGIA[x.system?.tipo] ?? ""}${fonteDe(this.dados, x) ? ` · ${fonteDe(this.dados, x)}` : ""}`,
+				selecionado: this.magias.includes(x.uuid),
+				foco: x.uuid === this.focoMagia
+			});
+		}
+		const foco = this.dados.magias.find((x) => x.uuid === this.focoMagia);
+		return {
+			precisaEscolas,
+			escolas,
+			qtdEscolas: m.escolas,
+			dicaEscolas: m.dicaEscolas,
+			escolasEscolhidas: this.escolas.length,
+			escolasFicha: m.escolasFicha.map(rotuloEscola).join(", "),
+			escolasProntas,
+			vagasTexto: m.vagas.map((v) => (v.circulo ? `1 de ${v.circulo}º círculo${v.motivo ? ` (${v.motivo})` : ""}` : `1 de até ${v.ate}º círculo`)),
+			faltam: vagas.faltam,
+			circuloNovo: m.circuloNovo,
+			semMagiaNova: !m.vagas.length,
+			circulos: [...porCirculo.entries()].sort(([a], [b]) => a - b).map(([c, cards]) => ({ titulo: `${c}º círculo`, cards })),
+			filtro: this.filtros.magia ?? "",
+			escolhidasLista: escolhidas.map((x) => ({ uuid: x.uuid, nome: x.name, circulo: circuloDe(x) })),
+			infoMagia: foco ? {
+				nome: foco.name, img: foco.img,
+				sub: `${circuloDe(foco)}º círculo · ${rotuloEscola(foco.system?.escola)} · ${TIPOS_MAGIA[foco.system?.tipo] ?? ""}`,
+				selecionado: this.magias.includes(foco.uuid),
+				descricao: await this.#descricao(foco)
+			} : null
+		};
+	}
+
+	#ctxRevisao(nivel, poder, magiasEsc) {
+		const plano = montarPlano(nivel, { poder, selecoes: this.selecoes, magias: magiasEsc, escolas: this.escolas, anotacao: this.anotacao });
+		const itens = [
+			...plano.habilidades.map((h) => ({ tipo: "Habilidade", nome: h.doc.name + (h.valor ? ` ${h.valor}` : "") })),
+			...plano.escolhidas.map((d) => ({ tipo: "Escolha", nome: d.name })),
+			...plano.anotadas.map((a) => ({ tipo: "Anotação", nome: `${a.doc.name}: ${a.texto}` })),
+			...plano.valores.map((v) => ({ tipo: "Valor", nome: `${v.nome}: ${v.para}${v.modo === "rolagem" ? " (rolagem do poder)" : " (anotado na descrição)"}` })),
+			...(plano.poder ? [{ tipo: "Poder", nome: plano.poder.name + (plano.anotacao?.trim() ? ` — ${plano.anotacao.trim()}` : "") }] : []),
+			...plano.magias.slice(0, 12).map((d) => ({ tipo: "Magia", nome: `${d.name} (${circuloDe(d)}º círculo)` })),
+			...(plano.magias.length > 12 ? [{ tipo: "Magia", nome: `… e mais ${plano.magias.length - 12}` }] : []),
+			...(plano.escolasMagia ? [{ tipo: "Escolas", nome: plano.escolasMagia.map(rotuloEscola).join(", ") }] : [])
+		];
+		return { revisao: itens, valoresInformativos: nivel.valores.filter((v) => !v.modo), bonusPericia: nivel.bonusPericia };
 	}
 
 	_onRender(context, options) {
 		super._onRender(context, options);
 		if (context.carregando) return;
-		const filtro = this.element.querySelector(".cf-filtro-lista");
-		if (filtro) {
+		for (const filtro of this.element.querySelectorAll(".cf-filtro-lista")) {
 			const lista = filtro.closest(".cf-lista-filtravel");
 			const aplicar = () => {
-				this.filtro = filtro.value;
+				this.filtros[filtro.dataset.filtro] = filtro.value;
 				const termo = normalizar(filtro.value);
 				let total = 0;
 				for (const grupo of lista.querySelectorAll(".cf-grupo")) {
@@ -277,6 +453,33 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 		this.element.querySelector("[name=anotacao]")?.addEventListener("input", (ev) => {
 			this.anotacao = ev.target.value;
 		});
+	}
+
+	/* ---------- Navegação ---------- */
+
+	#irParaPasso(id) {
+		this.passo = id;
+		this.render();
+	}
+
+	static #irPara(event, target) {
+		this.#irParaPasso(target.dataset.passo);
+	}
+
+	static #avancar() {
+		const { nivel } = this.#calcular();
+		if (!nivel) return;
+		const ids = this.#passos(nivel);
+		const pend = this.#pendencia(nivel, this.passo);
+		if (pend) return ui.notifications.warn(pend);
+		this.#irParaPasso(ids[Math.min(ids.length - 1, ids.indexOf(this.passo) + 1)]);
+	}
+
+	static #voltar() {
+		const { nivel } = this.#calcular();
+		if (!nivel) return;
+		const ids = this.#passos(nivel);
+		this.#irParaPasso(ids[Math.max(0, ids.indexOf(this.passo) - 1)]);
 	}
 
 	/* ---------- Ações ---------- */
@@ -304,26 +507,58 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 		this.render();
 	}
 
+	static #alternarEscola(event, target) {
+		const { nivel } = this.#calcular();
+		const k = target.dataset.escola;
+		if (this.escolas.includes(k)) this.escolas = this.escolas.filter((x) => x !== k);
+		else if (this.escolas.length < (nivel?.magias?.escolas ?? 0)) this.escolas = [...this.escolas, k];
+		else return ui.notifications.warn(`Você já escolheu ${nivel.magias.escolas} escolas. Remova uma para trocar.`);
+		// magias de escolas que deixaram de valer saem da escolha
+		this.magias = this.#magiasEscolhidas().filter((m) => this.escolas.includes(m.system?.escola)).map((m) => m.uuid);
+		this.render();
+	}
+
+	static #alternarMagia(event, target) {
+		const uuid = target.dataset.uuid;
+		this.focoMagia = uuid;
+		if (this.magias.includes(uuid)) this.magias = this.magias.filter((u) => u !== uuid);
+		else {
+			const { nivel } = this.#calcular();
+			const vagas = nivel?.magias?.vagas ?? [];
+			if (this.magias.length >= vagas.length) {
+				ui.notifications.warn(`Você já escolheu ${vagas.length === 1 ? "a magia" : `as ${vagas.length} magias`} deste nível. Desmarque uma para trocar.`);
+			} else this.magias = [...this.magias, uuid];
+		}
+		this.render();
+	}
+
+	static #focarMagia(event, target) {
+		this.focoMagia = target.dataset.uuid;
+		this.render();
+	}
+
 	static async #aplicar() {
 		if (this.ocupado) return;
 		const { classe, nivel, bloqueio } = this.#calcular();
 		if (bloqueio) return;
-		const poder = this.escolha ? [...nivel.poderesClasse, ...nivel.poderesGerais].find((o) => o.doc.uuid === this.escolha && o.disponivel) : null;
-		const pendencia = pendenciaNivel(nivel, { poder, selecoes: this.selecoes });
+		const poder = this.#poderEscolhido(nivel);
+		const pendencia = this.#pendencia(nivel);
 		if (pendencia) return ui.notifications.warn(pendencia);
 		this.ocupado = true;
 		this.render();
 		try {
-			const r = await aplicarNivel(this.actor, montarPlano(nivel, { classeId: classe.id, poder, anotacao: this.anotacao, selecoes: this.selecoes }));
+			const plano = montarPlano(nivel, {
+				classeId: classe.id, poder, anotacao: this.anotacao, selecoes: this.selecoes,
+				magias: this.#magiasEscolhidas(), escolas: this.escolas
+			});
+			const r = await aplicarNivel(this.actor, plano);
 			ui.notifications.info(`${this.actor.name} subiu para o ${nivel.nivelPersonagem}º nível (${classe.nome} ${nivel.nivelClasse}): +${r.pv} PV, +${r.pm} PM.`);
 			animarSubidaDeNivel({
 				nivel: nivel.nivelPersonagem,
 				detalhe: `${this.actor.name} · ${classe.nome} ${nivel.nivelClasse} · +${r.pv} PV · +${r.pm} PM`,
 				img: classe.item?.img
 			});
-			this.escolha = null;
-			this.anotacao = "";
-			this.selecoes = {};
+			this.#limparEscolhas();
 		} catch (err) {
 			console.error(err);
 			ui.notifications.error(`Não foi possível subir de nível: ${err.message}`);
@@ -343,7 +578,7 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 		const ultimo = historico(this.actor).at(-1);
 		const ok = await foundry.applications.api.DialogV2.confirm({
 			window: { title: "Desfazer último nível" },
-			content: `<p>Desfazer o ${ultimo.nivel}º nível (${ultimo.classe} ${ultimo.nivelClasse})? Os poderes ganhos nesse nível serão removidos da ficha e PV/PM atuais voltam a diminuir.</p><p>Só o último nível pode ser desfeito.</p>`
+			content: `<p>Desfazer o ${ultimo.nivel}º nível (${ultimo.classe} ${ultimo.nivelClasse})? Os poderes e magias ganhos nesse nível serão removidos da ficha e PV/PM atuais voltam a diminuir.</p><p>Só o último nível pode ser desfeito.</p>`
 		});
 		if (!ok) return;
 		this.ocupado = true;
@@ -351,6 +586,7 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 		try {
 			await desfazerUltimoNivel(this.actor);
 			ui.notifications.info(`${this.actor.name} voltou para o ${ultimo.nivel - 1}º nível.`);
+			this.#limparEscolhas();
 		} catch (err) {
 			console.error(err);
 			ui.notifications.error(`Não foi possível desfazer: ${err.message}`);
