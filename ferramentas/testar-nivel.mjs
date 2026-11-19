@@ -27,14 +27,45 @@ const setProperty = (o, k, v) => {
 	const alvo = partes.reduce((x, p) => (x[p] ??= {}), o);
 	alvo[ult] = v;
 };
-globalThis.foundry = { utils: { getProperty, setProperty, deepClone: (x) => structuredClone(x), escapeHTML: (t) => t } };
+// como o do Foundry: copia só objetos simples e listas; instâncias de classe (modelos de dados) voltam por referência
+const ehSimples = (x) => x !== null && typeof x === "object" && (Array.isArray(x) || Object.getPrototypeOf(x) === Object.prototype);
+const deepClone = (x) => !ehSimples(x) ? x : Array.isArray(x) ? x.map(deepClone) : Object.fromEntries(Object.entries(x).map(([k, v]) => [k, deepClone(v)]));
+globalThis.foundry = { utils: { getProperty, setProperty, deepClone, escapeHTML: (t) => t } };
 globalThis.game = { items: { fromCompendium: (d) => structuredClone({ name: d.name, type: d.type, img: d.img, system: d.system, effects: d.effects ?? [] }) } };
 const { aplicarNivel, desfazerUltimoNivel, podeDesfazer } = await import("../scripts/aplicar-nivel.js");
 
 let proximoId = 1;
+/** Rolagem como modelo de dados (instância de classe), como RollData no sistema. */
+class RollData { constructor(o) { Object.assign(this, structuredClone(o)); } }
+/**
+ * Item simulado: dados de origem (_source, objetos simples, devolvidos por toObject) e dados preparados
+ * (system com as rolagens como RollData), refeitos a cada update, como no Foundry.
+ */
 function novoItem(data) {
-	const item = { ...structuredClone(data), id: `i${proximoId++}` };
-	item.update = async (u) => { for (const [k, v] of Object.entries(u)) setProperty(item, k, structuredClone(v)); item.dono?.reset(); };
+	const fonteItem = structuredClone({ flags: {}, effects: [], ...data });
+	fonteItem.effects = (fonteItem.effects ?? []).map((e, i) => ({ _id: e._id ?? `e${i}`, ...e }));
+	const id = `i${proximoId++}`;
+	const item = {
+		id,
+		uuid: `Actor.teste.Item.${id}`,
+		toObject: () => structuredClone(fonteItem),
+		preparar() {
+			Object.assign(item, structuredClone({ name: fonteItem.name, type: fonteItem.type, flags: fonteItem.flags }));
+			item.system = structuredClone(fonteItem.system ?? {});
+			if (Array.isArray(item.system.rolls)) item.system.rolls = item.system.rolls.map((r) => new RollData(r));
+			item.effects = fonteItem.effects.map((e) => ({ ...structuredClone(e), id: e._id }));
+		},
+		async update(u) {
+			for (const [k, v] of Object.entries(u)) setProperty(fonteItem, k, structuredClone(v));
+			item.preparar();
+			item.dono?.reset();
+		},
+		async updateEmbeddedDocuments(_, lista) {
+			for (const { _id, ...resto } of lista) Object.assign(fonteItem.effects.find((e) => e._id === _id), structuredClone(resto));
+			item.preparar();
+		}
+	};
+	item.preparar();
 	return item;
 }
 function novoAtor(classe, habilidades1) {
@@ -65,14 +96,14 @@ function novoAtor(classe, habilidades1) {
 		async deleteEmbeddedDocuments(_, ids) { for (const id of ids) itens.splice(itens.findIndex((i) => i.id === id), 1); ator.reset(); }
 	};
 	itens.push(Object.assign(novoItem({ type: "classe", name: classe, system: { niveis: 1, inicial: true } }), { dono: ator }));
-	for (const doc of habilidades1) itens.push(novoItem({ type: "poder", name: `1 - ${doc.name}`, system: structuredClone(doc.system) }));
+	for (const doc of habilidades1) itens.push(novoItem({ type: "poder", name: `1 - ${doc.name}`, system: structuredClone(doc.system), effects: structuredClone(doc.effects ?? []) }));
 	ator.reset();
 	ator.system.attributes.pv.value = ator.system.attributes.pv.max;
 	ator.system.attributes.pm.value = ator.system.attributes.pm.max;
 	return ator;
 }
 const fotografia = (ator) => JSON.stringify({
-	itens: ator.items.map(({ update, dono, ...i }) => i).sort((a, b) => a.id.localeCompare(b.id)),
+	itens: ator.items.map((i) => ({ id: i.id, ...i.toObject() })).sort((a, b) => a.id.localeCompare(b.id)),
 	pv: ator.system.attributes.pv.value, pm: ator.system.attributes.pm.value
 });
 
@@ -194,7 +225,12 @@ async function subirClasse(nomeClasse) {
 		for (let n = 1; n <= 20; n++) ultimo = prog.niveis?.[n]?.valores?.[nome] ?? ultimo;
 		const item = poderesFicha.find((p) => normalizar(nomeBase(p.name)) === normalizar(nome));
 		if (!conferir(item, `${nomeClasse}: ${nome} não está na ficha`)) continue;
-		if (modo === "rolagem") conferir(item.system.rolls?.[0]?.parts?.[0]?.[0] === ultimo.replace(/^\+/, ""), `${nomeClasse}: rolagem de ${nome} = ${item.system.rolls?.[0]?.parts?.[0]?.[0]}, esperado ${ultimo}`);
+		if (modo === "rolagem") {
+			const formula = item.toObject().system.rolls?.[0]?.parts?.[0]?.[0];
+			conferir(formula === ultimo.replace(/^\+/, ""), `${nomeClasse}: rolagem de ${nome} (dados de origem) = ${formula}, esperado ${ultimo}`);
+			const comRoll = item.effects.filter((e) => (e.system?.changes ?? []).some((c) => c.value === "roll"));
+			conferir(comRoll.every((e) => e.origin === item.uuid), `${nomeClasse}: efeito de ${nome} não aponta para o próprio item (origin ${comRoll.map((e) => e.origin).join(", ")})`);
+		}
 		if (modo === "anotacao") conferir(item.system.description.value.includes(`(20º nível):</strong> ${ultimo}`) || item.system.description.value.includes(`</strong> ${ultimo}</p>`), `${nomeClasse}: anotação de ${nome} não tem ${ultimo}`);
 	}
 	for (const nivel of Object.values(prog.niveis ?? {})) {
