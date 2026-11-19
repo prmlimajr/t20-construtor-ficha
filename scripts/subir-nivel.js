@@ -8,11 +8,14 @@ import { lerFicha } from "./ficha-atual.js";
 import { poderRacialPermitido } from "./poderes-raciais.js";
 import { poderDistincaoPermitido, ehPoderDeDistincao, distincaoDoPoder } from "./distincoes.js";
 import {
-	montarNivel, criarLeitorPreRequisitos, pendenciaNivel, montarPlano, variantesDe, classesParaSubir, vagasEfetivas, progressaoDe,
+	montarNivel, pendenciaNivel, montarPlano, variantesDe, classesParaSubir, vagasEfetivas, progressaoDe,
 	magiasDisponiveis, escolasEfetivas, conferirVagas, circuloDe
 } from "./nivel.js";
 import { aplicarNivel, desfazerUltimoNivel, podeDesfazer, historico } from "./aplicar-nivel.js";
 import { animarSubidaDeNivel } from "./animacao-nivel.js";
+import { statsMagia, aprimoramentosMagia } from "./magias-info.js";
+import { carregarDadosNivel, leitorPreRequisitos as leitorDe } from "./dados-nivel.js";
+import { categoriaPoder, compararCategorias } from "./categorias-poder.js";
 
 const TPL = `modules/${MODULE_ID}/templates`;
 export const TEMPLATES_NIVEL = [`${TPL}/subir-nivel.hbs`];
@@ -28,26 +31,6 @@ const DICAS_PASSOS = {
 	revisao: "Confira tudo o que vai entrar na ficha."
 };
 const TIPOS_MAGIA = { arc: "Arcana", div: "Divina", uni: "Universal" };
-
-/* ---------- Dados próprios da subida de nível (progressões e correções de pré-requisitos) ---------- */
-
-let dadosNivel = null;
-async function carregarDadosNivel() {
-	if (dadosNivel) return dadosNivel;
-	const ler = async (arquivo) => {
-		const resp = await fetch(`modules/${MODULE_ID}/data/${arquivo}`);
-		if (!resp.ok) throw new Error(`${MODULE_ID} | não foi possível ler data/${arquivo}`);
-		return resp.json();
-	};
-	const [progressao, correcoes] = await Promise.all([ler("progressao.json"), ler("pre-requisitos.json")]);
-	delete progressao._comentario;
-	delete correcoes._comentario;
-	dadosNivel = { progressao, correcoes };
-	return dadosNivel;
-}
-
-let leitorPreRequisitos = null;
-let leitorDe = null;
 
 async function enriquecer(html) {
 	const limpo = String(html ?? "").trim();
@@ -120,10 +103,7 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	async #carregar() {
 		const [dados, { progressao, correcoes }] = await Promise.all([carregarDados(), carregarDadosNivel()]);
-		if (leitorDe !== dados) {
-			leitorPreRequisitos = criarLeitorPreRequisitos(dados, correcoes);
-			leitorDe = dados;
-		}
+		this.lerPreRequisito = leitorDe(dados, correcoes);
 		this.dados = dados;
 		this.progressao = progressao;
 	}
@@ -153,7 +133,7 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 		const raca = this.actor.items.find((i) => i.type === "race")?.name ?? null;
 		const r = montarNivel({
 			dados: this.dados, progressao: this.progressao, ficha, classe,
-			lerPreRequisito: leitorPreRequisitos,
+			lerPreRequisito: this.lerPreRequisito,
 			regrasPoderesClasse: this.dados.regrasPoderesClasse,
 			regrasClasses: this.dados.regrasClasses,
 			// poderes de distinção: só para quem tem a marca, e para quem tem, sempre (mesmo com a chave
@@ -164,7 +144,7 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			ehGeral: (p) => p.system?.tipo === "geral" || ehPoderDeDistincao(this.dados, p),
 			grupoGeral: (p) => {
 				const d = distincaoDoPoder(this.dados, p);
-				return d ? `Distinção: ${d}` : p.system?.subtipo || "Outros";
+				return d ? `Distinção: ${d}` : categoriaPoder(p);
 			}
 		});
 		if (r.erro === "semProgressao") {
@@ -201,6 +181,12 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			revisao: nivel
 		};
 		return pendenciaNivel(passo ? so[passo] : nivel, ctx);
+	}
+
+	/** HTML enriquecido com cache por chave (aprimoramentos das magias). */
+	async #htmlCache(chave, html) {
+		if (!this._html.has(chave)) this._html.set(chave, await enriquecer(html));
+		return this._html.get(chave);
 	}
 
 	async #descricao(doc) {
@@ -399,7 +385,7 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 				if (!porGrupo.has(o.grupo)) porGrupo.set(o.grupo, []);
 				porGrupo.get(o.grupo).push(card(o));
 			}
-			grupos = [...porGrupo.entries()].sort(([a], [b]) => a.localeCompare(b, "pt-BR")).map(([titulo, cards]) => ({ titulo, cards }));
+			grupos = [...porGrupo.entries()].sort(([a], [b]) => compararCategorias(a, b)).map(([titulo, cards]) => ({ titulo, cards }));
 		} else {
 			grupos = [{ titulo: `Poderes de ${classe.nome}`, cards: visiveis.map(card) }];
 		}
@@ -481,11 +467,20 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			circulos: [...porCirculo.entries()].sort(([a], [b]) => a - b).map(([c, cards]) => ({ titulo: `${c}º círculo`, cards })),
 			filtro: this.filtros.magia ?? "",
 			escolhidasLista: escolhidas.map((x) => ({ uuid: x.uuid, nome: x.name, circulo: circuloDe(x) })),
+			// mesmo painel do construtor: escola, ficha resumida, descrição e aprimoramentos (os que pedem um
+			// círculo que o personagem ainda não lança ficam marcados)
 			infoMagia: foco ? {
+				uuid: foco.uuid,
 				nome: foco.name, img: foco.img,
-				sub: `${circuloDe(foco)}º círculo · ${rotuloEscola(foco.system?.escola)} · ${TIPOS_MAGIA[foco.system?.tipo] ?? ""}`,
+				escola: rotuloEscola(foco.system?.escola),
+				tipo: TIPOS_MAGIA[foco.system?.tipo] ?? "",
+				circulo: circuloDe(foco),
+				escolaDescricao: this.dados.escolas?.[foco.system?.escola]?.descricao ?? "",
+				fonte: fonteDe(this.dados, foco),
 				selecionado: this.magias.includes(foco.uuid),
-				descricao: await this.#descricao(foco)
+				stats: statsMagia(foco),
+				descricao: await this.#descricao(foco),
+				aprimoramentos: await aprimoramentosMagia(foco, (chave, html) => this.#htmlCache(chave, html), m.circulo)
 			} : null
 		};
 	}
@@ -640,10 +635,12 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			});
 			const r = await aplicarNivel(this.actor, plano);
 			ui.notifications.info(`${this.actor.name} subiu para o ${nivel.nivelPersonagem}º nível (${classe.nome} ${nivel.nivelClasse}): +${r.pv} PV, +${r.pm} PM.`);
+			// só dentro da janela (no elemento raiz, que não é redesenhado pelo render do conteúdo)
 			animarSubidaDeNivel({
+				container: this.element,
 				nivel: nivel.nivelPersonagem,
-				detalhe: `${this.actor.name} · ${classe.nome} ${nivel.nivelClasse} · +${r.pv} PV · +${r.pm} PM`,
-				img: classe.item?.img
+				detalhe: `${classe.nome} ${nivel.nivelClasse} · +${r.pv} PV · +${r.pm} PM`,
+				img: classe.item?.img ?? classe.doc?.img
 			});
 			this.#limparEscolhas();
 		} catch (err) {

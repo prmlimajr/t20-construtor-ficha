@@ -92,15 +92,42 @@
 				{{#if slideout.longa}}
 				<input type="search" class="cf-filtro" placeholder="Filtrar…" value="{{slideout.filtro}}">
 				{{/if}}
+				{{#if slideout.indisponiveis}}
+				<button type="button" class="cf-chip {{#if slideout.mostrarIndisponiveis}}selecionado{{/if}}" data-action="alternarIndisponiveisSlideout"
+					title="Poderes cujo pré-requisito o personagem não atende">
+					<i class="fa-solid fa-eye{{#unless slideout.mostrarIndisponiveis}}-slash{{/unless}}"></i> Indisponíveis ({{slideout.indisponiveis}})
+				</button>
+				{{/if}}
 			</header>
 			{{#if slideout.venda}}
 			{{> "modules/t20-construtor-ficha/templates/partes/venda.hbs" slideout}}
 			{{else}}
 			<div class="cf-duas">
+				{{#if slideout.grupos}}
+				<div class="cf-lista">
+					{{#each slideout.grupos}}
+					<section class="cf-grupo">
+						<h4 class="cf-grupo-titulo">{{titulo}} <small>{{cards.length}}</small></h4>
+						<div class="cf-cards cf-cards-coluna">
+							{{#each cards}}
+							<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if foco}}foco{{/if}} {{#if indisponivel}}bloqueado{{/if}}"
+								data-action="focarSlideout" data-valor="{{valor}}" data-busca="{{nome}} {{sub}} {{../titulo}}" {{#if indisponivel}}{{#unless selecionado}}disabled{{/unless}}{{/if}}>
+								{{#if img}}<img src="{{img}}" alt="">{{else if sigla}}<span class="cf-sigla">{{sigla}}</span>{{/if}}
+								<span class="cf-card-texto">
+									<span class="cf-card-nome">{{nome}}</span>
+									{{#if sub}}<span class="cf-card-sub">{{sub}}</span>{{/if}}
+								</span>
+							</button>
+							{{/each}}
+						</div>
+					</section>
+					{{/each}}
+				</div>
+				{{else}}
 				<div class="cf-lista cf-cards">
 					{{#each slideout.cards}}
-					<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if foco}}foco{{/if}}"
-						data-action="focarSlideout" data-valor="{{valor}}" data-busca="{{nome}} {{sub}}">
+					<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if foco}}foco{{/if}} {{#if indisponivel}}bloqueado{{/if}}"
+						data-action="focarSlideout" data-valor="{{valor}}" data-busca="{{nome}} {{sub}}" {{#if indisponivel}}{{#unless selecionado}}disabled{{/unless}}{{/if}}>
 						{{#if img}}<img src="{{img}}" alt="">{{else if sigla}}<span class="cf-sigla">{{sigla}}</span>{{/if}}
 						<span class="cf-card-texto">
 							<span class="cf-card-nome">{{nome}}</span>
@@ -109,15 +136,17 @@
 					</button>
 					{{/each}}
 				</div>
+				{{/if}}
 				<aside class="cf-info">
 					{{#with slideout.info}}
 					<h3>{{#if img}}<img src="{{img}}" alt="">{{/if}} {{nome}}</h3>
-					<button type="button" class="cf-primario cf-escolher" data-action="confirmarSlideout" data-valor="{{valor}}">
+					<button type="button" class="cf-primario cf-escolher" data-action="confirmarSlideout" data-valor="{{valor}}" {{#if bloqueado}}disabled title="Pré-requisito não atendido"{{/if}}>
 						<i class="fa-solid fa-check"></i> {{#if rotuloEscolher}}{{rotuloEscolher}}{{else}}{{#if jaEscolhido}}Manter{{else}}Escolher{{/if}}{{/if}} {{nome}}
 					</button>
 					{{#if stats.length}}
 					<dl class="cf-dados">{{#each stats}}<dt>{{rotulo}}</dt><dd>{{valor}}</dd>{{/each}}</dl>
 					{{/if}}
+					{{#each avisos}}<p class="cf-aviso"><i class="fa-solid fa-circle-exclamation"></i> Confira com o mestre: “{{this}}” (não foi possível verificar na ficha).</p>{{/each}}
 					{{#if descricao}}<div class="cf-descricao">{{{descricao}}}</div>{{/if}}
 					{{> "modules/t20-construtor-ficha/templates/partes/aprimoramentos.hbs" this}}
 					{{else}}

@@ -1,11 +1,11 @@
 /**
- * Animação de "subiu de nível" no estilo MMO: clarão, coluna de luz, raios girando, onda de choque,
- * faíscas subindo e o título dourado. Só para quem subiu o nível; dura ~3 s e some sozinha
- * (clicar fecha antes). Com "reduzir movimento" no sistema, só o título aparece e some.
+ * Animação de "subiu de nível" dentro da janela do assistente, no visual do construtor (fundo vermelho,
+ * faixa e faíscas douradas, título na fonte e no contorno bordô dos títulos). Dura ~1000 ms e some
+ * sozinha. Com "reduzir movimento" no sistema, só o fundo e o título aparecem e somem.
  */
 
-const DURACAO_MS = 3200;
-const FAISCAS = 36;
+const DURACAO_MS = 1000;
+const FAISCAS = 16;
 
 function el(tag, classe, texto) {
 	const e = document.createElement(tag);
@@ -15,25 +15,29 @@ function el(tag, classe, texto) {
 }
 
 /**
- * @param {object} p { nivel: número do nível de personagem alcançado, detalhe: texto menor (ex.: "Guerreiro 5"), img }
+ * @param {object} p
+ * @param {HTMLElement} p.container  elemento da janela (a animação cobre só ele)
+ * @param {number} p.nivel           nível de personagem alcançado
+ * @param {string} [p.detalhe]       texto menor (ex.: "Guerreiro 5 · +7 PV · +3 PM")
+ * @param {string} [p.img]           ícone da classe
  */
-export function animarSubidaDeNivel({ nivel, detalhe = "", img = "" } = {}) {
-	document.querySelector(".t20cf-levelup")?.remove();
+export function animarSubidaDeNivel({ container, nivel, detalhe = "", img = "" } = {}) {
+	if (!container) return;
+	container.querySelector(":scope > .t20cf-levelup")?.remove();
 	const raiz = el("div", "t20cf-levelup");
 	raiz.setAttribute("role", "status");
 	raiz.setAttribute("aria-live", "polite");
 
-	raiz.append(el("div", "t20cf-lu-clarao"), el("div", "t20cf-lu-raios"), el("div", "t20cf-lu-coluna"), el("div", "t20cf-lu-onda"));
+	raiz.append(el("div", "t20cf-lu-faixa"), el("div", "t20cf-lu-onda"));
 
 	const faiscas = el("div", "t20cf-lu-faiscas");
 	for (let i = 0; i < FAISCAS; i++) {
 		const f = el("span");
-		// posição, atraso, duração, deriva lateral e tamanho aleatórios (via variáveis CSS)
-		f.style.setProperty("--x", `${(Math.random() * 2 - 1) * 26}vw`);
-		f.style.setProperty("--deriva", `${(Math.random() * 2 - 1) * 8}vw`);
-		f.style.setProperty("--atraso", `${Math.random() * 0.9}s`);
-		f.style.setProperty("--dur", `${1.4 + Math.random() * 1.2}s`);
-		f.style.setProperty("--tam", `${3 + Math.random() * 5}px`);
+		// posição, atraso, altura da subida e tamanho aleatórios (variáveis CSS)
+		f.style.setProperty("--x", `${Math.round((Math.random() * 2 - 1) * 200)}px`);
+		f.style.setProperty("--sobe", `${-Math.round(80 + Math.random() * 160)}px`);
+		f.style.setProperty("--atraso", `${Math.round(Math.random() * 250)}ms`);
+		f.style.setProperty("--tam", `${4 + Math.round(Math.random() * 4)}px`);
 		faiscas.append(f);
 	}
 	raiz.append(faiscas);
@@ -45,19 +49,10 @@ export function animarSubidaDeNivel({ nivel, detalhe = "", img = "" } = {}) {
 		i.alt = "";
 		texto.append(i);
 	}
-	texto.append(el("div", "t20cf-lu-titulo", "Subiu de nível!"));
-	texto.append(el("div", "t20cf-lu-nivel", `${nivel}º nível`));
+	texto.append(el("div", "t20cf-lu-titulo", "Subiu de nível!"), el("div", "t20cf-lu-nivel", `${nivel}º nível`));
 	if (detalhe) texto.append(el("div", "t20cf-lu-detalhe", detalhe));
 	raiz.append(texto);
 
-	let fechado = false;
-	const fechar = () => {
-		if (fechado) return;
-		fechado = true;
-		raiz.classList.add("saindo");
-		setTimeout(() => raiz.remove(), 450);
-	};
-	raiz.addEventListener("click", fechar);
-	document.body.append(raiz);
-	setTimeout(fechar, DURACAO_MS);
+	container.append(raiz);
+	setTimeout(() => raiz.remove(), DURACAO_MS);
 }

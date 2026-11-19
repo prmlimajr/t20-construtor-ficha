@@ -299,8 +299,17 @@
 				<aside class="cf-info">
 					{{#if infoMagia}}
 					<h3>{{#if infoMagia.img}}<img src="{{infoMagia.img}}" alt="">{{/if}} {{infoMagia.nome}}</h3>
-					<p class="cf-nota">{{infoMagia.sub}}{{#if infoMagia.selecionado}} · <strong>escolhida</strong>{{/if}}</p>
+					<p class="cf-destaque">{{infoMagia.escola}} · {{infoMagia.tipo}} · {{infoMagia.circulo}}º círculo</p>
+					{{#if infoMagia.fonte}}<p class="cf-fonte">{{infoMagia.fonte}} (Suplementos de Arton)</p>{{/if}}
+					<button type="button" class="cf-escolher" data-action="magia" data-uuid="{{infoMagia.uuid}}">
+						{{#if infoMagia.selecionado}}<i class="fa-solid fa-xmark"></i> Remover magia{{else}}<i class="fa-solid fa-check"></i> Escolher magia{{/if}}
+					</button>
+					{{#if infoMagia.escolaDescricao}}<p class="cf-nota">{{infoMagia.escolaDescricao}}</p>{{/if}}
+					{{#if infoMagia.stats.length}}
+					<dl class="cf-dados">{{#each infoMagia.stats}}<dt>{{rotulo}}</dt><dd>{{valor}}</dd>{{/each}}</dl>
+					{{/if}}
 					<div class="cf-descricao">{{{infoMagia.descricao}}}</div>
+					{{> "modules/t20-construtor-ficha/templates/partes/aprimoramentos.hbs" infoMagia}}
 					{{else}}
 					<p class="cf-vazio">Clique numa magia para escolhê-la e ver a descrição.</p>
 					{{/if}}
