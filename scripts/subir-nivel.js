@@ -100,8 +100,10 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 		const r = montarNivel({
 			dados: this.dados, progressao: this.progressao, ficha, classe,
 			lerPreRequisito: leitorPreRequisitos,
-			selecionavel: (p) => poderSelecionavel(this.dados, p) && poderRacialPermitido(this.dados, p, raca)
-				// poderes de distinção só para quem tem a marca da distinção
+			// poderes de distinção: só para quem tem a marca, e para quem tem, sempre (mesmo com a chave
+			// "Poderes" do suplemento desligada: a marca foi posta na ficha pelo mestre)
+			selecionavel: (p) => (distincaoDoPoder(this.dados, p) || poderSelecionavel(this.dados, p))
+				&& poderRacialPermitido(this.dados, p, raca)
 				&& poderDistincaoPermitido(this.dados, p, (nome) => ficha.temPoder(nome)),
 			ehGeral: (p) => p.system?.tipo === "geral" || ehPoderDeDistincao(this.dados, p),
 			grupoGeral: (p) => {
