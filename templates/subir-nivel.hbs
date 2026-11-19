@@ -68,8 +68,56 @@
 			{{/if}}
 			{{#each avisos}}<p class="cf-aviso"><i class="fa-solid fa-triangle-exclamation"></i> {{this}}</p>{{/each}}
 
+			{{!-- ============ Classe: continuar ou multiclasse ============ --}}
+			{{#if (eq passo "classe")}}
+			<div class="cf-duas">
+				<div class="cf-lista cf-lista-filtravel">
+					<input type="search" class="cf-filtro cf-filtro-lista" data-filtro="classe" placeholder="Buscar classe…" value="{{filtro}}" aria-label="Buscar classe pelo nome">
+					<section class="cf-grupo">
+						<h4 class="cf-grupo-titulo">Suas classes</h4>
+						<div class="cf-cards cf-cards-coluna">
+							{{#each classesExistentes}}
+							<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if bloqueado}}bloqueado{{/if}}" data-action="escolherClasse" data-valor="{{valor}}" data-busca="{{nome}}" {{#if bloqueado}}disabled{{/if}}>
+								{{#if img}}<img src="{{img}}" alt="">{{/if}}
+								<span class="cf-card-texto"><span class="cf-card-nome">{{nome}}</span><span class="cf-card-sub">{{sub}}</span></span>
+							</button>
+							{{/each}}
+						</div>
+					</section>
+					<section class="cf-grupo">
+						<h4 class="cf-grupo-titulo">Nova classe (multiclasse) <small>{{classesNovas.length}}</small></h4>
+						<div class="cf-cards cf-cards-coluna">
+							{{#each classesNovas}}
+							<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if bloqueado}}bloqueado{{/if}}" data-action="escolherClasse" data-valor="{{valor}}" data-busca="{{nome}}" {{#if bloqueado}}disabled title="{{sub}}"{{/if}}>
+								{{#if img}}<img src="{{img}}" alt="">{{/if}}
+								<span class="cf-card-texto"><span class="cf-card-nome">{{nome}}</span><span class="cf-card-sub">{{sub}}{{#if fonte}} · {{fonte}}{{/if}}</span></span>
+							</button>
+							{{/each}}
+						</div>
+					</section>
+					<p class="cf-vazio cf-sem-resultado" hidden>Nenhuma classe com esse nome.</p>
+				</div>
+				<aside class="cf-info">
+					{{#if infoClasse}}
+					<h3>{{#if infoClasse.img}}<img src="{{infoClasse.img}}" alt="">{{/if}} {{infoClasse.nome}}</h3>
+					{{#if infoClasse.nova}}
+					<dl class="cf-dados">
+						<dt>Por nível</dt><dd>{{infoClasse.dados}}</dd>
+						{{#if infoClasse.habilidades}}<dt>1º nível</dt><dd>{{infoClasse.habilidades}}</dd>{{/if}}
+					</dl>
+					<p class="cf-aviso"><i class="fa-solid fa-circle-info"></i> Multiclasse: o 1º nível desta classe dá os PV de um nível seguinte (não os do 1º nível) e não dá as perícias treinadas nem as proficiências dela. Os PM das classes se somam.</p>
+					{{#if infoClasse.descricao}}<div class="cf-descricao">{{{infoClasse.descricao}}}</div>{{/if}}
+					{{else}}
+					<p class="cf-nota">Continua em {{infoClasse.nome}}: {{infoClasse.dados}}.</p>
+					{{/if}}
+					{{/if}}
+				</aside>
+			</div>
+			{{/if}}
+
 			{{!-- ============ Nível: ganhos e escolhas das habilidades ============ --}}
 			{{#if (eq passo "nivel")}}
+			{{#each notas}}<p class="cf-aviso"><i class="fa-solid fa-circle-info"></i> {{this}}</p>{{/each}}
 			<div class="cf-nivel-ganhos">
 				<dl class="cf-dados">
 					<dt>Pontos de vida</dt><dd>+{{pv}} <small class="cf-nota">({{classe}} + Constituição; bônus de poderes são somados pela ficha)</small></dd>

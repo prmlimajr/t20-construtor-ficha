@@ -150,7 +150,12 @@ export async function aplicarNaFicha(actor, plano, dados) {
 			itens.push(data);
 		});
 	});
-	for (const m of plano.magias) itens.push(doCompendio(m));
+	for (const m of plano.magias) {
+		const data = doCompendio(m);
+		// as magias do compêndio vêm com um atributo fixo (Int nas arcanas, Sab nas divinas): vale o da classe
+		if (plano.conjuracao && data.system?.resistencia) data.system.resistencia.atributo = plano.conjuracao;
+		itens.push(data);
+	}
 	for (const { doc } of plano.magiasPoderesClasse ?? []) itens.push(doCompendio(doc));
 	for (const { doc, atributo } of plano.magiasRaciais ?? []) {
 		const data = doCompendio(doc);
