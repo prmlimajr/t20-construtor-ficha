@@ -31,6 +31,21 @@ function comRolagem(rolls, valor) {
 	return copia;
 }
 
+/**
+ * Corrige trechos das fórmulas dos efeitos (erros de dados do suplemento, ex.: Casca Grossa do atleta
+ * usando @nvl.lutador). Vale para os dois formatos de efeito (changes no topo, da v13, e system.changes).
+ */
+function corrigirFormulas(data, trocas) {
+	for (const ef of data.effects ?? []) {
+		for (const lista of [ef.changes, ef.system?.changes]) {
+			for (const c of lista ?? []) {
+				if (typeof c.value !== "string") continue;
+				for (const [de, para] of Object.entries(trocas)) c.value = c.value.split(de).join(para);
+			}
+		}
+	}
+}
+
 /** Item da ficha com o poder, pelo nome (sem prefixo; com ou sem o complemento entre parênteses). */
 function poderNaFicha(actor, nome) {
 	const alvo = normalizar(nome);
@@ -96,8 +111,9 @@ export async function aplicarNivel(actor, plano) {
 
 	const n = plano.nivelPersonagem;
 	const itens = [];
-	const adicionar = (doc, { anotacao = "", valor = null, modo = null } = {}) => {
+	const adicionar = (doc, { anotacao = "", valor = null, modo = null, corrigir = null } = {}) => {
 		const data = doCompendio(doc);
+		if (corrigir) corrigirFormulas(data, corrigir);
 		data.name = `${n} - ${doc.name}`;
 		data.sort = SORT_CLASSE + n * 1000 + itens.length * 10;
 		if (anotacao?.trim()) foundry.utils.setProperty(data, CAMPO_DESCRICAO, comAnotacao(foundry.utils.getProperty(data, CAMPO_DESCRICAO), anotacao, n));
@@ -124,7 +140,7 @@ export async function aplicarNivel(actor, plano) {
 	const valorAtual = (item, caminho) => atualizacoes.get(item.id)?.[caminho] ?? fonte(item, caminho);
 	const comRolagemAtualizada = new Set(); // ids (existentes) e índices (novos) de itens com a rolagem trocada
 
-	for (const h of plano.habilidades ?? []) adicionar(h.doc, { valor: h.valor, modo: h.modo });
+	for (const h of plano.habilidades ?? []) adicionar(h.doc, { valor: h.valor, modo: h.modo, corrigir: h.corrigir });
 	for (const doc of plano.escolhidas ?? []) adicionar(doc);
 	for (const a of plano.anotadas ?? []) {
 		const item = poderNaFicha(actor, a.doc.name);

@@ -4,6 +4,7 @@
  *
  * Uso: node ferramentas/testar-nivel.mjs [Classe ...] [--sistema=caminho do repositório Tormenta20] [-v]
  *   sem classes: todas as de data/progressao.json; -v: mostra cada nível.
+ *   Classes do Suplementos de Arton precisam do cache: (cd ferramentas && npm install) && node ferramentas/extrair-suplemento.mjs
  * Não entra no module.zip.
  */
 import fs from "node:fs";
@@ -11,7 +12,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { normalizar } from "../scripts/regras.js";
 import { lerFicha, nomeBase } from "../scripts/ficha-atual.js";
-import { montarNivel, criarLeitorPreRequisitos, montarPlano, pendenciaNivel, progressaoDe, magiasDisponiveis, circuloDe } from "../scripts/nivel.js";
+import { montarNivel, criarLeitorPreRequisitos, montarPlano, pendenciaNivel, progressaoDe, magiasDisponiveis, circuloDe, variantesDe } from "../scripts/nivel.js";
 
 const aqui = path.dirname(fileURLToPath(import.meta.url));
 const raizModulo = path.resolve(aqui, "..");
@@ -126,8 +127,23 @@ function lerPack(nome) {
 	return out;
 }
 const json = (f) => JSON.parse(fs.readFileSync(path.join(raizModulo, "data", f), "utf8"));
-const poderes = lerPack("poderes");
-const dados = { poderes, poderesPorNome: new Map(poderes.map((p) => [normalizar(p.name), p])), classes: lerPack("classes"), magias: lerPack("magias") };
+// Suplementos de Arton (cache gerado por extrair-suplemento.mjs); sem o cache, as classes dele são puladas
+const caminhoSup = path.join(aqui, ".cache/suplemento.json");
+const sup = fs.existsSync(caminhoSup) ? JSON.parse(fs.readFileSync(caminhoSup, "utf8")) : null;
+// habilidades da Miragem definidas pelo próprio construtor (dados.js → PODERES_DO_CONSTRUTOR); aqui só o nome
+const doConstrutor = sup ? ["Passo do Deserto", "Mestre do Deserto"].map((name, i) => ({
+	_id: `construtor${i}`, uuid: `construtor.${name}`, name, type: "poder", img: "",
+	system: { tipo: "ability", subtipo: "Miragem", description: { value: "" } }, effects: []
+})) : [];
+// como no módulo: sistema primeiro (a busca por nome acha primeiro o do livro básico), depois o suplemento
+const poderes = [...lerPack("poderes"), ...doConstrutor, ...(sup?.itens ?? []).filter((i) => i.type === "poder")];
+const dados = {
+	poderes,
+	poderesPorNome: new Map([...poderes].reverse().map((p) => [normalizar(p.name), p])),
+	classes: [...lerPack("classes"), ...(sup?.itens ?? []).filter((i) => i.type === "classe")],
+	magias: [...lerPack("magias"), ...(sup?.itens ?? []).filter((i) => i.type === "magia")],
+	racas: [...lerPack("racas"), ...(sup?.itens ?? []).filter((i) => i.type === "race")]
+};
 const progressao = json("progressao.json");
 delete progressao._comentario;
 const regrasClasses = json("classes.json");
@@ -173,8 +189,18 @@ const VARIACOES = {
 		{ rotulo: "sem escolas na ficha", escolher: ["evo", "con", "nec"], magias: 10 }
 	],
 	Clérigo: [{ rotulo: "", magias: 19 }],
-	Druida: [{ rotulo: "sem escolas na ficha", escolher: ["evo", "con", "trm"], magias: 10 }]
+	Druida: [{ rotulo: "sem escolas na ficha", escolher: ["evo", "con", "trm"], magias: 10 }],
+	// Suplementos de Arton
+	Ermitão: [{ rotulo: "sem escolas na ficha", escolher: ["evo", "con", "trm"], magias: 10 }],
+	Magimarcialista: [{ rotulo: "sem escolas na ficha", escolher: ["evo", "trm", "ilu"], magias: 10 }],
+	Místico: [{ rotulo: "sem escolas na ficha", escolher: ["evo", "con", "trm"], magias: 10 }],
+	Necromante: [{ rotulo: "", magias: 19 }],
+	Frade: [{ rotulo: "", magias: 19 }],
+	Usurpador: [{ rotulo: "Usurpar (magias automáticas)", automaticas: [5, 9, 13, 17] }],
+	Atleta: [{ rotulo: "", formula: { "Casca Grossa": ["@nvl.lutador", "@nvl.atleta"] } }]
 };
+const SUPLEMENTO = new Set(["Treinador", "Alquimista", "Atleta", "Burguês", "Duelista", "Ermitão", "Inovador", "Machado de Pedra", "Magimarcialista",
+	"Necromante", "Santo", "Seteiro", "Usurpador", "Vassalo", "Ventanista", "Frade", "Samurai", "Místico", "Miragem"]);
 
 async function subirClasse(nomeClasse, variacao = {}) {
 	const prog = progressaoDe(progressao, nomeClasse);
@@ -190,8 +216,12 @@ async function subirClasse(nomeClasse, variacao = {}) {
 	let desfazerTestado = false;
 
 	for (let n = 2; n <= 21; n++) {
-		const ficha = lerFicha(ator, { regrasClasses });
+		const ficha = lerFicha(ator, { regrasClasses, variantes: variantesDe(progressao) });
 		const r = montarNivel({ dados, progressao, ficha, classe: ficha.classes[0], lerPreRequisito, regrasPoderesClasse });
+		if (r.magias && (variacao.automaticas ?? []).includes(n)) {
+			conferir(r.magias.automaticas?.length > 0, `${titulo} ${n}: deveria receber as magias do círculo novo`);
+			magiasNovas += r.magias.automaticas?.length ?? 0;
+		}
 		if (n === 21) {
 			conferir(r.erro === "nivelMaximo", `${nomeClasse}: nível 21 deveria ser recusado`);
 			break;
@@ -302,6 +332,15 @@ async function subirClasse(nomeClasse, variacao = {}) {
 		conferir(maxCirculo === esperado, `${titulo}: maior círculo na ficha ${maxCirculo}, esperado ${esperado}`);
 		if (variacao.escolher) conferir(JSON.stringify(ator.flags["t20-construtor-ficha"].escolasMagia) === JSON.stringify(variacao.escolher), `${titulo}: escolas não gravadas na ficha`);
 	}
+	for (const [nome, [errado, certo]] of Object.entries(variacao.formula ?? {})) {
+		const item = ator.items.find((i) => normalizar(nomeBase(i.name)) === normalizar(nome));
+		const valores = (item?.effects ?? []).flatMap((e) => [...(e.changes ?? []), ...(e.system?.changes ?? [])]).map((c) => String(c.value));
+		conferir(item && !valores.some((v) => v.includes(errado)) && valores.some((v) => v.includes(certo)), `${titulo}: fórmula de ${nome} não corrigida (${valores.join(" | ")})`);
+	}
+	if (variacao.automaticas) {
+		const naFicha = ator.items.filter((i) => i.type === "magia").length;
+		conferir(naFicha === magiasNovas && naFicha > 0, `${titulo}: ${naFicha} magias na ficha, esperado ${magiasNovas} (automáticas)`);
+	}
 	for (const nome of variacao.concede ?? []) {
 		conferir(ator.items.some((i) => normalizar(nomeBase(i.name)) === normalizar(nome)), `${titulo}: ${nome} não foi concedida`);
 	}
@@ -312,7 +351,13 @@ async function subirClasse(nomeClasse, variacao = {}) {
 }
 
 console.log("");
-for (const c of classes) for (const v of VARIACOES[c] ?? [{}]) await subirClasse(c, v);
+for (const c of classes) {
+	if (SUPLEMENTO.has(c) && !sup) {
+		console.log(`${c}: pulada (sem o cache do Suplementos de Arton; rode ferramentas/extrair-suplemento.mjs)`);
+		continue;
+	}
+	for (const v of VARIACOES[c] ?? [{}]) await subirClasse(c, v);
+}
 
 /* ---------- 3. Casos de pré-requisito conhecidos ---------- */
 {
@@ -322,7 +367,7 @@ for (const c of classes) for (const v of VARIACOES[c] ?? [{}]) await subirClasse
 		const doc = dados.poderesPorNome.get(normalizar(nomePoder));
 		const a = novoAtor(nomeClasse, []);
 		mutar(a);
-		const ficha = lerFicha(a, { regrasClasses });
+		const ficha = lerFicha(a, { regrasClasses, variantes: variantesDe(progressao) });
 		const r = montarNivel({ dados, progressao, ficha, classe: ficha.classes[0], lerPreRequisito });
 		const op = [...r.poderesClasse, ...r.poderesGerais].find((o) => o.doc === doc);
 		if (conferir(op?.disponivel === esperado, `${nomePoder}: esperado ${esperado ? "disponível" : "bloqueado"}, veio ${op?.disponivel} (${op?.motivo ?? "sem motivo"})`)) {
@@ -358,6 +403,28 @@ for (const c of classes) for (const v of VARIACOES[c] ?? [{}]) await subirClasse
 	paladino("Arma Sagrada", (a) => (a.system.detalhes = { divindade: "Khalmyr" }), true);
 	paladino("Arma Sagrada", (a) => (a.system.detalhes = { divindade: "Lena (fundamentalista)" }), false);
 	paladino("Arma Sagrada", (a) => (a.system.detalhes = { divindade: "Marah" }), false);
+	paladino("Escudo Fraterno", (a) => (classe(a).system.niveis = 6), false); // "Égide Sagrada" = Bênção da Justiça: Égide Sagrada
+	paladino("Escudo Fraterno", (a) => { classe(a).system.niveis = 6; poderNaFicha(a, "5 - Bênção da Justiça: Égide Sagrada"); }, true);
+	if (sup) {
+		const lutador = casoDe("Lutador");
+		lutador("Mestre das Combinações", (a) => { classe(a).system.niveis = 9; poderNaFicha(a, "2 - Combinação: Chute Circular"); }, false);
+		lutador("Mestre das Combinações", (a) => { classe(a).system.niveis = 9; poderNaFicha(a, "2 - Combinação: Chute Circular"); poderNaFicha(a, "3 - Combinação: Gancho"); }, true);
+		const druida = casoDe("Druida");
+		druida("Forma Esquelética", (a) => { classe(a).system.niveis = 9; a.system.detalhes = { divindade: "Allihanna" }; }, false);
+		druida("Forma Esquelética", (a) => { classe(a).system.niveis = 9; a.system.detalhes = { divindade: "Tenebra" }; poderNaFicha(a, "2 - Forma Selvagem"); }, true);
+		druida("Xamã Místico", (a) => poderNaFicha(a, "1 - Forma Selvagem"), false);
+		const bardo = casoDe("Bardo");
+		bardo("Música: Réquiem Sombrio", (a) => (a.flags["t20-construtor-ficha"].escolasMagia = ["enc", "ilu", "adv"]), false);
+		bardo("Música: Réquiem Sombrio", (a) => (a.flags["t20-construtor-ficha"].escolasMagia = ["enc", "nec", "adv"]), true);
+		// a variante conta como a classe básica: Ventanista 5 atende "5º nível de ladino"
+		const ventanista = casoDe("Ventanista");
+		const comPreNivelLadino = dados.poderes.find((p) => p.system?.subtipo === "Ladino" && /\d+º nível de ladino/i.test(p.system?.description?.value ?? "") && !/\b(treinado|For|Des|Con|Int|Sab|Car)\b/.test(p.system.description.value.match(/Pr[ée]-requisitos?:([^.]*)/)?.[1] ?? "x"));
+		if (comPreNivelLadino) {
+			const min = Number(comPreNivelLadino.system.description.value.match(/(\d+)º nível de ladino/i)[1]);
+			ventanista(comPreNivelLadino.name, (a) => (classe(a).system.niveis = min - 2), false);
+			ventanista(comPreNivelLadino.name, (a) => (classe(a).system.niveis = min - 1), true);
+		}
+	}
 }
 
 console.log(falhas ? `\n${falhas} falha(s).` : "\nTudo certo.");

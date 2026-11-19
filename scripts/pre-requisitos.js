@@ -8,6 +8,7 @@ import { normalizar, chavePericia } from "./regras.js";
 
 const SIGLAS = { for: "for", des: "des", con: "con", int: "int", sab: "sab", car: "car" };
 const NUMEROS = { um: 1, uma: 1, outro: 1, outra: 1, dois: 2, duas: 2, tres: 3, quatro: 4, cinco: 5, seis: 6 };
+const ESCOLAS = { abjuracao: "abj", adivinhacao: "adv", convocacao: "con", encantamento: "enc", evocacao: "evo", ilusao: "ilu", necromancia: "nec", transmutacao: "trm" };
 const PROFICIENCIAS = {
 	"armaduras pesadas": "pesada",
 	escudos: "escudo",
@@ -65,6 +66,27 @@ function condicao(clausula, ctx) {
 	if ((m = /^(for|des|con|int|sab|car)\s+(-?\d+)$/.exec(n))) {
 		return { tipo: "atributo", atributo: SIGLAS[m[1]], min: Number(m[2]), texto: c };
 	}
+	// "Car –1 ou menor"
+	if ((m = /^(for|des|con|int|sab|car)\s+[-–](\d+) ou menor$/.exec(n))) {
+		return { tipo: "atributoMax", atributo: SIGLAS[m[1]], max: -Number(m[2]), texto: c };
+	}
+	if (/^lancar magias$/.test(n)) return { tipo: "magias", texto: c };
+	if ((m = /^lancar magias (arcanas|divinas)$/.exec(n))) return { tipo: "tipoMagia", tipoMagia: m[1] === "arcanas" ? "arc" : "div", texto: c };
+	// "necromancia como uma de suas escolas de magia"
+	if ((m = /^(\w+) como uma de suas escolas de magia$/.exec(n)) && ESCOLAS[m[1]]) return { tipo: "escola", escola: ESCOLAS[m[1]], texto: c };
+	// "druida de Tenebra": devoto do deus ("druida de Arton" não tem deus: fica como aviso)
+	if ((m = /^druida de (.+)$/.exec(n)) && m[1] !== "arton") return { tipo: "devotoDe", deus: m[1], texto: c };
+	// "não possuir Forma Selvagem", "não humano"
+	if ((m = /^nao possuir (.+)$/i.exec(normalizar(c)))) {
+		const nome = ctx.ehPoder?.(c.replace(/^n[ãa]o possuir\s+/i, ""));
+		if (nome) return { tipo: "naoPoder", nome, texto: c };
+	}
+	if ((m = /^nao (\S+)$/.exec(n)) && ctx.ehRaca?.(m[1])) return { tipo: "naoRaca", raca: ctx.ehRaca(m[1]), texto: c };
+	// "outro poder de Combinação", "dois poderes de postura", "outra inovação qualquer", "outro poder de grupo"
+	if ((m = /^(\w+) (?:outros? )?poder(?:es)? de (.+)$/.exec(n)) && (NUMEROS[m[1]] ?? Number(m[1]))) {
+		return { tipo: "contaGrupo", grupo: m[2], min: NUMEROS[m[1]] ?? Number(m[1]), texto: c };
+	}
+	if ((m = /^outr[oa] (\w+) qualquer$/.exec(n))) return { tipo: "contaGrupo", grupo: m[1], min: 1, texto: c };
 	if ((m = /^(\d+)[ºo°]?\s+nivel(?:\s+de\s+(.+))?$/.exec(n))) {
 		const min = Number(m[1]);
 		if (!m[2] || m[2] === "personagem") return { tipo: "nivel", min, classe: null, texto: c };
@@ -94,7 +116,7 @@ function condicao(clausula, ctx) {
 		return { tipo: "devoto", exceto, texto: c, ...(/deus (?:maior|menor)/.test(n) ? { ressalva: c } : {}) };
 	}
 	if ((m = /^lancar magias de (\d)[ºo°]? circulo$/.exec(n))) return { tipo: "circulo", min: Number(m[1]), texto: c };
-	if ((m = /^(?:(\w+)\s+)?outros?\s+poder(?:es)?\s+da tormenta$/.exec(n))) {
+	if ((m = /^(?:(\w+)\s+)?outros?\s+poder(?:es)?\s+da tormenta$/.exec(n)) || (m = /^outro poder de (tormenta)$/.exec(n))) {
 		const min = m[1] ? NUMEROS[m[1]] ?? Number(m[1]) : 1;
 		return min ? { tipo: "contaPoderes", subtipo: "tormenta", min, texto: c } : null;
 	}
@@ -107,15 +129,20 @@ function condicao(clausula, ctx) {
 		if (magia) return { tipo: "magia", nome: magia, texto: c };
 		return null;
 	};
-	const direto = nomeDe(c);
+	const direto = nomeDe(c) ?? nomeDe(c.replace(/^habilidade\s+/i, ""));
 	if (direto) return direto;
+	// "Foco em Perícia (Enganação)", "Herança Superior (linhagem celestial)": o poder, com o complemento como aviso
+	if ((m = /^(.+?)\s*\(([^)]+)\)$/.exec(c))) {
+		const cond = nomeDe(m[1]);
+		if (cond) return { ...cond, ressalva: c };
+	}
 	if ((m = /^(.+?)\s+com\s+(?:a|o|as|os)\s+.+$/i.exec(c))) {
 		const cond = nomeDe(m[1]);
 		// o complemento ("com a arma escolhida") não é verificável: avisa
 		if (cond) return { ...cond, ressalva: c };
 	}
 	if (/\sou\s/i.test(c)) {
-		const opcoes = c.split(/\s+ou\s+/i).map((p) => condicao(p, ctx));
+		const opcoes = c.replace(/^habilidade\s+/i, "").split(/\s+ou\s+/i).map((p) => condicao(p, ctx));
 		if (opcoes.every(Boolean)) return { tipo: "ou", opcoes, texto: c };
 	}
 	return null;
@@ -144,6 +171,13 @@ function atende(cond, ficha) {
 		case "pericia": return ficha.pericias.has(cond.pericia);
 		case "proficiencia": return ficha.proficiencias.has(cond.prof);
 		case "magias": return ficha.temMagias;
+		case "tipoMagia": return ficha.tiposMagia.has(cond.tipoMagia);
+		case "escola": return ficha.escolasMagia.includes(cond.escola);
+		case "atributoMax": return (ficha.atributos[cond.atributo] ?? 0) <= cond.max;
+		case "devotoDe": return normalizar(ficha.divindade).startsWith(cond.deus);
+		case "naoPoder": return !ficha.temPoder(cond.nome);
+		case "naoRaca": return normalizar(ficha.raca) !== normalizar(cond.raca);
+		case "contaGrupo": return ficha.contarGrupo(cond.grupo) >= cond.min;
 		case "prefixoPoder": return ficha.temPoderComPrefixo(cond.prefixo);
 		case "devoto": {
 			const d = normalizar(ficha.divindade);

@@ -89,10 +89,21 @@
 						<div class="cf-descricao">{{{descricao}}}</div>
 					</details>
 					{{else}}
-					<p class="cf-nota">Nenhuma habilidade nova neste nível além do que está ao lado.</p>
+					{{#unless ausentes.length}}<p class="cf-nota">Nenhuma habilidade nova neste nível além do que está ao lado.</p>{{/unless}}
+					{{/each}}
+					{{#each ausentes}}
+					<p class="cf-aviso"><i class="fa-solid fa-book"></i> <strong>{{this}}</strong>: habilidade deste nível que não existe nos compêndios. Consulte o livro e anote na ficha.</p>
 					{{/each}}
 				</div>
 			</div>
+
+			{{#if automaticas.length}}
+			<details class="cf-poder cf-bloco">
+				<summary><span>Magias de {{circuloNovo}}º círculo que entram sozinhas ({{automaticas.length}})</span></summary>
+				<p class="cf-nota">Você pode lançar qualquer magia {{tipoMagia}} dos círculos a que tem acesso: todas as do círculo novo entram na ficha.</p>
+				<p>{{#each automaticas}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}</p>
+			</details>
+			{{/if}}
 
 			{{#each escolhas}}
 			<div class="cf-bloco cf-nivel-escolha">
@@ -193,6 +204,7 @@
 			{{#if precisaEscolas}}
 			<div class="cf-bloco">
 				<h4>Escolas de magia <small>{{escolasEscolhidas}}/{{qtdEscolas}}</small></h4>
+				{{#if dicaEscolas}}<p class="cf-nota"><strong>Escolas da classe:</strong> {{dicaEscolas}}.</p>{{/if}}
 				<p class="cf-nota">Esta ficha não tem as escolas registradas. Escolha as {{qtdEscolas}} escolas da classe (uma vez só; ficam gravadas na ficha). As marcadas com <i class="fa-solid fa-book-open"></i> são as das magias que você já conhece.</p>
 				<div class="cf-chips">
 					{{#each escolas}}

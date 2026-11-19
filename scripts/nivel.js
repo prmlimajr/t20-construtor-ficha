@@ -20,7 +20,15 @@ export function progressaoDe(progressao, nomeClasse) {
 	if (!p) return null;
 	if (!p.base) return p;
 	const base = progressaoDe(progressao, p.base) ?? {};
-	return { ...base, ...p, poder: p.poder ?? base.poder, niveis: { ...(base.niveis ?? {}), ...(p.niveis ?? {}) } };
+	// a variante herda o poder e as magias da básica; a tabela de níveis, só se não tiver a sua
+	return { ...base, ...p, poder: p.poder ?? base.poder, magias: p.magias ?? base.magias, niveis: p.niveis ?? base.niveis };
+}
+
+/** Variante → classe básica: as do suplemento (suplementos.json) e as que a progressão declara com "base". */
+export function variantesDe(progressao, variantes = {}) {
+	const out = { ...variantes };
+	for (const [nome, p] of Object.entries(progressao ?? {})) if (p?.base) out[nome] = p.base;
+	return out;
 }
 
 /** Valor mais recente da tabela para uma habilidade até o nível dado (ex.: Ataque Especial +8). */
@@ -40,15 +48,21 @@ function valorAte(prog, nome, nivel) {
 export function criarLeitorPreRequisitos(dados, correcoes = {}) {
 	const cache = new Map();
 	const classesPorNome = new Map(dados.classes.map((c) => [normalizar(c.name), c.name]));
-	// nome sem o complemento: "Esgrimista" → "Esgrimista (Bucaneiro)", "Ambidestria" → a geral ou a de classe
+	// nome sem o complemento: "Esgrimista" → "Esgrimista (Bucaneiro)", "Ambidestria" → a geral ou a de classe;
+	// e pelo nome final: "Égide Sagrada" → "Bênção da Justiça: Égide Sagrada", "animal" → "Tipo: Animal"
 	const semComplemento = new Map();
+	const porSufixo = new Map();
 	for (const p of dados.poderes) {
 		const k = normalizar(p.name).replace(/\s*\([^)]*\)\s*$/, "");
 		if (!semComplemento.has(k)) semComplemento.set(k, p.name);
+		const sufixo = k.includes(":") ? k.split(":").pop().trim() : null;
+		if (sufixo && !porSufixo.has(sufixo)) porSufixo.set(sufixo, p.name);
 	}
+	const racas = new Map((dados.racas ?? []).map((r) => [normalizar(r.name), r.name]));
 	const ctx = {
 		ehPoder: (nome) => dados.poderesPorNome.get(normalizar(nome))?.name ?? semComplemento.get(normalizar(nome))
-			?? dados.poderesPorNome.get(normalizar(APELIDOS_PODER[normalizar(nome)] ?? ""))?.name ?? null,
+			?? dados.poderesPorNome.get(normalizar(APELIDOS_PODER[normalizar(nome)] ?? ""))?.name ?? porSufixo.get(normalizar(nome)) ?? null,
+		ehRaca: (nome) => racas.get(normalizar(nome)) ?? null,
 		ehClasse: (nome) => classesPorNome.get(normalizar(nome)) ?? null,
 		ehMagia: (nome) => dados.magias.find((m) => normalizar(m.name) === normalizar(nome))?.name ?? null
 	};
@@ -66,12 +80,14 @@ export function criarLeitorPreRequisitos(dados, correcoes = {}) {
  * Ficha como ficará depois do nível (pré-requisitos valem no nível em que são atingidos):
  * +1 nível de personagem e da classe, e as habilidades fixas do nível já contam.
  */
-function fichaProjetada(ficha, nomeClasse, habilidades) {
+function fichaProjetada(ficha, nomesClasse, habilidades) {
 	const novas = new Set(habilidades.map((h) => normalizar(h)));
+	// o nível novo conta para a classe e para a básica dela (variante)
+	const daClasse = new Set(nomesClasse.filter(Boolean).map(normalizar));
 	return {
 		...ficha,
 		nivel: ficha.nivel + 1,
-		niveisDeClasse: (nome) => ficha.niveisDeClasse(nome) + (normalizar(nome) === normalizar(nomeClasse) ? 1 : 0),
+		niveisDeClasse: (nome) => ficha.niveisDeClasse(nome) + (daClasse.has(normalizar(nome)) ? 1 : 0),
 		vezesPoder: (nome) => ficha.vezesPoder(nome) + (novas.has(normalizar(nome)) ? 1 : 0),
 		temPoder(nome) {
 			return this.vezesPoder(nome) > 0;
@@ -96,19 +112,36 @@ export function montarNivel({
 
 	const entrada = prog.niveis?.[nivelClasse] ?? {};
 	const avisos = [];
-	const buscar = (nome) => {
-		const doc = dados.poderesPorNome.get(normalizar(nome)) ?? null;
-		if (!doc) avisos.push(`Habilidade "${nome}" não encontrada nos compêndios.`);
+	// o item da própria classe tem preferência: variantes têm habilidades com o mesmo nome das da
+	// classe básica (ex.: Briga do Atleta × Briga do Lutador), com texto e efeitos próprios
+	const daClasse = new Map(dados.poderes
+		.filter((p) => normalizar(p.system?.subtipo) === normalizar(classe.nome))
+		.map((p) => [normalizar(p.name), p]));
+	const buscar = (nome, { avisar = true } = {}) => {
+		const doc = daClasse.get(normalizar(nome)) ?? dados.poderesPorNome.get(normalizar(nome)) ?? null;
+		if (!doc && avisar) avisos.push(`Habilidade "${nome}" não encontrada nos compêndios.`);
 		return doc;
 	};
 	// como o valor da tabela vai para a ficha: "rolagem" (fórmula da rolagem do poder), "anotacao"
 	// (linha na descrição) ou nada (só informativo: o sistema já faz o efeito crescer)
 	const modoValor = (nome) => prog.valoresNaFicha?.[nome] ?? null;
 	const habilidades = [];
-	for (const nome of entrada.habilidades ?? []) {
-		const doc = buscar(nome);
+	// habilidade que depende de uma escolha anterior (ex.: Técnica Avançada conforme a Escola de Duelo)
+	const conformes = (entrada.conforme ?? []).map((mapa) => {
+		const chave = Object.keys(mapa).find((k) => ficha.temPoder(k));
+		if (!chave) avisos.push(`Nenhuma das escolhas que definem a habilidade deste nível está na ficha (${Object.keys(mapa).join(", ")}).`);
+		return chave ? mapa[chave] : null;
+	}).filter(Boolean);
+	for (const ref of [...(entrada.habilidades ?? []), ...conformes]) {
+		// {nome, classe}: habilidade ou poder de outra classe (ex.: Golpe Divino do paladino para o vassalo)
+		const nome = typeof ref === "string" ? ref : ref.nome;
+		const doc = typeof ref === "string" ? buscar(nome)
+			: dados.poderes.find((p) => normalizar(p.name) === normalizar(nome) && normalizar(p.system?.subtipo) === normalizar(ref.classe)) ?? buscar(nome);
 		const jaTem = ficha.temPoder(nome);
-		habilidades.push({ nome: doc?.name ?? nome, doc, jaTem, valor: valorAte(prog, nome, nivelClasse), modo: modoValor(nome) });
+		habilidades.push({
+			nome: doc?.name ?? nome, doc, jaTem, valor: valorAte(prog, nome, nivelClasse), modo: modoValor(nome),
+			corrigir: prog.corrigirFormulas?.[nome] ?? null
+		});
 	}
 	// valores que mudam neste nível em habilidades que a ficha já tem (ex.: Ataque Especial +4 → +8)
 	const valores = Object.entries(entrada.valores ?? {})
@@ -136,7 +169,10 @@ export function montarNivel({
 	}
 
 	const ganhaPoder = (prog.poder?.niveis ?? []).includes(nivelClasse);
-	const projetada = fichaProjetada(ficha, classe.nome, habilidades.map((h) => h.nome));
+	const magias = magiasDoNivel(prog, ficha, nivelClasse, regrasPoderesClasse);
+	// Usurpar e afins: todas as magias do círculo novo entram sozinhas
+	if (magias?.todas && magias.circuloNovo) magias.automaticas = magiasDisponiveis(dados, magias, ficha).filter((m) => circuloDe(m) === magias.circuloNovo);
+	const projetada = fichaProjetada(ficha, [classe.nome, prog.base], habilidades.map((h) => h.nome));
 	const classeBasica = prog.base ?? classe.nome;
 
 	const opcao = (doc) => {
@@ -160,8 +196,10 @@ export function montarNivel({
 		};
 	};
 	const ordenar = (a, b) => a.nome.localeCompare(b.nome, "pt-BR");
+	// poderes da classe básica, da própria classe (variante) e listas extras (ex.: Melhor Amigo do treinador)
+	const listas = new Set([classeBasica, classe.nome, ...(prog.poder?.listas ?? []), ...(prog.poder?.listasPorNivel?.[nivelClasse] ?? [])].map(normalizar));
 	const poderesClasse = !ganhaPoder ? [] : dados.poderes
-		.filter((p) => p.system?.tipo === "classe" && normalizar(p.system?.subtipo) === normalizar(classeBasica) && selecionavel(p))
+		.filter((p) => p.system?.tipo === "classe" && listas.has(normalizar(p.system?.subtipo)) && selecionavel(p))
 		.map(opcao).sort(ordenar);
 	const poderesGerais = !ganhaPoder ? [] : dados.poderes
 		.filter((p) => ehGeral(p) && selecionavel(p))
@@ -177,7 +215,9 @@ export function montarNivel({
 		valores,
 		escolhas,
 		anotadas,
-		magias: magiasDoNivel(prog, ficha, nivelClasse, regrasPoderesClasse),
+		// habilidades da tabela que não têm item em nenhum compêndio (só aviso: consultar o livro)
+		ausentes: entrada.ausentes ?? [],
+		magias,
 		ganhaPoder,
 		poderesClasse,
 		poderesGerais,
@@ -214,13 +254,13 @@ export function montarPlano(nivel, { classeId, poder = null, anotacao = "", sele
 	const concedido = poder?.disponivel && poder.concede ? [{ doc: poder.concede }] : [];
 	const m = nivel.magias;
 	return {
-		magias,
+		magias: [...magias, ...(m?.automaticas ?? [])],
 		// escolas escolhidas agora (personagem sem as escolas gravadas na ficha)
 		escolasMagia: m?.escolas && !m.escolasFicha?.length && escolas?.length === m.escolas ? [...escolas] : null,
 		classeId,
 		nivelPersonagem: nivel.nivelPersonagem,
 		nivelClasse: nivel.nivelClasse,
-		habilidades: [...nivel.habilidades.filter((h) => h.doc && !h.jaTem).map((h) => ({ doc: h.doc, valor: h.valor, modo: h.modo })), ...concedido],
+		habilidades: [...nivel.habilidades.filter((h) => h.doc && !h.jaTem).map((h) => ({ doc: h.doc, valor: h.valor, modo: h.modo, corrigir: h.corrigir })), ...concedido],
 		escolhidas: (nivel.escolhas ?? []).map((e) => e.opcoes.find((o) => o.doc.uuid === selecoes[e.id])?.doc).filter(Boolean),
 		anotadas: (nivel.anotadas ?? []).filter((a) => selecoes[a.id]).map((a) => ({ doc: a.doc, texto: `${a.titulo}: ${selecoes[a.id]}` })),
 		valores: nivel.valores.filter((v) => v.modo),
@@ -248,7 +288,7 @@ function circuloAte(circulos, nivel) {
 export function regraMagias(prog, ficha, regrasPoderesClasse = {}) {
 	const m = prog?.magias;
 	if (!m) return null;
-	let r = { tipo: m.tipo, circulos: m.circulos, aprende: m.aprende ?? "todo", escolas: m.escolas ?? 0, extraPorCirculo: 0 };
+	let r = { tipo: m.tipo, circulos: m.circulos, aprende: m.aprende ?? "todo", escolas: m.escolas ?? 0, extraPorCirculo: 0, todas: !!m.todas };
 	for (const [poder, ajuste] of Object.entries(m.porEscolha ?? {})) if (ficha.temPoder(poder)) r = { ...r, ...ajuste };
 	const tipos = new Set([m.tipo, "uni"]);
 	for (const [poder, regra] of Object.entries(regrasPoderesClasse)) {
@@ -266,7 +306,7 @@ export function magiasDoNivel(prog, ficha, nivelClasse, regrasPoderesClasse = {}
 	if (!r) return null;
 	const circulo = circuloAte(r.circulos, nivelClasse);
 	const circuloNovo = r.circulos?.[nivelClasse] ?? null;
-	const qtd = r.aprende === "todo" ? 1
+	const qtd = r.todas ? 0 : r.aprende === "todo" ? 1
 		: r.aprende === "par" ? (nivelClasse % 2 === 0 ? 1 : 0)
 			: r.aprende === "impar" ? (nivelClasse % 2 === 1 && nivelClasse >= 3 ? 1 : 0) : 0;
 	const vagas = Array.from({ length: qtd }, () => ({ ate: circulo }));
@@ -278,7 +318,9 @@ export function magiasDoNivel(prog, ficha, nivelClasse, regrasPoderesClasse = {}
 		circuloNovo,
 		escolas: r.escolas,
 		escolasFicha: ficha.escolasMagia ?? [],
+		dicaEscolas: prog.magias?.dicaEscolas ?? null,
 		aprende: r.aprende,
+		todas: r.todas,
 		vagas
 	};
 }

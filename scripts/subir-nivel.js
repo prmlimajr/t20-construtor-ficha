@@ -8,7 +8,7 @@ import { lerFicha } from "./ficha-atual.js";
 import { poderRacialPermitido } from "./poderes-raciais.js";
 import { poderDistincaoPermitido, ehPoderDeDistincao, distincaoDoPoder } from "./distincoes.js";
 import {
-	montarNivel, criarLeitorPreRequisitos, pendenciaNivel, montarPlano,
+	montarNivel, criarLeitorPreRequisitos, pendenciaNivel, montarPlano, variantesDe,
 	magiasDisponiveis, escolasEfetivas, conferirVagas, circuloDe
 } from "./nivel.js";
 import { aplicarNivel, desfazerUltimoNivel, podeDesfazer, historico } from "./aplicar-nivel.js";
@@ -122,7 +122,8 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	/** Situação atual: ficha, classe e o que o próximo nível concede (ou o motivo de não poder subir). */
 	#calcular() {
-		const ficha = lerFicha(this.actor, { regrasClasses: this.dados.regrasClasses, variantes: this.dados.variantes });
+		// a variante conta como a classe básica nos pré-requisitos ("5º nível de ladino" para o ventanista)
+		const ficha = lerFicha(this.actor, { regrasClasses: this.dados.regrasClasses, variantes: variantesDe(this.progressao, this.dados.variantes) });
 		if (!ficha.classes.length) return { ficha, bloqueio: "Este personagem ainda não tem classe. Use o construtor para criá-lo." };
 		if (ficha.classes.length > 1) return { ficha, bloqueio: "Personagens com mais de uma classe (multiclasse) ainda não são suportados pelo assistente. Use “Outra classe (compêndio)” para subir de nível arrastando a classe para a ficha, como no sistema." };
 		const classe = ficha.classes[0];
@@ -293,7 +294,9 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			escolhas,
 			anotadas,
 			circuloNovo: m?.circuloNovo ?? null,
-			tipoMagia: m ? TIPOS_MAGIA[m.tipo]?.toLowerCase() : null
+			tipoMagia: m ? TIPOS_MAGIA[m.tipo]?.toLowerCase() : null,
+			ausentes: nivel.ausentes,
+			automaticas: (m?.automaticas ?? []).map((x) => x.name).sort((a, b) => a.localeCompare(b, "pt-BR"))
 		};
 	}
 
@@ -388,6 +391,7 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			precisaEscolas,
 			escolas,
 			qtdEscolas: m.escolas,
+			dicaEscolas: m.dicaEscolas,
 			escolasEscolhidas: this.escolas.length,
 			escolasFicha: m.escolasFicha.map(rotuloEscola).join(", "),
 			escolasProntas,
@@ -415,7 +419,8 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			...plano.anotadas.map((a) => ({ tipo: "Anotação", nome: `${a.doc.name}: ${a.texto}` })),
 			...plano.valores.map((v) => ({ tipo: "Valor", nome: `${v.nome}: ${v.para}${v.modo === "rolagem" ? " (rolagem do poder)" : " (anotado na descrição)"}` })),
 			...(plano.poder ? [{ tipo: "Poder", nome: plano.poder.name + (plano.anotacao?.trim() ? ` — ${plano.anotacao.trim()}` : "") }] : []),
-			...plano.magias.map((d) => ({ tipo: "Magia", nome: `${d.name} (${circuloDe(d)}º círculo)` })),
+			...plano.magias.slice(0, 12).map((d) => ({ tipo: "Magia", nome: `${d.name} (${circuloDe(d)}º círculo)` })),
+			...(plano.magias.length > 12 ? [{ tipo: "Magia", nome: `… e mais ${plano.magias.length - 12}` }] : []),
 			...(plano.escolasMagia ? [{ tipo: "Escolas", nome: plano.escolasMagia.map(rotuloEscola).join(", ") }] : [])
 		];
 		return { revisao: itens, valoresInformativos: nivel.valores.filter((v) => !v.modo), bonusPericia: nivel.bonusPericia };
