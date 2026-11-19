@@ -7,8 +7,9 @@ import { carregarDados, poderSelecionavel, fonteDe } from "./dados.js";
 import { lerFicha } from "./ficha-atual.js";
 import { poderRacialPermitido } from "./poderes-raciais.js";
 import { poderDistincaoPermitido, ehPoderDeDistincao, distincaoDoPoder } from "./distincoes.js";
-import { montarNivel, criarLeitorPreRequisitos } from "./nivel.js";
+import { montarNivel, criarLeitorPreRequisitos, pendenciaNivel, montarPlano } from "./nivel.js";
 import { aplicarNivel, desfazerUltimoNivel, podeDesfazer, historico } from "./aplicar-nivel.js";
+import { animarSubidaDeNivel } from "./animacao-nivel.js";
 
 const TPL = `modules/${MODULE_ID}/templates`;
 export const TEMPLATES_NIVEL = [`${TPL}/subir-nivel.hbs`];
@@ -50,6 +51,7 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 		this.aba = "classe";
 		this.mostrarIndisponiveis = false;
 		this.anotacao = "";
+		this.selecoes = {}; // escolhas do nível: id → uuid (escolha entre habilidades) ou texto (escolha anotada)
 		this.filtro = "";
 		this.ocupado = false;
 		this._html = new Map();
@@ -62,6 +64,7 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 		position: { width: 960, height: 720 },
 		actions: {
 			escolher: SubirNivel.#escolher,
+			selecionar: SubirNivel.#selecionar,
 			aba: SubirNivel.#trocarAba,
 			indisponiveis: SubirNivel.#alternarIndisponiveis,
 			aplicar: SubirNivel.#aplicar,
@@ -99,8 +102,10 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 		const r = montarNivel({
 			dados: this.dados, progressao: this.progressao, ficha, classe,
 			lerPreRequisito: leitorPreRequisitos,
-			selecionavel: (p) => poderSelecionavel(this.dados, p) && poderRacialPermitido(this.dados, p, raca)
-				// poderes de distinção só para quem tem a marca da distinção
+			// poderes de distinção: só para quem tem a marca, e para quem tem, sempre (mesmo com a chave
+			// "Poderes" do suplemento desligada: a marca foi posta na ficha pelo mestre)
+			selecionavel: (p) => (distincaoDoPoder(this.dados, p) || poderSelecionavel(this.dados, p))
+				&& poderRacialPermitido(this.dados, p, raca)
 				&& poderDistincaoPermitido(this.dados, p, (nome) => ficha.temPoder(nome)),
 			ehGeral: (p) => p.system?.tipo === "geral" || ehPoderDeDistincao(this.dados, p),
 			grupoGeral: (p) => {
@@ -192,7 +197,26 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			descricao: await this.#descricao(escolhida.doc)
 		} : null;
 
-		const pendencia = nivel.ganhaPoder && !info ? "Escolha um poder." : null;
+		const escolhas = await Promise.all(nivel.escolhas.map(async (e) => {
+			const marcada = e.opcoes.find((o) => o.doc.uuid === this.selecoes[e.id]);
+			return {
+				id: e.id,
+				titulo: e.titulo,
+				// "Caminho do Cavaleiro: Bastião" → "Bastião" (o título já diz qual é a escolha)
+				opcoes: e.opcoes.map((o) => ({ valor: o.doc.uuid, nome: o.nome.replace(new RegExp(`^${e.titulo}:\\s*`, "i"), ""), selecionado: o === marcada })),
+				info: marcada ? { nome: marcada.nome, img: marcada.doc.img, descricao: await this.#descricao(marcada.doc) } : null
+			};
+		}));
+		const anotadas = await Promise.all(nivel.anotadas.map(async (a) => ({
+			id: a.id,
+			titulo: a.titulo,
+			habilidade: a.habilidade,
+			jaTem: a.jaTem,
+			opcoes: a.opcoes.map((o) => ({ valor: o, nome: o, selecionado: this.selecoes[a.id] === o })),
+			descricao: a.jaTem ? "" : await this.#descricao(a.doc),
+			img: a.doc?.img
+		})));
+		const pendencia = pendenciaNivel(nivel, { poder: escolhida, selecoes: this.selecoes });
 		return {
 			...base,
 			img: classeDoc.img,
@@ -205,6 +229,8 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			bonusPericia: nivel.bonusPericia,
 			habilidades,
 			valores: nivel.valores,
+			escolhas,
+			anotadas,
 			avisos: nivel.avisos,
 			ganhaPoder: nivel.ganhaPoder,
 			aba: this.aba,
@@ -262,6 +288,12 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 		this.render();
 	}
 
+	/** Escolha do nível (Caminho do Cavaleiro, terreno do Explorador…). */
+	static #selecionar(event, target) {
+		this.selecoes[target.dataset.id] = target.dataset.valor;
+		this.render();
+	}
+
 	static #trocarAba(event, target) {
 		this.aba = target.dataset.aba;
 		this.render();
@@ -277,21 +309,21 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 		const { classe, nivel, bloqueio } = this.#calcular();
 		if (bloqueio) return;
 		const poder = this.escolha ? [...nivel.poderesClasse, ...nivel.poderesGerais].find((o) => o.doc.uuid === this.escolha && o.disponivel) : null;
-		if (nivel.ganhaPoder && !poder) return ui.notifications.warn("Escolha um poder antes de subir de nível.");
+		const pendencia = pendenciaNivel(nivel, { poder, selecoes: this.selecoes });
+		if (pendencia) return ui.notifications.warn(pendencia);
 		this.ocupado = true;
 		this.render();
 		try {
-			const r = await aplicarNivel(this.actor, {
-				classeId: classe.id,
-				nivelPersonagem: nivel.nivelPersonagem,
-				nivelClasse: nivel.nivelClasse,
-				habilidades: nivel.habilidades.filter((h) => h.doc && !h.jaTem).map((h) => h.doc),
-				poder: poder?.doc ?? null,
-				anotacao: this.anotacao
-			});
+			const r = await aplicarNivel(this.actor, montarPlano(nivel, { classeId: classe.id, poder, anotacao: this.anotacao, selecoes: this.selecoes }));
 			ui.notifications.info(`${this.actor.name} subiu para o ${nivel.nivelPersonagem}º nível (${classe.nome} ${nivel.nivelClasse}): +${r.pv} PV, +${r.pm} PM.`);
+			animarSubidaDeNivel({
+				nivel: nivel.nivelPersonagem,
+				detalhe: `${this.actor.name} · ${classe.nome} ${nivel.nivelClasse} · +${r.pv} PV · +${r.pm} PM`,
+				img: classe.item?.img
+			});
 			this.escolha = null;
 			this.anotacao = "";
+			this.selecoes = {};
 		} catch (err) {
 			console.error(err);
 			ui.notifications.error(`Não foi possível subir de nível: ${err.message}`);

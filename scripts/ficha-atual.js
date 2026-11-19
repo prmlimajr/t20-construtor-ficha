@@ -61,6 +61,9 @@ export function lerFicha(actor, { regrasClasses = {}, variantes = {} } = {}) {
 		if (s) poderesPorSubtipo.set(s, (poderesPorSubtipo.get(s) ?? 0) + 1);
 	}
 
+	// prefixos de poderes com "Prefixo: Nome" (ex.: "Armadilha: Laço" → "armadilha")
+	const prefixos = new Set(poderes.map((p) => normalizar(nomeBase(p.name))).filter((n) => n.includes(":")).map((n) => n.split(":")[0].trim()));
+
 	const magiasItens = itens.filter((i) => i.type === "magia");
 	const magias = new Set(magiasItens.map((m) => normalizar(m.name)));
 	const circuloMax = magiasItens.reduce((max, m) => Math.max(max, Number(m.system?.circulo) || 0), 0);
@@ -77,6 +80,10 @@ export function lerFicha(actor, { regrasClasses = {}, variantes = {} } = {}) {
 		circuloMax,
 		temMagias,
 		poderesPorSubtipo,
+		/** Nome da divindade na ficha ("Khalmyr", "Khalmyr (fundamentalista)") ou "". */
+		divindade: String(sys.detalhes?.divindade ?? "").trim(),
+		/** A ficha tem algum poder "Prefixo: …"? (ex.: "armadilha" → "Armadilha: Laço") */
+		temPoderComPrefixo: (prefixo) => prefixos.has(normalizar(prefixo)),
 		/** Quantas vezes a ficha tem o poder (pelo nome, com ou sem prefixo e complemento). */
 		vezesPoder: (nome) => Math.max(0, ...chaves(nome).map((k) => contagem.get(k) ?? 0)),
 		temPoder(nome) {

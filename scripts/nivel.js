@@ -88,17 +88,36 @@ export function montarNivel({
 
 	const entrada = prog.niveis?.[nivelClasse] ?? {};
 	const avisos = [];
-	const habilidades = [];
-	for (const nome of entrada.habilidades ?? []) {
+	const buscar = (nome) => {
 		const doc = dados.poderesPorNome.get(normalizar(nome)) ?? null;
 		if (!doc) avisos.push(`Habilidade "${nome}" não encontrada nos compêndios.`);
+		return doc;
+	};
+	// como o valor da tabela vai para a ficha: "rolagem" (fórmula da rolagem do poder), "anotacao"
+	// (linha na descrição) ou nada (só informativo: o sistema já faz o efeito crescer)
+	const modoValor = (nome) => prog.valoresNaFicha?.[nome] ?? null;
+	const habilidades = [];
+	for (const nome of entrada.habilidades ?? []) {
+		const doc = buscar(nome);
 		const jaTem = ficha.temPoder(nome);
-		habilidades.push({ nome: doc?.name ?? nome, doc, jaTem, valor: valorAte(prog, nome, nivelClasse) });
+		habilidades.push({ nome: doc?.name ?? nome, doc, jaTem, valor: valorAte(prog, nome, nivelClasse), modo: modoValor(nome) });
 	}
 	// valores que mudam neste nível em habilidades que a ficha já tem (ex.: Ataque Especial +4 → +8)
 	const valores = Object.entries(entrada.valores ?? {})
 		.filter(([nome]) => !habilidades.some((h) => normalizar(h.nome) === normalizar(nome)))
-		.map(([nome, valor]) => ({ nome, de: valorAte(prog, nome, nivelClasse - 1), para: valor }));
+		.map(([nome, valor]) => ({ nome, de: valorAte(prog, nome, nivelClasse - 1), para: valor, modo: modoValor(nome) }));
+
+	// escolha entre habilidades (ex.: Caminho do Cavaleiro: Bastião ou Montaria); some se a ficha já tem uma
+	const escolhas = (entrada.escolhas ?? []).map((e) => {
+		const opcoes = e.opcoes.map((nome) => ({ nome, doc: buscar(nome) })).filter((o) => o.doc).map((o) => ({ nome: o.doc.name, doc: o.doc }));
+		return { id: e.id, titulo: e.titulo, opcoes, jaTem: opcoes.find((o) => ficha.temPoder(o.nome))?.nome ?? null };
+	}).filter((e) => !e.jaTem && e.opcoes.length);
+
+	// habilidade com uma escolha anotada que se acumula (ex.: terreno do Explorador a cada 4 níveis)
+	const anotadas = (entrada.anotadas ?? []).map((a) => {
+		const doc = buscar(a.habilidade);
+		return { id: a.id ?? normalizar(a.habilidade), habilidade: doc?.name ?? a.habilidade, doc, titulo: a.titulo, opcoes: a.opcoes ?? [], jaTem: ficha.temPoder(a.habilidade) };
+	}).filter((a) => a.doc);
 
 	const ganhaPoder = (prog.poder?.niveis ?? []).includes(nivelClasse);
 	const projetada = fichaProjetada(ficha, classe.nome, habilidades.map((h) => h.nome));
@@ -139,11 +158,41 @@ export function montarNivel({
 		nivelPersonagem,
 		habilidades,
 		valores,
+		escolhas,
+		anotadas,
 		ganhaPoder,
 		poderesClasse,
 		poderesGerais,
 		// bônus de perícia = metade do nível: sobe nos níveis pares
 		bonusPericia: nivelPersonagem % 2 === 0 ? nivelPersonagem / 2 : null,
 		avisos
+	};
+}
+
+/**
+ * O que ainda falta escolher (texto para o rodapé), ou null.
+ * @param {object} nivel   resultado de montarNivel
+ * @param {object} s       { poder: opção escolhida (de poderesClasse/poderesGerais) | null, selecoes: {id: valor} }
+ */
+export function pendenciaNivel(nivel, { poder = null, selecoes = {} } = {}) {
+	const faltam = [];
+	for (const e of nivel.escolhas ?? []) if (!e.opcoes.some((o) => o.doc.uuid === selecoes[e.id])) faltam.push(e.titulo);
+	for (const a of nivel.anotadas ?? []) if (!a.opcoes.includes(selecoes[a.id])) faltam.push(a.titulo);
+	if (nivel.ganhaPoder && !poder?.disponivel) faltam.push("um poder");
+	return faltam.length ? `Escolha: ${faltam.join(", ")}.` : null;
+}
+
+/** Plano de gravação (aplicar-nivel.js) a partir do nível calculado e das escolhas feitas. */
+export function montarPlano(nivel, { classeId, poder = null, anotacao = "", selecoes = {} } = {}) {
+	return {
+		classeId,
+		nivelPersonagem: nivel.nivelPersonagem,
+		nivelClasse: nivel.nivelClasse,
+		habilidades: nivel.habilidades.filter((h) => h.doc && !h.jaTem).map((h) => ({ doc: h.doc, valor: h.valor, modo: h.modo })),
+		escolhidas: (nivel.escolhas ?? []).map((e) => e.opcoes.find((o) => o.doc.uuid === selecoes[e.id])?.doc).filter(Boolean),
+		anotadas: (nivel.anotadas ?? []).filter((a) => selecoes[a.id]).map((a) => ({ doc: a.doc, texto: `${a.titulo}: ${selecoes[a.id]}` })),
+		valores: nivel.valores.filter((v) => v.modo),
+		poder: poder?.disponivel ? poder.doc : null,
+		anotacao
 	};
 }

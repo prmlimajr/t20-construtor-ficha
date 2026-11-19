@@ -39,7 +39,7 @@
 				<dt>Pontos de vida</dt><dd>+{{pv}} <small class="cf-nota">({{classe}} + Constituição; bônus de poderes são somados pela ficha)</small></dd>
 				<dt>Pontos de mana</dt><dd>+{{pm}}</dd>
 				{{#if bonusPericia}}<dt>Perícias</dt><dd>bônus de metade do nível passa a +{{bonusPericia}}</dd>{{/if}}
-				{{#each valores}}<dt>{{nome}}</dt><dd>{{#if de}}{{de}} → {{/if}}{{para}}</dd>{{/each}}
+				{{#each valores}}<dt>{{nome}}</dt><dd>{{#if de}}{{de}} → {{/if}}{{para}}{{#if (eq modo "rolagem")}} <small class="cf-nota">(a rolagem do poder é atualizada)</small>{{/if}}{{#if (eq modo "anotacao")}} <small class="cf-nota">(anotado na descrição do poder)</small>{{/if}}</dd>{{/each}}
 			</dl>
 			{{#if habilidades.length}}
 			<div class="cf-bloco">
@@ -56,6 +56,41 @@
 			</div>
 			{{/if}}
 		</div>
+
+		{{#each escolhas}}
+		<div class="cf-bloco cf-nivel-escolha">
+			<h4>{{titulo}}</h4>
+			<div class="cf-chips">
+				{{#each opcoes}}
+				<button type="button" class="cf-chip {{#if selecionado}}selecionado{{/if}}" data-action="selecionar" data-id="{{../id}}" data-valor="{{valor}}">{{nome}}</button>
+				{{/each}}
+			</div>
+			{{#if info}}
+			<details class="cf-poder" open>
+				<summary>{{#if info.img}}<img src="{{info.img}}" alt="">{{/if}}<span>{{info.nome}}</span></summary>
+				<div class="cf-descricao">{{{info.descricao}}}</div>
+			</details>
+			{{else}}<p class="cf-nota">Escolha uma das opções. A escolha não pode ser mudada depois.</p>{{/if}}
+		</div>
+		{{/each}}
+
+		{{#each anotadas}}
+		<div class="cf-bloco cf-nivel-escolha">
+			<h4>{{habilidade}}: {{titulo}}</h4>
+			<div class="cf-chips">
+				{{#each opcoes}}
+				<button type="button" class="cf-chip {{#if selecionado}}selecionado{{/if}}" data-action="selecionar" data-id="{{../id}}" data-valor="{{valor}}">{{nome}}</button>
+				{{/each}}
+			</div>
+			<p class="cf-nota">{{#if jaTem}}A escolha é acrescentada à descrição de {{habilidade}}, que já está na ficha.{{else}}{{habilidade}} entra na ficha com a escolha anotada na descrição.{{/if}}</p>
+			{{#unless jaTem}}{{#if descricao}}
+			<details class="cf-poder">
+				<summary>{{#if img}}<img src="{{img}}" alt="">{{/if}}<span>{{habilidade}}</span></summary>
+				<div class="cf-descricao">{{{descricao}}}</div>
+			</details>
+			{{/if}}{{/unless}}
+		</div>
+		{{/each}}
 
 		{{#if ganhaPoder}}
 		<h4>Poder de {{classe}}</h4>
