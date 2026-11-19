@@ -416,6 +416,92 @@
       }
     }
   },
+  "Capanga": {
+    "base": "Ladino",
+    "fonte": "Dragão Brasil (Tabela 1: O Capanga)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Ataque Furtivo Brutal"],
+        "valores": {
+          "Ataque Furtivo Brutal": "+1d8"
+        }
+      },
+      "2": {
+        "habilidades": ["Evasão (Ladino)"]
+      },
+      "3": {
+        "habilidades": ["Rápido e Rasteiro"],
+        "valores": {
+          "Ataque Furtivo Brutal": "+2d8",
+          "Rápido e Rasteiro": "+2"
+        }
+      },
+      "4": {
+        "habilidades": ["Cara Feia"]
+      },
+      "5": {
+        "valores": {
+          "Ataque Furtivo Brutal": "+3d8"
+        }
+      },
+      "6": {
+        "habilidades": ["Flanquear Aprimorado"]
+      },
+      "7": {
+        "valores": {
+          "Ataque Furtivo Brutal": "+4d8",
+          "Rápido e Rasteiro": "+4"
+        }
+      },
+      "8": {
+        "habilidades": ["Olhos nas Costas"]
+      },
+      "9": {
+        "valores": {
+          "Ataque Furtivo Brutal": "+5d8"
+        }
+      },
+      "10": {
+        "habilidades": ["Evasão Aprimorada (Ladino)"]
+      },
+      "11": {
+        "valores": {
+          "Ataque Furtivo Brutal": "+6d8"
+        }
+      },
+      "13": {
+        "valores": {
+          "Ataque Furtivo Brutal": "+7d8"
+        }
+      },
+      "15": {
+        "valores": {
+          "Ataque Furtivo Brutal": "+8d8",
+          "Rápido e Rasteiro": "+6"
+        }
+      },
+      "17": {
+        "valores": {
+          "Ataque Furtivo Brutal": "+9d8"
+        }
+      },
+      "19": {
+        "valores": {
+          "Ataque Furtivo Brutal": "+10d8"
+        }
+      },
+      "20": {
+        "habilidades": ["Debulhar Inimigos"]
+      }
+    },
+    "valoresNaFicha": {
+      "Ataque Furtivo Brutal": "rolagem",
+      "Rápido e Rasteiro": "anotacao"
+    }
+  },
   "Cavaleiro": {
     "fonte": "Tormenta20 JdA, p. 53 (Tabela 1-10)",
     "poder": {
@@ -592,6 +678,153 @@
       "20": {
         "habilidades": ["Mão da Divindade"]
       }
+    }
+  },
+  "Comandante": {
+    "base": "Nobre",
+    "fonte": "Dragão Brasil (Tabela 1: O Comandante)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Autoconfiança", "Coordenar", "Direcionar (Comandante)"]
+      },
+      "2": {
+        "habilidades": ["Palavras Afiadas"],
+        "valores": {
+          "Palavras Afiadas": "2d6"
+        }
+      },
+      "3": {
+        "habilidades": ["Replanejar"]
+      },
+      "4": {
+        "habilidades": ["Gritar Ordens"]
+      },
+      "5": {
+        "habilidades": ["Presença de Liderança"],
+        "anotadas": [
+          {
+            "habilidade": "Direcionar (Comandante)",
+            "titulo": "Direcionamento",
+            "opcoes": ["Aguenta Firme!", "Carga!", "Em Frente!", "Encontrem Eles!", "Lutem!", "Parede de Escudos!", "Peguem-no Vivo!", "Para o Chão!", "Saiam Dessa!", "Vão, vão, vão!"]
+          }
+        ]
+      },
+      "6": {
+        "valores": {
+          "Palavras Afiadas": "4d6"
+        }
+      },
+      "9": {
+        "anotadas": [
+          {
+            "habilidade": "Direcionar (Comandante)",
+            "titulo": "Direcionamento",
+            "opcoes": ["Aguenta Firme!", "Carga!", "Em Frente!", "Encontrem Eles!", "Lutem!", "Parede de Escudos!", "Peguem-no Vivo!", "Para o Chão!", "Saiam Dessa!", "Vão, vão, vão!"]
+          }
+        ]
+      },
+      "10": {
+        "valores": {
+          "Palavras Afiadas": "6d6"
+        }
+      },
+      "13": {
+        "anotadas": [
+          {
+            "habilidade": "Direcionar (Comandante)",
+            "titulo": "Direcionamento",
+            "opcoes": ["Aguenta Firme!", "Carga!", "Em Frente!", "Encontrem Eles!", "Lutem!", "Parede de Escudos!", "Peguem-no Vivo!", "Para o Chão!", "Saiam Dessa!", "Vão, vão, vão!"]
+          }
+        ]
+      },
+      "14": {
+        "valores": {
+          "Palavras Afiadas": "8d6"
+        }
+      },
+      "17": {
+        "anotadas": [
+          {
+            "habilidade": "Direcionar (Comandante)",
+            "titulo": "Direcionamento",
+            "opcoes": ["Aguenta Firme!", "Carga!", "Em Frente!", "Encontrem Eles!", "Lutem!", "Parede de Escudos!", "Peguem-no Vivo!", "Para o Chão!", "Saiam Dessa!", "Vão, vão, vão!"]
+          }
+        ]
+      },
+      "18": {
+        "valores": {
+          "Palavras Afiadas": "10d6"
+        }
+      },
+      "20": {
+        "habilidades": ["Líder Nato"]
+      }
+    },
+    "valoresNaFicha": {
+      "Palavras Afiadas": "rolagem"
+    }
+  },
+  "Cruzado": {
+    "base": "Clérigo",
+    "fonte": "Dragão Brasil (Tabela 2: O Cruzado)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Devoto Fiel (Clérigo)", "Magias (Clérigo)", "Presente dos Deuses (Cruzado)"],
+        "valores": {
+          "Presente dos Deuses (Cruzado)": "1 melhoria"
+        }
+      },
+      "2": {
+        "habilidades": ["Alma Guerreira"]
+      },
+      "3": {
+        "habilidades": ["Fé Inabalável"]
+      },
+      "5": {
+        "valores": {
+          "Presente dos Deuses (Cruzado)": "2 melhorias"
+        }
+      },
+      "8": {
+        "valores": {
+          "Presente dos Deuses (Cruzado)": "3 melhorias"
+        }
+      },
+      "9": {
+        "valores": {
+          "Presente dos Deuses (Cruzado)": "3 melhorias, 1 encanto"
+        }
+      },
+      "10": {
+        "habilidades": ["Oração Marcial"]
+      },
+      "11": {
+        "valores": {
+          "Presente dos Deuses (Cruzado)": "4 melhorias, 1 encanto"
+        }
+      },
+      "14": {
+        "valores": {
+          "Presente dos Deuses (Cruzado)": "4 melhorias, 2 encantos"
+        }
+      },
+      "18": {
+        "valores": {
+          "Presente dos Deuses (Cruzado)": "4 melhorias, 3 encantos"
+        }
+      },
+      "20": {
+        "habilidades": ["Guerreiro Santificado"]
+      }
+    },
+    "valoresNaFicha": {
+      "Presente dos Deuses (Cruzado)": "anotacao"
     }
   },
   "Druida": {
@@ -1660,6 +1893,43 @@
     },
     "valoresNaFicha": {
       "Ladainha de Combate": "anotacao"
+    }
+  },
+  "Sentinela": {
+    "base": "Arcanista",
+    "fonte": "Dragão Brasil (Tabela 2: O Sentinela)",
+    "poder": {
+      "niveis": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    },
+    "magias": {
+      "tipo": "arc",
+      "circulos": {
+        "1": 1,
+        "5": 2,
+        "9": 3,
+        "13": 4,
+        "17": 5
+      },
+      "aprende": "todo"
+    },
+    "niveis": {
+      "1": {
+        "habilidades": ["Caminho do Sentinela", "Gladiomancia", "Magias (Arcanista)"]
+      },
+      "3": {
+        "habilidades": ["Mago de Combate"]
+      },
+      "8": {
+        "habilidades": [
+          {
+            "nome": "Ataque Extra",
+            "classe": "Guerreiro"
+          }
+        ]
+      },
+      "20": {
+        "habilidades": ["Mestre Arcano-combatente"]
+      }
     }
   },
   "Seteiro": {

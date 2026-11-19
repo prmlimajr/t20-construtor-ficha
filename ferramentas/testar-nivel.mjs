@@ -45,7 +45,8 @@ class RollData { constructor(o) { Object.assign(this, structuredClone(o)); } }
  */
 function novoItem(data) {
 	const fonteItem = structuredClone({ flags: {}, effects: [], ...data });
-	fonteItem.effects = (fonteItem.effects ?? []).map((e, i) => ({ _id: e._id ?? `e${i}`, ...e }));
+	// como no Foundry: todo efeito tem id e "origin" (null por padrão)
+	fonteItem.effects = (fonteItem.effects ?? []).map((e, i) => ({ _id: e._id ?? `e${i}`, origin: null, ...e }));
 	const id = `i${proximoId++}`;
 	const item = {
 		id,
@@ -130,17 +131,23 @@ const json = (f) => JSON.parse(fs.readFileSync(path.join(raizModulo, "data", f),
 // Suplementos de Arton (cache gerado por extrair-suplemento.mjs); sem o cache, as classes dele são puladas
 const caminhoSup = path.join(aqui, ".cache/suplemento.json");
 const sup = fs.existsSync(caminhoSup) ? JSON.parse(fs.readFileSync(caminhoSup, "utf8")) : null;
-// habilidades da Miragem definidas pelo próprio construtor (dados.js → PODERES_DO_CONSTRUTOR); aqui só o nome
-const doConstrutor = sup ? ["Passo do Deserto", "Mestre do Deserto"].map((name, i) => ({
-	_id: `construtor${i}`, uuid: `construtor.${name}`, name, type: "poder", img: "",
-	system: { tipo: "ability", subtipo: "Miragem", description: { value: "" } }, effects: []
-})) : [];
-// como no módulo: sistema primeiro (a busca por nome acha primeiro o do livro básico), depois o suplemento
-const poderes = [...lerPack("poderes"), ...doConstrutor, ...(sup?.itens ?? []).filter((i) => i.type === "poder")];
+// poderes e classes definidos pelo próprio construtor (dados.js), na mesma ordem que o módulo monta:
+// sistema, construtor (não exclusivos), suplemento (sem os substituídos), construtor exclusivos
+const { poderesSubstitutos, classesDoConstrutor } = await import("../scripts/dados.js");
+const poderesSup = (sup?.itens ?? []).filter((i) => i.type === "poder");
+const doConstrutor = poderesSubstitutos({ ligado: !!sup, poderes: poderesSup });
+const substituidos = new Set(doConstrutor.filter((p) => p.substituiSuplemento).map((p) => p.name));
+const poderes = [
+	...lerPack("poderes"),
+	...doConstrutor.filter((p) => !p.exclusivo),
+	...poderesSup.filter((p) => !substituidos.has(p.name)),
+	...doConstrutor.filter((p) => p.exclusivo)
+];
+const classesSistema = lerPack("classes");
 const dados = {
 	poderes,
 	poderesPorNome: new Map([...poderes].reverse().map((p) => [normalizar(p.name), p])),
-	classes: [...lerPack("classes"), ...(sup?.itens ?? []).filter((i) => i.type === "classe")],
+	classes: [...classesSistema, ...(sup?.itens ?? []).filter((i) => i.type === "classe"), ...classesDoConstrutor(classesSistema)],
 	magias: [...lerPack("magias"), ...(sup?.itens ?? []).filter((i) => i.type === "magia")],
 	racas: [...lerPack("racas"), ...(sup?.itens ?? []).filter((i) => i.type === "race")]
 };
@@ -197,7 +204,10 @@ const VARIACOES = {
 	Necromante: [{ rotulo: "", magias: 19 }],
 	Frade: [{ rotulo: "", magias: 19 }],
 	Usurpador: [{ rotulo: "Usurpar (magias automáticas)", automaticas: [5, 9, 13, 17] }],
-	Atleta: [{ rotulo: "", formula: { "Casca Grossa": ["@nvl.lutador", "@nvl.atleta"] } }]
+	Atleta: [{ rotulo: "", formula: { "Casca Grossa": ["@nvl.lutador", "@nvl.atleta"] } }],
+	// Dragão Brasil (definidas pelo construtor)
+	Cruzado: [{ rotulo: "", magias: 19 }],
+	Sentinela: [{ rotulo: "", magias: 19 }]
 };
 const SUPLEMENTO = new Set(["Treinador", "Alquimista", "Atleta", "Burguês", "Duelista", "Ermitão", "Inovador", "Machado de Pedra", "Magimarcialista",
 	"Necromante", "Santo", "Seteiro", "Usurpador", "Vassalo", "Ventanista", "Frade", "Samurai", "Místico", "Miragem"]);

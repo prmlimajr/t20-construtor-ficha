@@ -54,7 +54,7 @@ Assistente em passos, com a mesma barra lateral do construtor; só aparecem os p
 
 Na ficha, os poderes ganhos recebem o nível como prefixo (`4 - Esgrimista (Guerreiro)`). Quando o sistema não faz um valor crescer sozinho, o assistente atualiza a rolagem do poder (Ataque Furtivo, Palavras Afiadas, Domar Criatura) ou anota o valor na descrição (Briga, Fabricar Item Superior). **Desfazer último nível** (na barra lateral) remove o que o nível acrescentou e restaura o que ele alterou, inclusive a classe nova da multiclasse; só o último nível pode ser desfeito. Ao subir, uma animação de "level up" aparece para quem subiu.
 
-Classes com progressão: as 14 do livro básico e, com os Suplementos de Arton, Treinador, Frade, Samurai, Místico, Miragem e as 14 variantes do *Heróis de Arton*. Classes sem progressão cadastrada continuam subindo pelo sistema (botão **Outra classe (compêndio)**).
+Classes com progressão: as 14 do livro básico, as variantes da *Dragão Brasil* (Capanga, Cruzado, Comandante e Sentinela, que funcionam sem o suplemento) e, com os Suplementos de Arton, Treinador, Frade, Samurai, Místico, Miragem e as 14 variantes do *Heróis de Arton*. Classes sem progressão cadastrada continuam subindo pelo sistema (botão **Outra classe (compêndio)**).
 
 ## Regras opcionais do sistema
 
@@ -111,7 +111,7 @@ O suplemento foi feito para Foundry v13 / Tormenta20 1.5. O Foundry converte os 
 
 - Subir de nível: escolhas internas de algumas habilidades não são pedidas (ex.: tipo de dano da Linhagem Dracônica na multiclasse, magias da Linhagem Rubra Aprimorada, truques do Melhor Amigo, Poder Capturado); itens concedidos por habilidades (item superior do Inventor, montarias) ficam só na descrição.
 - Subir de nível com os Suplementos de Arton: muitos efeitos do suplemento (feito para Tormenta20 1.5) têm valores fixos que deveriam crescer; o valor da tabela vai para a descrição do poder. A Afinidade do místico não fica registrada, então os pré-requisitos "Afinidade (…)" são aviso.
-- Classes da *Dragão Brasil* (Capanga, Cruzado, Comandante, Sentinela) não estão nos compêndios e não são suportadas.
+- Classes da *Dragão Brasil* (Capanga, Cruzado, Comandante, Sentinela): nenhum compêndio as traz, então o construtor as define (`scripts/dados.js` → `CLASSES_DO_CONSTRUTOR` e `PODERES_DO_CONSTRUTOR`, regras em `classes.json` e `progressao.json`). Os 2 direcionamentos iniciais do comandante não são pedidos na criação (anote-os; os seguintes são pedidos ao subir de nível). O sentinela começa com 12 PV (o sistema calcula 16 a partir dos 4 PV por nível; o *Caminho do Sentinela* aplica –4 PV) — como classe adicional (multiclasse), esse –4 não deveria valer: ajuste à mão.
 - Somente conteúdo do livro básico (Jogo do Ano), a menos que a integração com os Suplementos de Arton esteja ligada.
 - Clérigo devoto do Panteão: a escolha entre energia positiva e negativa não é registrada.
 - Foco do Bruxo e grimório do Mago não são adicionados como itens.
