@@ -177,7 +177,7 @@ async function carregar() {
 
 	const dados = {
 		racas: [...racas, ...sup.racas, ...racasDoConstrutor(racas, todosPoderes)].sort(ordenar),
-		classes: [...classes, ...sup.classes].sort(ordenar),
+		classes: [...classes, ...sup.classes, ...classesDoConstrutor(classes)].sort(ordenar),
 		magias: [...magias, ...sup.magias].sort(ordenar),
 		poderes: todosPoderes,
 		poderesPorNome: porNome(todosPoderes),
@@ -213,7 +213,7 @@ async function carregar() {
 		complicacoes: sup.complicacoes ?? [],
 		uuidsComplicacoes: new Set((sup.complicacoes ?? []).map((c) => c.doc.uuid)),
 		/** Variantes de classes do suplemento → classe básica (para as complicações de classe). */
-		variantes: configSuplementos.variantes ?? {},
+		variantes: { ...(configSuplementos.variantes ?? {}), ...VARIANTES_DO_CONSTRUTOR },
 		equipamento,
 		escolas: escolas.escolas ?? {},
 		regrasRacas: regrasRacas.poderes ?? {},
@@ -246,6 +246,9 @@ function efeitoSomar(nome, img, changes) {
 		system: { changes: changes.map(([key, value]) => ({ key, value, type: "add", phase: "initial", priority: null })), onuse: false }
 	};
 }
+
+/** Pasta dos ícones de habilidades de classe do sistema (usada pelas classes do construtor). */
+const ICONES_CLASSE = "systems/tormenta20/icons/poderes/classes";
 
 /**
  * Poderes que as regras usam mas o suplemento não traz: o construtor os define aqui, com
@@ -840,10 +843,139 @@ const PODERES_DO_CONSTRUTOR = [
 				abilityUse: { description: "", automatic: false, aumenta: false, custo: -1, names: ["Transmutar Objetos", "Controlar Terra"], types: ["spell"] }
 			}
 		}]
+	},
+
+	// ---------- Classes variantes da Dragão Brasil (SDD/fontes/capanga-cruzado.pdf e comandante-sentinela.pdf) ----------
+	// Habilidades exclusivas de cada classe. Nomes que já existem em outra classe levam a classe entre
+	// parênteses, como no sistema ("Direcionar" do treinador, "Presente dos Deuses" do clérigo no suplemento).
+	// Capanga (ladino)
+	{
+		nome: "Ataque Furtivo Brutal",
+		tipo: "ability", subtipo: "Capanga", exclusivo: true,
+		img: `${ICONES_CLASSE}/especialistas/ataque-furtivo.webp`,
+		descricao: "<p>Você sabe aproveitar a distração do inimigo para atingir seus pontos vitais. Uma vez por rodada, quando atinge uma criatura desprevenida com um ataque corpo a corpo, ou uma criatura que esteja flanqueando, você causa 1d8 pontos de dano extra. A cada dois níveis, esse dano aumenta em +1d8. Uma criatura imune a acertos críticos também é imune a ataques furtivos.</p>",
+		// como o Ataque Furtivo do sistema: o efeito "ao usar" soma a rolagem do poder (atualizada a cada nível)
+		efeitos: (img) => [efeitoAoUsar("Ataque Furtivo Brutal", img, [["dano", "roll"]])],
+		rolls: [{ name: "Dano", key: "dano0", type: "dano", parts: [["1d8", "dano", ""]], versatil: "", adaptavel: "" }]
+	},
+	{
+		nome: "Rápido e Rasteiro",
+		tipo: "ability", subtipo: "Capanga", exclusivo: true,
+		img: `${ICONES_CLASSE}/especialistas/audacia.webp`,
+		descricao: "<p>No 3º nível, você recebe +2 em Iniciativa, Defesa e em rolagens de dano na primeira rodada de cada combate. Esse bônus aumenta para +4 no 7º nível e para +6 no 15º nível.</p>"
+	},
+	{
+		nome: "Cara Feia",
+		tipo: "ability", subtipo: "Capanga", exclusivo: true,
+		img: `${ICONES_CLASSE}/especialistas/insolencia.webp`,
+		descricao: "<p>No 4º nível, você recebe +5 em testes de resistência contra efeitos de medo e em testes de Vontade para resistir a intimidações.</p>"
+	},
+	{
+		nome: "Flanquear Aprimorado",
+		tipo: "ability", subtipo: "Capanga", exclusivo: true,
+		img: `${ICONES_CLASSE}/especialistas/esquiva-sagaz.webp`,
+		descricao: "<p>No 6º nível, o bônus que você recebe contra oponentes flanqueados aumenta para +4 (em vez de +2).</p>"
+	},
+	{
+		nome: "Debulhar Inimigos",
+		tipo: "ability", subtipo: "Capanga", exclusivo: true,
+		img: `${ICONES_CLASSE}/combatentes/campeao.webp`,
+		descricao: "<p>No 20º nível, você já perdeu a paciência com inimigos cheios de truques ou que são resistentes às suas habilidades. Seus ataques furtivos ignoram imunidades de criaturas a acertos críticos. Além disso, você pode gastar 5 PM quando faz um ataque para usar seu ataque furtivo mesmo que o alvo não esteja desprevenido ou que você não o esteja flanqueando.</p>"
+	},
+	// Cruzado (clérigo)
+	{
+		nome: "Presente dos Deuses (Cruzado)",
+		tipo: "ability", subtipo: "Cruzado", exclusivo: true,
+		img: `${ICONES_CLASSE}/conjuradores/mao-divindade.webp`,
+		descricao: "<p>Você começa o jogo com uma arma superior com uma melhoria (exceto material especial) com preço total de até T$ 500. Preferencialmente, este item deve ser a arma preferida do seu deus, mas pode ser outra, de acordo com o mestre. Nos níveis 5, 8 e 11, esse item recebe, respectivamente, uma segunda, terceira e quarta melhorias à sua escolha. Nos níveis 9, 14 e 18, esse item recebe, respectivamente, um, dois e três encantos à sua escolha.</p><p>Seu presente dos deuses funciona como a versão mundana da arma, mas ele não ocupa espaços no inventário, pois você deve gastar uma ação de movimento e 2 PM para invocá-lo com um brilho de luz dourada — efeito que dura até o fim da cena, quando o item desaparece e volta para o mundo divino de onde veio.</p>"
+	},
+	{
+		nome: "Alma Guerreira",
+		tipo: "ability", subtipo: "Cruzado", exclusivo: true,
+		img: `${ICONES_CLASSE}/combatentes/abencoado.webp`,
+		descricao: "<p>No 2º nível, quando invoca seu presente dos deuses em um combate, você recebe uma quantidade de pontos de vida temporários igual a seu nível + sua Sabedoria.</p>"
+	},
+	{
+		nome: "Fé Inabalável",
+		tipo: "ability", subtipo: "Cruzado", exclusivo: true,
+		img: `${ICONES_CLASSE}/combatentes/durao.webp`,
+		descricao: "<p>No 3º nível, enquanto estiver empunhando seu presente dos deuses, você não fica inconsciente por estar com 0 PV ou menos (você ainda morre se chegar a um valor negativo igual à metade de seus pontos de vida máximos).</p>"
+	},
+	{
+		nome: "Oração Marcial",
+		tipo: "ability", subtipo: "Cruzado", exclusivo: true,
+		img: `${ICONES_CLASSE}/conjuradores/devoto-c.webp`,
+		descricao: "<p>No 10º nível, você pode, uma vez por dia, gastar uma hora e 5 PM para rezar ao seu deus e pedir orientação em combate; então escolha um poder de clérigo, de guerreiro ou de combate cujos pré-requisitos cumpra. Você recebe os benefícios desse poder até o próximo dia.</p>"
+	},
+	{
+		nome: "Guerreiro Santificado",
+		tipo: "ability", subtipo: "Cruzado", exclusivo: true,
+		img: `${ICONES_CLASSE}/combatentes/ataque-especial.webp`,
+		descricao: "<p>No 20º nível, você torna-se tão formidável em combate quanto seus aliados combatentes. Você pode usar Ataque Especial como se fosse um guerreiro de 20º nível. Além disso, se usar essa habilidade em um ataque feito com o seu presente dos deuses, o custo para usá-la é reduzido em –1 PM.</p>"
+	},
+	// Comandante (nobre)
+	{
+		nome: "Coordenar",
+		tipo: "ability", subtipo: "Comandante", exclusivo: true,
+		img: `${ICONES_CLASSE}/especialistas/gritar-ordens.webp`,
+		descricao: "<p>No início de um combate, role 1d20 por patamar (1d20 para iniciante, 2d20 para veterano e assim por diante) e anote os resultados. Uma vez por rodada, você pode gastar 1 PM para substituir a rolagem do teste de um aliado em alcance curto por um desses seus resultados. Após substituir uma rolagem, o resultado é perdido.</p><p>Além disso, você aprende e pode lançar <em>Comando</em> (atributo-chave Carisma). Esta não é uma habilidade mágica e provém de sua capacidade de impor suas vontades em outras criaturas.</p>",
+		magias: ["Comando"],
+		atributoMagias: "car"
+	},
+	{
+		nome: "Direcionar (Comandante)",
+		tipo: "ability", subtipo: "Comandante", exclusivo: true,
+		img: `${ICONES_CLASSE}/especialistas/realeza.webp`,
+		descricao: "<p>Você pode gastar a ação do direcionamento e 1 PM para fazer um teste de Guerra (CD 15). Se passar, você usa um direcionamento em um aliado em alcance curto. Para cada 10 pontos acima da CD, você afeta um alvo adicional. Você começa com 2 direcionamentos. A cada quatro níveis, aprende um direcionamento adicional à sua escolha.</p><ul><li><strong>Aguenta Firme!</strong> (padrão). Os alvos recebem pontos de vida temporários iguais ao seu nível + seu Carisma.</li><li><strong>Carga!</strong> (completa). Faça uma investida. Se acertar e causar dano, os alvos podem usar uma reação para se movimentar o equivalente a uma ação de movimento, terminando mais próximos da criatura atingida.</li><li><strong>Em Frente!</strong> (reação). Após os testes de Iniciativa, mas antes do primeiro turno do combate, você desloca os alvos em até 6m.</li><li><strong>Encontrem Eles!</strong> (movimento). Até o fim do seu próximo turno, os alvos recebem +2 em testes de Percepção e Intuição.</li><li><strong>Lutem!</strong> (padrão). Os alvos podem usar uma reação para fazer um ataque contra um inimigo dentro do alcance deles.</li><li><strong>Parede de Escudos!</strong> (reação). Quando um aliado adjacente sofre um ataque, os alvos o protegem: ele recebe um bônus na Defesa igual a 1 + a quantidade de alvos.</li><li><strong>Peguem-no Vivo!</strong> (movimento). Até o fim do seu próximo turno, você e os alvos não sofrem a penalidade de –5 em testes de ataque para causar dano não letal.</li><li><strong>Para o Chão!</strong> (reação). Até o início do seu próximo turno, os alvos recebem um bônus em testes de resistência igual ao seu Carisma.</li><li><strong>Saiam Dessa!</strong> (movimento). Remove uma condição mental que estava afetando os alvos; para cada 10 pontos acima da CD, pode remover uma condição adicional em vez de afetar um alvo adicional.</li><li><strong>Vão, vão, vão!</strong> (padrão). Escolha um inimigo em alcance curto. Até o fim do seu próximo turno, você e os alvos recebem +2 em testes de ataque e rolagens de dano contra ele.</li></ul>"
+	},
+	{
+		nome: "Replanejar",
+		tipo: "ability", subtipo: "Comandante", exclusivo: true,
+		img: `${ICONES_CLASSE}/especialistas/autoconfianca.webp`,
+		descricao: "<p>No 3º nível, uma vez por cena, quando um oponente em alcance curto acerta um ataque em um de seus aliados, ou quando um de seus aliados falha em um teste de resistência, você pode gastar 2 PM para fazer o oponente repetir o teste de ataque (escolhendo o pior entre os dois resultados) ou para fazer o aliado repetir o teste de resistência (escolhendo o melhor entre os dois resultados).</p>"
+	},
+	{
+		nome: "Presença de Liderança",
+		tipo: "ability", subtipo: "Comandante", exclusivo: true,
+		img: `${ICONES_CLASSE}/especialistas/orgulho.webp`,
+		descricao: "<p>A partir do 5º nível, você pode gastar 1 PM para seus aliados em alcance curto receberem +2 em testes de perícias baseadas em Carisma até o fim da cena. Além disso, você recebe +2 em testes de Intimidação.</p>",
+		efeitos: (img) => [efeitoSomar("Presença de Liderança", img, [["system.pericias.inti.bonus", 2]])]
+	},
+	{
+		nome: "Líder Nato",
+		tipo: "ability", subtipo: "Comandante", exclusivo: true,
+		img: `${ICONES_CLASSE}/especialistas/realeza.webp`,
+		descricao: "<p>No 20º nível, uma vez por rodada, você pode usar Direcionar como ação livre, sem precisar fazer um teste e sem custo em PM. Além disso, uma criatura que seja reduzida a 0 PV por Palavras Afiadas não sofre este dano; em vez disso, passa a lutar ao seu lado pelo resto da cena.</p>"
+	},
+	// Sentinela (arcanista)
+	{
+		nome: "Caminho do Sentinela",
+		tipo: "ability", subtipo: "Sentinela", exclusivo: true,
+		img: `${ICONES_CLASSE}/conjuradores/caminho-arcanista-bruxo.webp`,
+		descricao: "<p>Você lança magias misturando combate e feitiçaria. Para lançar uma magia em combate, você deve empunhar uma arma com a qual seja proficiente com uma mão (e gesticular com a outra) ou fazer um teste de Misticismo (CD 20 + o custo em PM da magia; se falhar, a magia não funciona, mas você gasta os PM mesmo assim). Fora de combate, deve pelo menos estar com uma das mãos sobre esta arma ou precisa fazer o mesmo teste. Você não precisa fazer testes de Misticismo para lançar magias arcanas se estiver usando uma armadura leve, e também recebe uma armadura leve como seu equipamento inicial no 1º nível. Seu atributo-chave para lançar magias é Inteligência.</p><p><em>Construtor:</em> o sentinela começa com 12 PV + Con e ganha 4 PV + Con por nível; o sistema calcula o 1º nível como 4× os PV por nível (16), então esta habilidade aplica –4 PV.</p>",
+		efeitos: (img) => [efeitoSomar("Caminho do Sentinela", img, [["system.attributes.pv.bonus.total", -4]])]
+	},
+	{
+		nome: "Gladiomancia",
+		tipo: "ability", subtipo: "Sentinela", exclusivo: true,
+		img: `${ICONES_CLASSE}/combatentes/ataque-especial.webp`,
+		descricao: "<p>Você pode gastar uma ação de movimento e 2 PM para evocar palavras de poder mágico e imbuir essência arcana em uma arma corpo a corpo leve ou ágil que esteja empunhando. Enquanto empunhar esta arma ou até o fim da cena (o que acontecer primeiro), você pode somar sua Inteligência em vez de Destreza na Defesa. Além disso, você usa Inteligência em testes de Luta, em vez de Força, e pode somar sua Inteligência em rolagens de dano usando esta arma (limitado pelo seu nível).</p>"
+	},
+	{
+		nome: "Mago de Combate",
+		tipo: "ability", subtipo: "Sentinela", exclusivo: true,
+		img: `${ICONES_CLASSE}/conjuradores/alta-arcana.webp`,
+		descricao: "<p>Quando faz um ataque usando uma arma sob efeito de Gladiomancia, você soma o círculo máximo de magias que pode lançar à rolagem de dano. Além disso, a mão da arma é considerada livre para lançar magias.</p>"
+	},
+	{
+		nome: "Mestre Arcano-combatente",
+		tipo: "ability", subtipo: "Sentinela", exclusivo: true,
+		img: `${ICONES_CLASSE}/conjuradores/alta-arcana.webp`,
+		descricao: "<p>No 20º nível, você pode usar Gladiomancia como ação livre. Enquanto empunhar uma arma sob o efeito de Gladiomancia, suas habilidades de sentinela (incluindo magias) têm seu custo em PM reduzido pela metade (após aplicar aprimoramentos e quaisquer outros efeitos que reduzam custo).</p>"
 	}
 ];
 
-function poderesSubstitutos(sup) {
+export function poderesSubstitutos(sup) {
 	return PODERES_DO_CONSTRUTOR
 		.filter((x) => !x.requerSuplemento || sup.ligado)
 		// se o suplemento passar a ter o poder, vale o dele (a menos que o do construtor o substitua de
@@ -863,6 +995,8 @@ function poderesSubstitutos(sup) {
 			regiao: x.regiao ?? null,
 			itensOrigem: x.itensOrigem ?? [],
 			magiasConcedidas: x.magias ?? [],
+			// atributo-chave dessas magias, se não for o da magia no compêndio (ex.: Comando do comandante: Carisma)
+			atributoMagias: x.atributoMagias ?? null,
 			effects: x.efeitos ? x.efeitos(x.img) : [],
 			system: {
 				tipo: x.tipo, subtipo: x.subtipo, description: { value: x.descricao },
@@ -967,6 +1101,40 @@ function racasDoConstrutor(racas, poderes) {
 			name: def.nome, type: "race", img: base.img,
 			uuid: `${MODULE_ID}.raca.${def.nome}`, _id: null,
 			substituto: true, varianteDe: def.base,
+			effects: [], system: sistema
+		});
+	}
+	return out;
+}
+
+/**
+ * Classes variantes que nenhum compêndio traz (Dragão Brasil): copiam a classe básica do sistema
+ * (estrutura, ícone, PV e PM) com nome, descrição e, se for o caso, PV/PM próprios. As regras de 1º nível
+ * ficam em data/classes.json e a progressão em data/progressao.json, como as das outras classes.
+ */
+const CLASSES_DO_CONSTRUTOR = [
+	{ nome: "Capanga", base: "Ladino", livro: "Dragão Brasil", descricao: "<p>Capanga, variante do ladino (<em>Dragão Brasil</em>): o ladino que trocou sutileza por força bruta. PV, PM e proficiências como o ladino básico.</p>" },
+	{ nome: "Cruzado", base: "Clérigo", livro: "Dragão Brasil", descricao: "<p>Cruzado, variante do clérigo (<em>Dragão Brasil</em>): o sacerdote que vive com um pé no campo de batalha. PV e PM como o clérigo básico; proficiência com armas marciais, armaduras pesadas e escudos.</p>" },
+	{ nome: "Comandante", base: "Nobre", livro: "Dragão Brasil", descricao: "<p>Comandante, variante do nobre (<em>Dragão Brasil</em>): a voz firme no calor da batalha. PV, PM e proficiências como o nobre básico.</p>" },
+	{ nome: "Sentinela", base: "Arcanista", livro: "Dragão Brasil", pvPorNivel: 4, pmPorNivel: 5, descricao: "<p>Sentinela, variante do arcanista (<em>Dragão Brasil</em>): onde espada e feitiçaria se encontram. Começa com 12 PV + Constituição e ganha 4 PV + Constituição por nível; 5 PM por nível; proficiência com armas marciais.</p>" }
+];
+
+/** Variante → classe básica das classes do construtor. */
+const VARIANTES_DO_CONSTRUTOR = Object.fromEntries(CLASSES_DO_CONSTRUTOR.map((c) => [c.nome, c.base]));
+
+export function classesDoConstrutor(classes) {
+	const out = [];
+	for (const def of CLASSES_DO_CONSTRUTOR) {
+		const base = classes.find((c) => c.name === def.base);
+		if (!base) continue;
+		const sistema = typeof base.system?.toObject === "function" ? base.system.toObject() : structuredClone(base.system);
+		if (def.pvPorNivel) sistema.pvPorNivel = def.pvPorNivel;
+		if (def.pmPorNivel) sistema.pmPorNivel = def.pmPorNivel;
+		sistema.description = { ...(sistema.description ?? {}), value: def.descricao };
+		out.push({
+			name: def.nome, type: "classe", img: base.img,
+			uuid: `${MODULE_ID}.classe.${def.nome}`, _id: null,
+			substituto: true, varianteDe: def.base, fonteLivro: def.livro,
 			effects: [], system: sistema
 		});
 	}

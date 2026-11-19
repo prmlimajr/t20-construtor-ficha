@@ -1,11 +1,11 @@
 /**
  * Animação de "subiu de nível" dentro da janela do assistente, no visual do construtor (fundo vermelho,
- * faixa e faíscas douradas, título na fonte e no contorno bordô dos títulos). Dura ~1000 ms e some
+ * faixa e faíscas douradas, título na fonte e no contorno bordô dos títulos). Dura 3000 ms e some
  * sozinha. Com "reduzir movimento" no sistema, só o fundo e o título aparecem e somem.
  */
 
-const DURACAO_MS = 1000;
-const FAISCAS = 16;
+const DURACAO_MS = 3000;
+const FAISCAS = 28;
 
 function el(tag, classe, texto) {
 	const e = document.createElement(tag);
@@ -36,7 +36,7 @@ export function animarSubidaDeNivel({ container, nivel, detalhe = "", img = "" }
 		// posição, atraso, altura da subida e tamanho aleatórios (variáveis CSS)
 		f.style.setProperty("--x", `${Math.round((Math.random() * 2 - 1) * 200)}px`);
 		f.style.setProperty("--sobe", `${-Math.round(80 + Math.random() * 160)}px`);
-		f.style.setProperty("--atraso", `${Math.round(Math.random() * 250)}ms`);
+		f.style.setProperty("--atraso", `${Math.round(Math.random() * 1300)}ms`);
 		f.style.setProperty("--tam", `${4 + Math.round(Math.random() * 4)}px`);
 		faiscas.append(f);
 	}

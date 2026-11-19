@@ -1,5 +1,5 @@
 {
-  "_comentario": "Escolhas das habilidades de classe de 1º nível (T20 Jogo do Ano, cap. 2). Mesmo formato de racas.json. Tipos extras: 'especialista' (perícias treinadas, escolhidas no passo Perícias), 'item' (um item até 'precoMax', no passo Equipamento), 'prototipo' (item superior ou itens alquímicos, no passo Equipamento). 'periciasFixas' = perícias treinadas pelo poder; 'magiasExtra' = magias iniciais a mais. 'extras': escolhas adicionais do mesmo poder; 'opcoesDivindades': as opções são os deuses maiores; efeito 'nenhum': só registra a escolha; 'tiposMagia': filtra as magias da escolha por tipo (arc/div/uni); 'tiposMagiaExtras': tipos de magia que a classe passa a poder aprender.",
+  "_comentario": "Escolhas das habilidades de classe de 1º nível (T20 Jogo do Ano, cap. 2). Mesmo formato de racas.json. Tipos extras: 'especialista' (perícias treinadas, escolhidas no passo Perícias), 'item' (um item até 'precoMax', no passo Equipamento), 'prototipo' (item superior ou itens alquímicos, no passo Equipamento). 'periciasFixas' = perícias treinadas pelo poder; 'magiasExtra' = magias iniciais a mais. 'extras': escolhas adicionais do mesmo poder; 'opcoesDivindades': as opções são os deuses maiores; efeito 'nenhum': só registra a escolha; 'tiposMagia': filtra as magias da escolha por tipo (arc/div/uni); 'tiposMagiaExtras': tipos de magia que a classe passa a poder aprender. 'prototipo' aceita 'semAlquimicos' (só o item superior) e 'apenasArmas' (só armas), ex.: Presente dos Deuses do cruzado.",
   "poderes": {
     "Linhagem Dracônica Básica": {
       "id": "linhagemDraconica",
@@ -95,6 +95,16 @@
           ]
         }
       ]
+    },
+    "Presente dos Deuses (Cruzado)": {
+      "id": "presenteDeuses",
+      "tipo": "prototipo",
+      "titulo": "Presente dos Deuses (Cruzado)",
+      "precoMax": 500,
+      "precoMelhoria": 300,
+      "maxAlquimicos": 0,
+      "semAlquimicos": true,
+      "apenasArmas": true
     }
   }
 }

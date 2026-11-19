@@ -167,5 +167,48 @@
     "escolhas": [],
     "devocao": { "obrigatoria": true, "poderes": 1, "divindades": ["Azgher", "Khalmyr", "Lena", "Lin-Wu", "Marah", "Tanna-Toh", "Thyatis", "Valkaria"], "alternativa": { "nome": "Paladino do Bem", "descricao": "Serve ao Bem como um todo, sem ser devoto de uma divindade específica. Não recebe poder concedido; em compensação, recebe Devoção Ampla (+2 PM por patamar).", "poder": "Devoção Ampla" } },
     "equipamentoExtra": []
+  },
+  "Capanga": {
+    "fixas": ["ladi", "enga"],
+    "ou": [],
+    "opcoes": ["acro", "atle", "atua", "cava", "conh", "dipl", "furt", "inic", "inti", "intu", "inve", "joga", "luta", "oficio", "perc", "pilo", "pont", "refl"],
+    "numero": 6,
+    "proficiencias": [],
+    "habilidades": ["Ataque Furtivo Brutal"],
+    "escolhas": [],
+    "equipamentoExtra": ["Gazua"]
+  },
+  "Cruzado": {
+    "fixas": ["reli"],
+    "ou": [["luta", "pont"]],
+    "opcoes": ["conh", "cura", "dipl", "fort", "inic", "intu", "luta", "mist", "nobr", "oficio", "perc", "pont", "vont"],
+    "numero": 2,
+    "proficiencias": ["marcial", "pesada", "escudo"],
+    "habilidades": ["Devoto Fiel (Clérigo)", "Magias (Clérigo)", "Presente dos Deuses (Cruzado)"],
+    "escolhas": [],
+    "conjurador": { "tipo": "div", "quantidade": 3, "escolas": 0, "atributo": "sab" },
+    "devocao": { "obrigatoria": true, "poderes": 2, "divindades": ["Aharadak", "Allihanna", "Arsenal", "Azgher", "Hyninn", "Kallyadranoch", "Khalmyr", "Lin-Wu", "Megalokk", "Nimb", "Oceano", "Tanna-Toh", "Tenebra", "Thwor", "Thyatis", "Valkaria"] },
+    "equipamentoExtra": ["Símbolo Sagrado"]
+  },
+  "Comandante": {
+    "fixas": ["inti", "guer", "vont"],
+    "ou": [],
+    "opcoes": ["ades", "atua", "cava", "conh", "dipl", "enga", "fort", "inic", "inti", "intu", "inve", "joga", "luta", "nobr", "oficio", "perc", "pont"],
+    "numero": 3,
+    "proficiencias": ["marcial", "pesada", "escudo"],
+    "habilidades": ["Autoconfiança", "Coordenar", "Direcionar (Comandante)"],
+    "escolhas": [],
+    "equipamentoExtra": []
+  },
+  "Sentinela": {
+    "fixas": ["luta", "mist"],
+    "ou": [],
+    "opcoes": ["conh", "dipl", "enga", "guer", "inic", "inti", "intu", "inve", "nobr", "oficio", "perc", "vont"],
+    "numero": 2,
+    "proficiencias": ["marcial"],
+    "habilidades": ["Caminho do Sentinela", "Gladiomancia", "Magias (Arcanista)"],
+    "escolhas": [],
+    "conjurador": { "tipo": "arc", "quantidade": 3, "escolas": 0, "atributo": "int" },
+    "equipamentoExtra": []
   }
 }

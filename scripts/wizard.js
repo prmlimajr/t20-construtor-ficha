@@ -555,7 +555,8 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			case "magias":
 			case "especialista": return Array.isArray(v) ? v : [];
 			case "prototipo": return {
-				modo: v?.modo ?? "", item: v?.item ?? "", melhoria: v?.melhoria ?? "",
+				// sem alquímicos (ex.: Presente dos Deuses do cruzado), só existe o modo item superior
+				modo: regra.semAlquimicos ? "superior" : v?.modo ?? "", item: v?.item ?? "", melhoria: v?.melhoria ?? "",
 				alquimicos: v?.alquimicos && typeof v.alquimicos === "object" ? v.alquimicos : {}
 			};
 		}
@@ -651,8 +652,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			}
 			if (regra.tipo === "item" && !v) return `${p.name}: escolha um item de até T$ ${regra.precoMax}.`;
 			if (regra.tipo === "prototipo") {
-				if (!v.modo) return "Protótipo: escolha entre item superior e itens alquímicos.";
-				if (v.modo === "superior" && (!v.item || !v.melhoria)) return "Protótipo: escolha o item e a melhoria.";
+				const nome = regra.titulo?.replace(/\s*\(.*\)$/, "") || "Protótipo";
+				if (!v.modo) return `${nome}: escolha entre item superior e itens alquímicos.`;
+				if (v.modo === "superior" && (!v.item || !v.melhoria)) return `${nome}: escolha o item e a melhoria.`;
 				if (v.modo === "alquimicos") {
 					const { qtd } = this.totaisAlquimicos(v);
 					if (!qtd) return "Protótipo: escolha seus itens alquímicos.";
@@ -1497,8 +1499,10 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 					.map(({ doc, categoria }) => ({ ...equip(doc.name), sub: `${ConstrutorFicha.formatarTibares(doc.system.preco)} · ${categoria}` }));
 			}
 			case "itemSuperior": {
-				const max = Number(arg);
-				return this.dados.loja.filter(({ doc }) => tipoMelhoria(doc) && Number(doc.system.preco) <= max)
+				// "300" ou "300:arma" (só armas, ex.: Presente dos Deuses do cruzado)
+				const [precoMax, soTipo] = arg.split(":");
+				const max = Number(precoMax);
+				return this.dados.loja.filter(({ doc }) => tipoMelhoria(doc) && Number(doc.system.preco) <= max && (!soTipo || doc.type === soTipo))
 					.map(({ doc, categoria }) => ({ ...equip(doc.name), sub: `${ConstrutorFicha.formatarTibares(doc.system.preco)} · ${categoria}` }));
 			}
 			case "melhoria":
@@ -2844,16 +2848,17 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			out.push({
 				titulo: regra.titulo, ehPrototipo: true,
 				campoModo: `${campo}.modo`,
-				modos: [
+				// sem alquímicos (Presente dos Deuses): só o item superior, sem escolher o modo
+				modos: regra.semAlquimicos ? [] : [
 					{ valor: "superior", nome: "Item superior", selecionado: v.modo === "superior" },
 					{ valor: "alquimicos", nome: `Até ${regra.maxAlquimicos} itens alquímicos`, selecionado: v.modo === "alquimicos" }
 				],
 				superior: v.modo === "superior" ? {
-					texto: `Item de até ${fmt(baseMax)} com uma melhoria (+${fmt(regra.precoMelhoria)}), total até ${fmt(regra.precoMax)}.`,
-					item: { campo: `${campo}.item`, lista: `itemSuperior:${baseMax}`, titulo: "Protótipo — item base", escolhido: v.item },
+					texto: `${regra.apenasArmas ? "Arma" : "Item"} de até ${fmt(baseMax)} com uma melhoria (+${fmt(regra.precoMelhoria)}), total até ${fmt(regra.precoMax)}.`,
+					item: { campo: `${campo}.item`, lista: `itemSuperior:${baseMax}${regra.apenasArmas ? ":arma" : ""}`, titulo: `${p.name} — ${regra.apenasArmas ? "arma" : "item base"}`, escolhido: v.item },
 					melhoria: itemDoc ? {
 						campo: `${campo}.melhoria`, lista: `melhoria:${tipoMelhoria(itemDoc)}`,
-						titulo: `Protótipo — melhoria (${v.item})`, escolhido: mel?.name ?? ""
+						titulo: `${p.name} — melhoria (${v.item})`, escolhido: mel?.name ?? ""
 					} : null
 				} : null,
 				alquimicos: v.modo === "alquimicos" ? {
@@ -3103,7 +3108,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		const magiasDaRaca = unicas(magiasRaciais);
 		// magias que poderes escolhidos dão na ficha (ex.: Canção da Pedra → Transmutar Objetos)
 		const deOutrosPoderes = gruposPoderes.filter((g) => !g.raciais).flatMap((g) => g.poderes)
-			.flatMap((p) => (p.magiasConcedidas ?? []).map((n) => magiaPorNome(this.dados, n)).filter(Boolean).map((doc) => ({ doc })));
+			.flatMap((p) => (p.magiasConcedidas ?? []).map((n) => magiaPorNome(this.dados, n)).filter(Boolean).map((doc) => ({ doc, atributo: p.atributoMagias ?? null })));
 		const magiasDePoderesClasse = unicas([...daClasse.magias, ...deOutrosPoderes]);
 
 		let conjuracao = this.conjurador?.atributo ?? null;
@@ -3322,8 +3327,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			}
 			// Adulto: tirar o poder geral de Já Vi Coisas devolve a complicação de idade que vinha com ele
 			if (campo === "idade.poderGeral" && !valor) e.idade.complicacoes = [];
-			// Protótipo: trocar o item base invalida a melhoria
-			if (campo === "classePoderEscolhas.prototipo.item") e.classePoderEscolhas.prototipo.melhoria = "";
+			// Protótipo e afins (item superior): trocar o item base invalida a melhoria
+			const itemSuperior = /^classePoderEscolhas\.([^.]+)\.item$/.exec(campo);
+			if (itemSuperior && e.classePoderEscolhas[itemSuperior[1]]) e.classePoderEscolhas[itemSuperior[1]].melhoria = "";
 			if (campo === "devoto" && valor === false) {
 				e.divindade = "";
 				e.poderesConcedidos = [];

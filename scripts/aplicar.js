@@ -158,7 +158,12 @@ export async function aplicarNaFicha(actor, plano, dados) {
 		if (plano.conjuracao && data.system?.resistencia) data.system.resistencia.atributo = plano.conjuracao;
 		itens.push(data);
 	}
-	for (const { doc } of plano.magiasPoderesClasse ?? []) itens.push(doCompendio(doc));
+	for (const { doc, atributo } of plano.magiasPoderesClasse ?? []) {
+		const data = doCompendio(doc);
+		// atributo-chave próprio da habilidade que dá a magia (ex.: Comando do comandante usa Carisma)
+		if (atributo && data.system?.resistencia) data.system.resistencia.atributo = atributo;
+		itens.push(data);
+	}
 	for (const { doc, atributo } of plano.magiasRaciais ?? []) {
 		const data = doCompendio(doc);
 		// atributo-chave da habilidade racial (usado na CD da magia)
