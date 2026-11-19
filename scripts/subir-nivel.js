@@ -9,6 +9,7 @@ import { poderRacialPermitido } from "./poderes-raciais.js";
 import { poderDistincaoPermitido, ehPoderDeDistincao, distincaoDoPoder } from "./distincoes.js";
 import { montarNivel, criarLeitorPreRequisitos } from "./nivel.js";
 import { aplicarNivel, desfazerUltimoNivel, podeDesfazer, historico } from "./aplicar-nivel.js";
+import { animarSubidaDeNivel } from "./animacao-nivel.js";
 
 const TPL = `modules/${MODULE_ID}/templates`;
 export const TEMPLATES_NIVEL = [`${TPL}/subir-nivel.hbs`];
@@ -290,6 +291,11 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 				anotacao: this.anotacao
 			});
 			ui.notifications.info(`${this.actor.name} subiu para o ${nivel.nivelPersonagem}º nível (${classe.nome} ${nivel.nivelClasse}): +${r.pv} PV, +${r.pm} PM.`);
+			animarSubidaDeNivel({
+				nivel: nivel.nivelPersonagem,
+				detalhe: `${this.actor.name} · ${classe.nome} ${nivel.nivelClasse} · +${r.pv} PV · +${r.pm} PM`,
+				img: classe.item?.img
+			});
 			this.escolha = null;
 			this.anotacao = "";
 		} catch (err) {
