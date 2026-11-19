@@ -85,6 +85,14 @@ function condicao(clausula, ctx) {
 		return prof ? { tipo: "proficiencia", prof, texto: c } : null;
 	}
 	if (/^habilidade de classe magias$/.test(n)) return { tipo: "magias", texto: c };
+	// "um poder de armadilha", "qualquer poder de Missa": algum poder com esse prefixo ("Armadilha: Laço")
+	if ((m = /^(?:um|qualquer) poder de (.+)$/.exec(n))) return { tipo: "prefixoPoder", prefixo: m[1], texto: c };
+	// "devoto de uma divindade (exceto Lena e Marah)", "devoto de um deus maior"
+	if ((m = /^devoto de (?:uma divindade|um deus(?: maior| menor)?)(?:\s*\(exceto (.+)\))?$/.exec(n))) {
+		const exceto = m[1] ? m[1].split(/\s*,\s*|\s+e\s+|\s+ou\s+/).filter(Boolean) : [];
+		// maior × menor não é verificável pela ficha (só o nome do deus)
+		return { tipo: "devoto", exceto, texto: c, ...(/deus (?:maior|menor)/.test(n) ? { ressalva: c } : {}) };
+	}
 	if ((m = /^lancar magias de (\d)[ºo°]? circulo$/.exec(n))) return { tipo: "circulo", min: Number(m[1]), texto: c };
 	if ((m = /^(?:(\w+)\s+)?outros?\s+poder(?:es)?\s+da tormenta$/.exec(n))) {
 		const min = m[1] ? NUMEROS[m[1]] ?? Number(m[1]) : 1;
@@ -136,6 +144,11 @@ function atende(cond, ficha) {
 		case "pericia": return ficha.pericias.has(cond.pericia);
 		case "proficiencia": return ficha.proficiencias.has(cond.prof);
 		case "magias": return ficha.temMagias;
+		case "prefixoPoder": return ficha.temPoderComPrefixo(cond.prefixo);
+		case "devoto": {
+			const d = normalizar(ficha.divindade);
+			return !!d && !cond.exceto.some((x) => d.startsWith(x));
+		}
 		case "circulo": return ficha.circuloMax >= cond.min;
 		case "contaPoderes": return (ficha.poderesPorSubtipo.get(cond.subtipo) ?? 0) >= cond.min;
 		case "poder": return ficha.temPoder(cond.nome);

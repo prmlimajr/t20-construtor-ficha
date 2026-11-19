@@ -1151,3 +1151,4 @@
 	.t20cf-lu-raios, .t20cf-lu-coluna, .t20cf-lu-onda, .t20cf-lu-faiscas { display: none; }
 	.t20cf-lu-clarao, .t20cf-lu-texto, .t20cf-lu-detalhe { animation: t20cf-lu-entra 0.3s ease-out both; }
 }
+.t20cf-nivel .cf-nivel-escolha h4 { margin: 4px 0 6px; }

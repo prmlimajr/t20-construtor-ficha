@@ -2,17 +2,43 @@
  * Grava um nível na ficha (e desfaz o último), mantendo um histórico em
  * flags.t20-construtor-ficha.niveis para o "Desfazer último nível".
  */
-import { MODULE_ID } from "./regras.js";
+import { MODULE_ID, normalizar } from "./regras.js";
 import { doCompendio } from "./aplicar.js";
+import { nomeBase } from "./ficha-atual.js";
 
 /** Os poderes de classe da criação usam sort 600000+ (grupo "1"); cada nível vem depois do anterior. */
 const SORT_CLASSE = 600000;
+const CAMPO_DESCRICAO = "system.description.value";
 
-function anotar(data, texto) {
-	if (!texto?.trim()) return;
-	const desc = foundry.utils.getProperty(data, "system.description.value") ?? "";
-	const nota = `<p><strong>Escolha:</strong> ${foundry.utils.escapeHTML?.(texto.trim()) ?? texto.trim()}</p>`;
-	foundry.utils.setProperty(data, "system.description.value", nota + desc);
+const escapar = (t) => foundry.utils.escapeHTML?.(t) ?? t;
+
+/** Descrição com uma linha "Escolha (Nº nível): …" no topo. */
+function comAnotacao(desc, texto, nivel) {
+	return `<p><strong>Escolha (${nivel}º nível):</strong> ${escapar(texto.trim())}</p>${desc ?? ""}`;
+}
+
+/** Descrição com a linha "Valor atual" trocada (ou acrescentada no topo). */
+function comValor(desc, valor, nivel) {
+	const linha = `<p class="t20cf-valor"><strong>Valor atual (${nivel}º nível):</strong> ${escapar(String(valor))}</p>`;
+	const re = /<p class="t20cf-valor">.*?<\/p>/s;
+	return re.test(desc ?? "") ? desc.replace(re, linha) : linha + (desc ?? "");
+}
+
+/** Rolagens com a fórmula da primeira parte trocada (ex.: Ataque Furtivo 1d6 → 3d6). */
+function comRolagem(rolls, valor) {
+	const copia = foundry.utils.deepClone(rolls ?? []);
+	if (copia[0]?.parts?.[0]) copia[0].parts[0][0] = String(valor).replace(/^\+/, "");
+	return copia;
+}
+
+/** Item da ficha com o poder, pelo nome (sem prefixo; com ou sem o complemento entre parênteses). */
+function poderNaFicha(actor, nome) {
+	const alvo = normalizar(nome);
+	const semComplemento = (t) => t.replace(/\s*\([^)]*\)\s*$/, "").trim();
+	const poderes = actor.items.filter((i) => i.type === "poder");
+	return poderes.find((i) => normalizar(nomeBase(i.name)) === alvo)
+		?? poderes.find((i) => semComplemento(normalizar(nomeBase(i.name))) === semComplemento(alvo))
+		?? null;
 }
 
 export function historico(actor) {
@@ -27,7 +53,13 @@ export function podeDesfazer(actor) {
 
 /**
  * @param {Actor} actor
- * @param {object} plano { classeId, nivelPersonagem, nivelClasse, habilidades: [doc], poder: doc|null, anotacao }
+ * @param {object} plano {
+ *   classeId, nivelPersonagem, nivelClasse,
+ *   habilidades: [{doc, valor?, modo?}],   habilidades novas (com o valor da tabela, se houver)
+ *   escolhidas: [doc],                     opções escolhidas (Caminho do Cavaleiro…)
+ *   anotadas: [{doc, texto}],              escolhas anotadas (terreno do Explorador…); atualiza o item se já existe
+ *   valores: [{nome, para, modo}],         valores da tabela em habilidades que a ficha já tem
+ *   poder: doc|null, anotacao }            poder escolhido e a anotação dele
  */
 export async function aplicarNivel(actor, plano) {
 	const classe = actor.items.get(plano.classeId);
@@ -39,20 +71,50 @@ export async function aplicarNivel(actor, plano) {
 
 	const n = plano.nivelPersonagem;
 	const itens = [];
-	const adicionar = (doc, anotacao) => {
+	const adicionar = (doc, { anotacao = "", valor = null, modo = null } = {}) => {
 		const data = doCompendio(doc);
 		data.name = `${n} - ${doc.name}`;
 		data.sort = SORT_CLASSE + n * 1000 + itens.length * 10;
-		anotar(data, anotacao);
+		if (anotacao?.trim()) foundry.utils.setProperty(data, CAMPO_DESCRICAO, comAnotacao(foundry.utils.getProperty(data, CAMPO_DESCRICAO), anotacao, n));
+		if (valor && modo === "rolagem") data.system.rolls = comRolagem(data.system.rolls, valor);
+		if (valor && modo === "anotacao") foundry.utils.setProperty(data, CAMPO_DESCRICAO, comValor(foundry.utils.getProperty(data, CAMPO_DESCRICAO), valor, n));
 		foundry.utils.setProperty(data, `flags.${MODULE_ID}.nivel`, n);
 		itens.push(data);
 	};
-	for (const doc of plano.habilidades) adicionar(doc);
-	if (plano.poder) adicionar(plano.poder, plano.anotacao);
+
+	// alterações em itens que já estão na ficha: guardam o valor anterior para o desfazer
+	const alteracoes = [];
+	const atualizacoes = new Map();
+	const alterar = (item, caminho, valor) => {
+		if (!atualizacoes.has(item.id)) atualizacoes.set(item.id, { _id: item.id });
+		const atual = atualizacoes.get(item.id);
+		if (!alteracoes.some((a) => a.id === item.id && a.caminho === caminho)) {
+			alteracoes.push({ id: item.id, caminho, antes: foundry.utils.deepClone(foundry.utils.getProperty(item, caminho) ?? null) });
+		}
+		atual[caminho] = valor;
+	};
+	const valorAtual = (item, caminho) => atualizacoes.get(item.id)?.[caminho] ?? foundry.utils.getProperty(item, caminho);
+
+	for (const h of plano.habilidades ?? []) adicionar(h.doc, { valor: h.valor, modo: h.modo });
+	for (const doc of plano.escolhidas ?? []) adicionar(doc);
+	for (const a of plano.anotadas ?? []) {
+		const item = poderNaFicha(actor, a.doc.name);
+		if (item) alterar(item, CAMPO_DESCRICAO, comAnotacao(valorAtual(item, CAMPO_DESCRICAO), a.texto, n));
+		else adicionar(a.doc, { anotacao: a.texto });
+	}
+	for (const v of plano.valores ?? []) {
+		if (!v.modo) continue;
+		const item = poderNaFicha(actor, v.nome);
+		if (!item) continue;
+		if (v.modo === "rolagem") alterar(item, "system.rolls", comRolagem(valorAtual(item, "system.rolls"), v.para));
+		else if (v.modo === "anotacao") alterar(item, CAMPO_DESCRICAO, comValor(valorAtual(item, CAMPO_DESCRICAO), v.para, n));
+	}
+	if (plano.poder) adicionar(plano.poder, { anotacao: plano.anotacao });
 
 	// a classe primeiro: o sistema atualiza o nível do personagem ao mudar system.niveis
 	await classe.update({ "system.niveis": plano.nivelClasse });
 	const criados = itens.length ? await actor.createEmbeddedDocuments("Item", itens) : [];
+	if (atualizacoes.size) await actor.updateEmbeddedDocuments("Item", [...atualizacoes.values()]);
 
 	// PV e PM atuais sobem o mesmo que os máximos (que o sistema recalcula com a classe e os poderes novos).
 	// reset() em vez de prepareData(): ver o comentário em aplicar.js.
@@ -70,6 +132,7 @@ export async function aplicarNivel(actor, plano) {
 		classe: classe.name,
 		nivelClasse: plano.nivelClasse,
 		itens: criados.map((i) => i.id),
+		alteracoes,
 		pv,
 		pm,
 		data: Date.now()
@@ -80,7 +143,7 @@ export async function aplicarNivel(actor, plano) {
 	return { pv, pm, itens: criados };
 }
 
-/** Desfaz o último nível aplicado pelo construtor: remove os itens criados e volta a classe um nível. */
+/** Desfaz o último nível aplicado pelo construtor: remove os itens criados, restaura os alterados e volta a classe um nível. */
 export async function desfazerUltimoNivel(actor) {
 	if (!podeDesfazer(actor)) throw new Error("não há nível para desfazer");
 	const lista = historico(actor);
@@ -88,6 +151,13 @@ export async function desfazerUltimoNivel(actor) {
 
 	const existentes = ultimo.itens.filter((id) => actor.items.has(id));
 	if (existentes.length) await actor.deleteEmbeddedDocuments("Item", existentes);
+	const restaurar = new Map();
+	for (const a of ultimo.alteracoes ?? []) {
+		if (!actor.items.has(a.id)) continue;
+		if (!restaurar.has(a.id)) restaurar.set(a.id, { _id: a.id });
+		restaurar.get(a.id)[a.caminho] = a.antes;
+	}
+	if (restaurar.size) await actor.updateEmbeddedDocuments("Item", [...restaurar.values()]);
 	const classe = actor.items.get(ultimo.classeId);
 	if (classe) await classe.update({ "system.niveis": Math.max(1, ultimo.nivelClasse - 1) });
 

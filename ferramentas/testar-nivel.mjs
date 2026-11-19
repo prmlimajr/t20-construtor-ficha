@@ -1,22 +1,83 @@
 /**
  * Teste da subida de nível fora do Foundry, com os compêndios do sistema lidos do disco.
- * Uso: node ferramentas/testar-nivel.mjs [caminho do repositório Tormenta20] [Classe]
- * (padrão: ../Tormenta20 e Guerreiro). Não entra no module.zip.
+ * Roda o código real de gravação e desfazer (aplicar-nivel.js) contra um ator simulado.
+ *
+ * Uso: node ferramentas/testar-nivel.mjs [Classe ...] [--sistema=caminho do repositório Tormenta20] [-v]
+ *   sem classes: todas as de data/progressao.json; -v: mostra cada nível.
+ * Não entra no module.zip.
  */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { normalizar } from "../scripts/regras.js";
-import { lerFicha } from "../scripts/ficha-atual.js";
-import { montarNivel, criarLeitorPreRequisitos } from "../scripts/nivel.js";
+import { lerFicha, nomeBase } from "../scripts/ficha-atual.js";
+import { montarNivel, criarLeitorPreRequisitos, montarPlano, pendenciaNivel, progressaoDe } from "../scripts/nivel.js";
 
 const aqui = path.dirname(fileURLToPath(import.meta.url));
 const raizModulo = path.resolve(aqui, "..");
-const raizSistema = path.resolve(process.argv[2] ?? path.join(raizModulo, "../Tormenta20"));
-const NOME_CLASSE = process.argv[3] ?? "Guerreiro";
+const args = process.argv.slice(2);
+const raizSistema = path.resolve(args.find((a) => a.startsWith("--sistema="))?.slice(10) ?? path.join(raizModulo, "../Tormenta20"));
+const VERBOSO = args.includes("-v");
 
+/* ---------- Simulação mínima do Foundry (o que aplicar-nivel.js e aplicar.js usam) ---------- */
+const getProperty = (o, k) => k.split(".").reduce((x, p) => x?.[p], o);
+const setProperty = (o, k, v) => {
+	const partes = k.split(".");
+	const ult = partes.pop();
+	const alvo = partes.reduce((x, p) => (x[p] ??= {}), o);
+	alvo[ult] = v;
+};
+globalThis.foundry = { utils: { getProperty, setProperty, deepClone: (x) => structuredClone(x), escapeHTML: (t) => t } };
+globalThis.game = { items: { fromCompendium: (d) => structuredClone({ name: d.name, type: d.type, img: d.img, system: d.system, effects: d.effects ?? [] }) } };
+const { aplicarNivel, desfazerUltimoNivel, podeDesfazer } = await import("../scripts/aplicar-nivel.js");
+
+let proximoId = 1;
+function novoItem(data) {
+	const item = { ...structuredClone(data), id: `i${proximoId++}` };
+	item.update = async (u) => { for (const [k, v] of Object.entries(u)) setProperty(item, k, structuredClone(v)); item.dono?.reset(); };
+	return item;
+}
+function novoAtor(classe, habilidades1) {
+	const itens = [];
+	const ator = {
+		flags: {},
+		system: {
+			atributos: { for: { value: 3 }, des: { value: 2 }, con: { value: 2 }, int: { value: 1 }, sab: { value: 1 }, car: { value: 2 } },
+			pericias: { luta: { treinado: true }, fort: { treinado: true }, guer: { treinado: true }, atle: { treinado: true }, inti: { treinado: true }, dipl: { treinado: true } },
+			tracos: {},
+			attributes: { pv: { max: 0, value: 0 }, pm: { max: 0, value: 0 } }
+		},
+		items: Object.assign(itens, {
+			get: (id) => itens.find((i) => i.id === id),
+			has: (id) => itens.some((i) => i.id === id)
+		}),
+		get nivel() { return itens.filter((i) => i.type === "classe").reduce((s, c) => s + c.system.niveis, 0); },
+		getFlag: (m, k) => ator.flags[m]?.[k],
+		reset() {
+			// PV/PM simplificados (só para conferir que a diferença vai para os valores atuais)
+			ator.system.attributes.pv.max = 20 + (ator.nivel - 1) * 5;
+			ator.system.attributes.pm.max = ator.nivel * 3;
+		},
+		// como no Foundry, os dados derivados (PV/PM máximos) são recalculados depois de cada alteração
+		async update(u) { for (const [k, v] of Object.entries(u)) setProperty(ator, k, structuredClone(v)); ator.reset(); },
+		async createEmbeddedDocuments(_, lista) { const c = lista.map(novoItem); itens.push(...c); ator.reset(); return c; },
+		async updateEmbeddedDocuments(_, lista) { for (const u of lista) { const { _id, ...resto } = u; await itens.find((i) => i.id === _id).update(resto); } ator.reset(); },
+		async deleteEmbeddedDocuments(_, ids) { for (const id of ids) itens.splice(itens.findIndex((i) => i.id === id), 1); ator.reset(); }
+	};
+	itens.push(Object.assign(novoItem({ type: "classe", name: classe, system: { niveis: 1, inicial: true } }), { dono: ator }));
+	for (const doc of habilidades1) itens.push(novoItem({ type: "poder", name: `1 - ${doc.name}`, system: structuredClone(doc.system) }));
+	ator.reset();
+	ator.system.attributes.pv.value = ator.system.attributes.pv.max;
+	ator.system.attributes.pm.value = ator.system.attributes.pm.max;
+	return ator;
+}
+const fotografia = (ator) => JSON.stringify({
+	itens: ator.items.map(({ update, dono, ...i }) => i).sort((a, b) => a.id.localeCompare(b.id)),
+	pv: ator.system.attributes.pv.value, pm: ator.system.attributes.pm.value
+});
+
+/* ---------- Dados ---------- */
 function lerPack(nome) {
-	const dir = path.join(raizSistema, "src/packs", nome);
 	const out = [];
 	const andar = (d) => {
 		for (const f of fs.readdirSync(d, { withFileTypes: true })) {
@@ -28,21 +89,18 @@ function lerPack(nome) {
 			}
 		}
 	};
-	andar(dir);
+	andar(path.join(raizSistema, "src/packs", nome));
 	return out;
 }
-
 const json = (f) => JSON.parse(fs.readFileSync(path.join(raizModulo, "data", f), "utf8"));
 const poderes = lerPack("poderes");
-const dados = {
-	poderes,
-	poderesPorNome: new Map(poderes.map((p) => [normalizar(p.name), p])),
-	classes: lerPack("classes"),
-	magias: lerPack("magias")
-};
+const dados = { poderes, poderesPorNome: new Map(poderes.map((p) => [normalizar(p.name), p])), classes: lerPack("classes"), magias: lerPack("magias") };
 const progressao = json("progressao.json");
+delete progressao._comentario;
 const regrasClasses = json("classes.json");
-const lerPreRequisito = criarLeitorPreRequisitos(dados, json("pre-requisitos.json"));
+const correcoes = json("pre-requisitos.json");
+delete correcoes._comentario;
+const lerPreRequisito = criarLeitorPreRequisitos(dados, correcoes);
 
 let falhas = 0;
 const conferir = (cond, msg) => {
@@ -50,9 +108,10 @@ const conferir = (cond, msg) => {
 		falhas++;
 		console.log(`  ✗ ${msg}`);
 	}
+	return cond;
 };
 
-/* ---------- 1. Pré-requisitos não reconhecidos (todos os poderes de classe e gerais) ---------- */
+/* ---------- 1. Pré-requisitos não reconhecidos ---------- */
 const naoReconhecidos = [];
 for (const p of poderes.filter((p) => ["classe", "geral"].includes(p.system?.tipo))) {
 	const req = lerPreRequisito(p);
@@ -61,73 +120,145 @@ for (const p of poderes.filter((p) => ["classe", "geral"].includes(p.system?.tip
 console.log(`Pré-requisitos não reconhecidos (viram aviso, não bloqueiam): ${naoReconhecidos.length}`);
 for (const l of naoReconhecidos) console.log(`  · ${l}`);
 
-/* ---------- 2. Ficha simulada subindo do 1 ao 20 ---------- */
-const classeDoc = dados.classes.find((c) => c.name === NOME_CLASSE);
-const ator = {
-	items: [{ _id: "classe", type: "classe", name: NOME_CLASSE, system: { niveis: 1, inicial: true } }],
-	system: {
-		atributos: { for: { value: 3 }, des: { value: 2 }, con: { value: 2 }, int: { value: 1 }, sab: { value: 0 }, car: { value: -1 } },
-		pericias: { luta: { treinado: true }, fort: { treinado: true }, guer: { treinado: true }, atle: { treinado: true } },
-		tracos: {}
-	}
-};
-for (const h of progressao[NOME_CLASSE]?.niveis?.["1"]?.habilidades ?? []) {
-	ator.items.push({ type: "poder", name: `1 - ${h}`, system: { tipo: "ability", subtipo: NOME_CLASSE } });
-}
-conferir(classeDoc, `classe ${NOME_CLASSE} existe no compêndio`);
+/* ---------- 2. Cada classe de 1 a 20, gravando com aplicar-nivel.js ---------- */
+const classes = args.filter((a) => !a.startsWith("-")).length ? args.filter((a) => !a.startsWith("-")) : Object.keys(progressao);
 
-console.log(`\n${NOME_CLASSE} (For 3, Des 2, Con 2, Int 1; treinado em Luta, Fortitude, Guerra, Atletismo):`);
-for (let n = 2; n <= 21; n++) {
-	const ficha = lerFicha(ator, { regrasClasses });
-	const classe = ficha.classes[0];
-	const r = montarNivel({ dados, progressao, ficha, classe, lerPreRequisito });
-	if (n === 21) {
-		conferir(r.erro === "nivelMaximo", "nível 21 deve ser recusado");
-		break;
-	}
-	conferir(!r.erro, `nível ${n}: ${r.erro}`);
-	if (r.erro) break;
-	r.avisos.forEach((a) => conferir(false, a));
-	const disponiveis = r.poderesClasse.filter((o) => o.disponivel);
-	// escolhe o primeiro disponível que ainda não estava liberado no nível anterior, para exercitar pré-requisitos
-	const escolha = disponiveis.find((o) => o.preRequisito) ?? disponiveis[0];
-	const habil = r.habilidades.map((h) => h.nome + (h.valor ? ` ${h.valor}` : "")).join(", ");
-	const vals = r.valores.map((v) => `${v.nome} ${v.de} → ${v.para}`).join(", ");
-	console.log(`  ${String(n).padStart(2)}: ${habil || "—"}${vals ? ` | ${vals}` : ""} | poderes disponíveis ${disponiveis.length}/${r.poderesClasse.length}, gerais ${r.poderesGerais.filter((o) => o.disponivel).length} | escolhe: ${escolha?.nome ?? "—"}${escolha?.preRequisito ? ` (pré: ${escolha.preRequisito})` : ""}`);
-	if (r.ganhaPoder) conferir(escolha, `nível ${n}: nenhum poder disponível`);
+async function subirClasse(nomeClasse) {
+	const prog = progressaoDe(progressao, nomeClasse);
+	const docsNivel1 = (prog.niveis?.["1"]?.habilidades ?? []).map((n) => dados.poderesPorNome.get(normalizar(n))).filter(Boolean);
+	conferir(docsNivel1.length === (prog.niveis?.["1"]?.habilidades ?? []).length, `${nomeClasse}: habilidade de 1º nível não encontrada`);
+	conferir(dados.classes.some((c) => c.name === nomeClasse), `${nomeClasse}: classe não existe no compêndio`);
+	const ator = novoAtor(nomeClasse, docsNivel1);
+	const resumo = [];
+	let desfazerTestado = false;
 
-	// aplica na ficha simulada
-	ator.items[0].system.niveis++;
-	for (const h of r.habilidades) ator.items.push({ type: "poder", name: `${n} - ${h.nome}`, system: h.doc?.system ?? {} });
-	if (escolha) ator.items.push({ type: "poder", name: `${n} - ${escolha.nome}`, system: escolha.doc.system });
+	for (let n = 2; n <= 21; n++) {
+		const ficha = lerFicha(ator, { regrasClasses });
+		const r = montarNivel({ dados, progressao, ficha, classe: ficha.classes[0], lerPreRequisito });
+		if (n === 21) {
+			conferir(r.erro === "nivelMaximo", `${nomeClasse}: nível 21 deveria ser recusado`);
+			break;
+		}
+		if (!conferir(!r.erro, `${nomeClasse} ${n}: ${r.erro}`)) break;
+		r.avisos.forEach((a) => conferir(false, `${nomeClasse} ${n}: ${a}`));
+
+		// escolhas automáticas: 1ª opção de cada escolha; terreno diferente a cada vez; 1º poder de classe
+		// com pré-requisito; sem poder de classe disponível, um poder geral (como no jogo)
+		const selecoes = {};
+		for (const e of r.escolhas) selecoes[e.id] = e.opcoes[0].doc.uuid;
+		for (const a of r.anotadas) selecoes[a.id] = a.opcoes[(n * 3) % a.opcoes.length];
+		const disponiveis = r.poderesClasse.filter((o) => o.disponivel);
+		const poder = disponiveis.find((o) => o.preRequisito) ?? disponiveis[0] ?? r.poderesGerais.find((o) => o.disponivel && !o.repetivel) ?? null;
+		if (VERBOSO && r.ganhaPoder && !disponiveis.length) console.log(`  ${String(n).padStart(2)}: sem poder de ${nomeClasse} disponível; escolhe o geral ${poder?.nome}`);
+		if (r.ganhaPoder) conferir(poder, `${nomeClasse} ${n}: nenhum poder disponível`);
+		conferir(!pendenciaNivel(r, { poder, selecoes }), `${nomeClasse} ${n}: pendência com tudo escolhido: ${pendenciaNivel(r, { poder, selecoes })}`);
+		conferir(pendenciaNivel(r, { poder: null, selecoes: {} }) || (!r.ganhaPoder && !r.escolhas.length && !r.anotadas.length),
+			`${nomeClasse} ${n}: deveria haver pendência sem escolhas`);
+
+		const plano = montarPlano(r, { classeId: ficha.classes[0].id, poder, selecoes, anotacao: poder?.repetivel ? "teste" : "" });
+		const antes = fotografia(ator);
+		await aplicarNivel(ator, plano);
+		conferir(ator.nivel === n, `${nomeClasse} ${n}: nível ficou ${ator.nivel}`);
+
+		// desfazer no nível com mais coisas (escolha, anotação ou valor gravado) e reaplicar
+		if (!desfazerTestado && (r.escolhas.length || r.anotadas.some((a) => a.jaTem) || plano.valores.length || n === 10)) {
+			conferir(podeDesfazer(ator), `${nomeClasse} ${n}: deveria poder desfazer`);
+			await desfazerUltimoNivel(ator);
+			conferir(fotografia(ator) === antes, `${nomeClasse} ${n}: desfazer não restaurou a ficha`);
+			conferir(!podeDesfazer(ator), `${nomeClasse} ${n}: não deveria desfazer duas vezes`);
+			await aplicarNivel(ator, plano);
+			desfazerTestado = n;
+		}
+
+		const extras = [
+			...r.habilidades.map((h) => h.nome + (h.valor ? ` ${h.valor}` : "")),
+			...r.escolhas.map((e) => `[${e.titulo}: ${e.opcoes[0].nome}]`),
+			...r.anotadas.map((a) => `[${a.habilidade}: ${selecoes[a.id]}${a.jaTem ? " (anota)" : ""}]`),
+			...r.valores.map((v) => `${v.nome} ${v.de ?? ""}→${v.para}${v.modo ? ` (${v.modo})` : ""}`)
+		];
+		if (VERBOSO) console.log(`  ${String(n).padStart(2)}: ${extras.join(", ") || "—"} | poderes ${disponiveis.length}/${r.poderesClasse.length} | ${poder?.nome ?? "—"}`);
+		resumo.push(...extras.filter((e) => !/→/.test(e)));
+	}
+
+	// conferências do estado final
+	const poderesFicha = ator.items.filter((i) => i.type === "poder");
+	const contagem = new Map();
+	for (const p of poderesFicha) contagem.set(nomeBase(p.name), (contagem.get(nomeBase(p.name)) ?? 0) + 1);
+	for (const [nome, qtd] of contagem) {
+		const doc = dados.poderesPorNome.get(normalizar(nome));
+		const repetivel = /pode escolher (?:este|esse) poder (?:outras|v[áa]rias|mais de uma) vez/i.test(doc?.system?.description?.value ?? "");
+		conferir(qtd === 1 || repetivel, `${nomeClasse}: ${nome} aparece ${qtd} vezes`);
+	}
+	for (const [nome, modo] of Object.entries(prog.valoresNaFicha ?? {})) {
+		let ultimo = null;
+		for (let n = 1; n <= 20; n++) ultimo = prog.niveis?.[n]?.valores?.[nome] ?? ultimo;
+		const item = poderesFicha.find((p) => normalizar(nomeBase(p.name)) === normalizar(nome));
+		if (!conferir(item, `${nomeClasse}: ${nome} não está na ficha`)) continue;
+		if (modo === "rolagem") conferir(item.system.rolls?.[0]?.parts?.[0]?.[0] === ultimo.replace(/^\+/, ""), `${nomeClasse}: rolagem de ${nome} = ${item.system.rolls?.[0]?.parts?.[0]?.[0]}, esperado ${ultimo}`);
+		if (modo === "anotacao") conferir(item.system.description.value.includes(`(20º nível):</strong> ${ultimo}`) || item.system.description.value.includes(`</strong> ${ultimo}</p>`), `${nomeClasse}: anotação de ${nome} não tem ${ultimo}`);
+	}
+	for (const nivel of Object.values(prog.niveis ?? {})) {
+		for (const a of nivel.anotadas ?? []) {
+			const item = poderesFicha.find((p) => normalizar(nomeBase(p.name)) === normalizar(a.habilidade));
+			const vezes = Object.values(prog.niveis).filter((x) => x.anotadas?.some((y) => y.habilidade === a.habilidade)).length;
+			const anotacoes = (item?.system.description.value.match(/Escolha \(\d+º nível\)/g) ?? []).length;
+			conferir(anotacoes === vezes, `${nomeClasse}: ${a.habilidade} tem ${anotacoes} anotações, esperado ${vezes}`);
+			break;
+		}
+	}
+	const pvOk = ator.system.attributes.pv.value === ator.system.attributes.pv.max;
+	conferir(pvOk, `${nomeClasse}: PV atual ${ator.system.attributes.pv.value} ≠ máximo ${ator.system.attributes.pv.max}`);
+	console.log(`${nomeClasse}: 1→20 ok · ${poderesFicha.length} poderes na ficha · desfazer testado no nível ${desfazerTestado || "—"}${resumo.length ? `\n    ganhos: ${resumo.join(", ")}` : ""}`);
 }
+
+console.log("");
+for (const c of classes) await subirClasse(c);
 
 /* ---------- 3. Casos de pré-requisito conhecidos ---------- */
-console.log("\nCasos de pré-requisito:");
-const caso = (nomePoder, mutar, esperado) => {
-	const doc = dados.poderesPorNome.get(normalizar(nomePoder));
-	const a = structuredClone(ator);
-	a.items = [{ _id: "classe", type: "classe", name: NOME_CLASSE, system: { niveis: 1, inicial: true } }];
-	mutar(a);
-	const ficha = lerFicha(a, { regrasClasses });
-	const r = montarNivel({ dados, progressao, ficha, classe: ficha.classes[0], lerPreRequisito });
-	const op = [...r.poderesClasse, ...r.poderesGerais].find((o) => o.doc === doc);
-	const ok = op?.disponivel === esperado;
-	conferir(ok, `${nomePoder}: esperado ${esperado ? "disponível" : "bloqueado"}, veio ${op?.disponivel} (${op?.motivo ?? "sem motivo"})`);
-	if (ok) console.log(`  ✓ ${nomePoder} ${esperado ? "disponível" : `bloqueado — ${op.motivo}`}`);
-};
-caso("Ambidestria (Guerreiro)", (a) => (a.system.atributos.des.value = 1), false);
-caso("Ambidestria (Guerreiro)", (a) => (a.system.atributos.des.value = 2), true);
-caso("Golpe Pessoal", (a) => (a.items[0].system.niveis = 3), false);
-caso("Golpe Pessoal", (a) => (a.items[0].system.niveis = 4), true); // atinge o 5º neste nível
-caso("Planejamento Marcial", (a) => (a.items[0].system.niveis = 9), true);
-caso("Planejamento Marcial", (a) => { a.items[0].system.niveis = 9; delete a.system.pericias.guer; }, false);
-caso("Mestre em Arma", (a) => (a.items[0].system.niveis = 11), false);
-caso("Mestre em Arma", (a) => { a.items[0].system.niveis = 11; a.items.push({ type: "poder", name: "3 - Especialização em Arma", system: {} }); }, true);
-caso("Especialização em Arma", (a) => a.items.push({ type: "poder", name: "2 - Especialização em Arma", system: {} }), true); // repetível
-caso("Bater e Correr", (a) => a.items.push({ type: "poder", name: "2 - Bater e Correr", system: {} }), false); // já tem
-caso("Encouraçado", () => {}, true); // proficiência com armaduras pesadas (classes.json)
-caso("Fanático", (a) => (a.items[0].system.niveis = 11), false);
+{
+	console.log("\nCasos de pré-requisito:");
+	const casoDe = (nomeClasse) => (nomePoder, mutar, esperado) => {
+		if (!classes.includes(nomeClasse)) return;
+		const doc = dados.poderesPorNome.get(normalizar(nomePoder));
+		const a = novoAtor(nomeClasse, []);
+		mutar(a);
+		const ficha = lerFicha(a, { regrasClasses });
+		const r = montarNivel({ dados, progressao, ficha, classe: ficha.classes[0], lerPreRequisito });
+		const op = [...r.poderesClasse, ...r.poderesGerais].find((o) => o.doc === doc);
+		if (conferir(op?.disponivel === esperado, `${nomePoder}: esperado ${esperado ? "disponível" : "bloqueado"}, veio ${op?.disponivel} (${op?.motivo ?? "sem motivo"})`)) {
+			console.log(`  ✓ ${nomeClasse} · ${nomePoder} ${esperado ? "disponível" : `bloqueado — ${op.motivo}`}`);
+		}
+	};
+	const caso = casoDe("Guerreiro");
+	const classe = (a) => a.items.find((i) => i.type === "classe");
+	const poderNaFicha = (a, nome) => a.items.push(novoItem({ type: "poder", name: nome, system: {} }));
+	caso("Ambidestria (Guerreiro)", (a) => (a.system.atributos.des.value = 1), false);
+	caso("Ambidestria (Guerreiro)", (a) => (a.system.atributos.des.value = 2), true);
+	caso("Golpe Pessoal", (a) => (classe(a).system.niveis = 3), false);
+	caso("Golpe Pessoal", (a) => (classe(a).system.niveis = 4), true); // atinge o 5º neste nível
+	caso("Planejamento Marcial", (a) => (classe(a).system.niveis = 9), true);
+	caso("Planejamento Marcial", (a) => { classe(a).system.niveis = 9; delete a.system.pericias.guer; }, false);
+	caso("Mestre em Arma", (a) => (classe(a).system.niveis = 11), false);
+	caso("Mestre em Arma", (a) => { classe(a).system.niveis = 11; poderNaFicha(a, "3 - Especialização em Arma"); }, true);
+	caso("Especialização em Arma", (a) => poderNaFicha(a, "2 - Especialização em Arma"), true); // repetível
+	caso("Bater e Correr", (a) => poderNaFicha(a, "2 - Bater e Correr"), false); // já tem
+	caso("Encouraçado", () => {}, true); // proficiência com armaduras pesadas (classes.json)
+	caso("Fanático", (a) => (classe(a).system.niveis = 11), false);
+
+	const cacador = casoDe("Caçador");
+	cacador("Armadilheiro", (a) => (classe(a).system.niveis = 5), false);
+	cacador("Armadilheiro", (a) => { classe(a).system.niveis = 5; poderNaFicha(a, "3 - Armadilha: Laço"); }, true);
+	cacador("Armadilheiro", (a) => { classe(a).system.niveis = 3; poderNaFicha(a, "3 - Armadilha: Laço"); }, false);
+	const cavaleiro = casoDe("Cavaleiro");
+	cavaleiro("Montaria Corajosa", (a) => (classe(a).system.niveis = 6), false);
+	cavaleiro("Montaria Corajosa", (a) => { classe(a).system.niveis = 6; poderNaFicha(a, "5 - Caminho do Cavaleiro: Montaria"); }, true);
+	cavaleiro("Montaria Corajosa", (a) => { classe(a).system.niveis = 6; poderNaFicha(a, "5 - Caminho do Cavaleiro: Bastião"); }, false);
+	const paladino = casoDe("Paladino");
+	paladino("Arma Sagrada", () => {}, false);
+	paladino("Arma Sagrada", (a) => (a.system.detalhes = { divindade: "Khalmyr" }), true);
+	paladino("Arma Sagrada", (a) => (a.system.detalhes = { divindade: "Lena (fundamentalista)" }), false);
+	paladino("Arma Sagrada", (a) => (a.system.detalhes = { divindade: "Marah" }), false);
+}
 
 console.log(falhas ? `\n${falhas} falha(s).` : "\nTudo certo.");
 process.exit(falhas ? 1 : 0);
