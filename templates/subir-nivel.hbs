@@ -236,6 +236,7 @@
 					</dl>
 					{{#each info.avisos}}<p class="cf-aviso"><i class="fa-solid fa-circle-exclamation"></i> Confira com o mestre: “{{this}}” (não foi possível verificar na ficha).</p>{{/each}}
 					{{#if info.jaTem}}<p class="cf-nota">Você já tem este poder; ele pode ser escolhido outras vezes.</p>{{/if}}
+					{{#if info.avisoMagias}}<p class="cf-aviso"><i class="fa-solid fa-circle-info"></i> {{info.avisoMagias}}</p>{{/if}}
 					{{#if info.pedeEscolha}}
 					<label class="cf-nivel-anotacao">
 						<span>Escolha feita (anotada na descrição do poder)</span>
