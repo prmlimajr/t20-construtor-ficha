@@ -84,17 +84,20 @@
 							{{/each}}
 						</div>
 					</section>
+					{{#if classesNovas.length}}<p class="cf-nota">Nova classe (multiclasse):</p>{{/if}}
+					{{#each gruposNovas}}
 					<section class="cf-grupo">
-						<h4 class="cf-grupo-titulo">Nova classe (multiclasse) <small>{{classesNovas.length}}</small></h4>
+						<h4 class="cf-grupo-titulo">{{titulo}} <small>{{classes.length}}</small></h4>
 						<div class="cf-cards cf-cards-coluna">
-							{{#each classesNovas}}
+							{{#each classes}}
 							<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if bloqueado}}bloqueado{{/if}}" data-action="escolherClasse" data-valor="{{valor}}" data-busca="{{nome}}" {{#if bloqueado}}disabled title="{{sub}}"{{/if}}>
 								{{#if img}}<img src="{{img}}" alt="">{{/if}}
-								<span class="cf-card-texto"><span class="cf-card-nome">{{nome}}</span><span class="cf-card-sub">{{sub}}{{#if fonte}} · {{fonte}}{{/if}}</span></span>
+								<span class="cf-card-texto"><span class="cf-card-nome">{{nome}}</span><span class="cf-card-sub">{{sub}}</span></span>
 							</button>
 							{{/each}}
 						</div>
 					</section>
+					{{/each}}
 					<p class="cf-vazio cf-sem-resultado" hidden>Nenhuma classe com esse nome.</p>
 				</div>
 				<aside class="cf-info">

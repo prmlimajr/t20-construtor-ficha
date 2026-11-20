@@ -4,7 +4,7 @@
  */
 import { ATRIBUTOS, MODULE_ID, normalizar } from "./regras.js";
 
-/** Nome do poder sem o prefixo do construtor ("R - ", "1 - ", "12 - "…). */
+/** Nome do poder ou magia sem o prefixo do construtor ("R - ", "1 - ", "12 - "…). */
 export function nomeBase(nome) {
 	return String(nome ?? "").replace(/^(?:[A-Z]|\d{1,2})\s+-\s+/, "").trim();
 }
@@ -71,7 +71,7 @@ export function lerFicha(actor, { regrasClasses = {}, variantes = {} } = {}) {
 	const prefixos = new Set(poderes.map((p) => normalizar(nomeBase(p.name))).filter((n) => n.includes(":")).map((n) => n.split(":")[0].trim()));
 
 	const magiasItens = itens.filter((i) => i.type === "magia");
-	const magias = new Set(magiasItens.map((m) => normalizar(m.name)));
+	const magias = new Set(magiasItens.map((m) => normalizar(nomeBase(m.name))));
 	const circuloMax = magiasItens.reduce((max, m) => Math.max(max, Number(m.system?.circulo) || 0), 0);
 	const temMagias = magiasItens.length > 0 || poderes.some((p) => /^magias\b/.test(normalizar(nomeBase(p.name))));
 

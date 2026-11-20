@@ -2,7 +2,7 @@
  * Passo "Classe" do construtor.
  */
 import { poder, fonteDe } from "../../dados.js";
-import { rotuloPericia } from "../comum.js";
+import { rotuloPericia, agruparPorLivro } from "../comum.js";
 
 export const passo = {
 	id: "classe",
@@ -107,16 +107,7 @@ export class Tela {
 			};
 		}
 		// agrupadas por livro, como as raças: o básico primeiro, depois Heróis de Arton e os demais
-		const ORDEM = ["", "Heróis de Arton"];
-		const porLivro = new Map();
-		for (const card of classes) (porLivro.get(card.fonte) ?? porLivro.set(card.fonte, []).get(card.fonte)).push(card);
-		const grupos = [...porLivro.entries()]
-			.sort(([a], [b]) => {
-				const ia = ORDEM.indexOf(a), ib = ORDEM.indexOf(b);
-				if (ia >= 0 || ib >= 0) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
-				return a.localeCompare(b, "pt-BR");
-			})
-			.map(([fonte, lista]) => ({ titulo: fonte || "Tormenta20 — Jogo do Ano", classes: lista }));
+		const grupos = agruparPorLivro(classes).map((g) => ({ titulo: g.titulo, classes: g.itens }));
 		return { classes, grupos, variosGrupos: grupos.length > 1, filtro: this.filtros?.classe ?? "", info };
 	}
 }

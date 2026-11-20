@@ -152,20 +152,24 @@ export async function aplicarNaFicha(actor, plano, dados) {
 			itens.push(data);
 		});
 	});
+	// Magias: mesmo prefixo dos poderes que vieram junto ("1 - " da classe, "R - " da raça, "O - " da origem…)
 	for (const m of plano.magias) {
 		const data = doCompendio(m);
+		data.name = `1 - ${m.name}`;
 		// as magias do compêndio vêm com um atributo fixo (Int nas arcanas, Sab nas divinas): vale o da classe
 		if (plano.conjuracao && data.system?.resistencia) data.system.resistencia.atributo = plano.conjuracao;
 		itens.push(data);
 	}
-	for (const { doc, atributo } of plano.magiasPoderesClasse ?? []) {
+	for (const { doc, atributo, prefixo } of plano.magiasPoderesClasse ?? []) {
 		const data = doCompendio(doc);
+		data.name = `${prefixo ?? "1"} - ${doc.name}`;
 		// atributo-chave próprio da habilidade que dá a magia (ex.: Comando do comandante usa Carisma)
 		if (atributo && data.system?.resistencia) data.system.resistencia.atributo = atributo;
 		itens.push(data);
 	}
 	for (const { doc, atributo } of plano.magiasRaciais ?? []) {
 		const data = doCompendio(doc);
+		data.name = `R - ${doc.name}`;
 		// atributo-chave da habilidade racial (usado na CD da magia)
 		if (atributo) foundry.utils.setProperty(data, "system.resistencia.atributo", atributo);
 		daRaca.push(itens.length);

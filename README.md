@@ -44,6 +44,8 @@ Jogadores precisam da permissão **"Criar novos atores"** (Configurações → P
 9. **Dinheiro**: 4d6 T$, rolado no chat, uma vez só.
 10. **Revisão**: nome, retrato e token (pelo navegador de arquivos do Foundry ou colando o caminho; o token pode usar o retrato) e resumo de tudo.
 
+Na ficha, poderes e magias recebem um prefixo com a origem: "R - " (raça), "O - " (origem), "D - " (concedidos pela divindade), "C - " (complicação), "I - " (idade) e "1 - " (classe, 1º nível). Uma magia dada por um poder leva o prefixo desse poder (ex.: a magia de uma habilidade racial entra como "R - ").
+
 ## Subir de nível
 
 Assistente em passos, com a mesma barra lateral do construtor; só aparecem os passos que o nível tiver. Podem usar o mestre e o dono do personagem. Configuração **Subir de nível** (ligada por padrão); desligada, o **+** da ficha volta a abrir o compêndio de classes.
@@ -54,7 +56,7 @@ Assistente em passos, com a mesma barra lateral do construtor; só aparecem os p
 4. **Magias**: as magias que o nível ensina (Feiticeiro só em nível ímpar, Mago +1 do círculo novo, Bardo e Druida em nível par e só das suas escolas; Usurpar recebe todas as do círculo novo). Fichas criadas antes desta versão escolhem as escolas uma vez. As magias novas recebem o atributo-chave da classe.
 5. **Revisão**: tudo o que vai entrar na ficha.
 
-Na ficha, os poderes ganhos recebem o nível como prefixo (`4 - Esgrimista (Guerreiro)`). Quando o sistema não faz um valor crescer sozinho, o assistente atualiza a rolagem do poder (Ataque Furtivo, Palavras Afiadas, Domar Criatura) ou anota o valor na descrição (Briga, Fabricar Item Superior). **Desfazer último nível** (na barra lateral) remove o que o nível acrescentou e restaura o que ele alterou, inclusive a classe nova da multiclasse; só o último nível pode ser desfeito. Ao subir, uma animação de "level up" aparece para quem subiu.
+Poderes que ensinam magias ao serem escolhidos (Conhecimento Mágico, do arcanista, do clérigo e do frade, e Aumentar Repertório) abrem as vagas no passo Magias, mesmo num nível sem magia nova; as do Aumentar Repertório aceitam magias arcanas ou divinas. Classes que já aprendem todas as magias (Usurpar) não ganham vagas com eles. Na ficha, os poderes e as magias ganhos recebem o nível como prefixo (`4 - Esgrimista (Guerreiro)`, `5 - Bola de Fogo`). Quando o sistema não faz um valor crescer sozinho, o assistente atualiza a rolagem do poder (Ataque Furtivo, Palavras Afiadas, Domar Criatura) ou anota o valor na descrição (Briga, Fabricar Item Superior). **Desfazer último nível** (na barra lateral) remove o que o nível acrescentou e restaura o que ele alterou, inclusive a classe nova da multiclasse; só o último nível pode ser desfeito. Ao subir, uma animação de "level up" aparece para quem subiu.
 
 Classes com progressão: as 14 do livro básico, as variantes da *Dragão Brasil* (Capanga, Cruzado, Comandante e Sentinela, que funcionam sem o suplemento) e, com os Suplementos de Arton, Treinador, Frade, Samurai, Místico, Miragem e as 14 variantes do *Heróis de Arton*. Classes sem progressão cadastrada continuam subindo pelo sistema (botão **Outra classe (compêndio)**).
 

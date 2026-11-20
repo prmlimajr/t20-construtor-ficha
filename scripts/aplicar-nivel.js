@@ -160,6 +160,8 @@ export async function aplicarNivel(actor, plano) {
 	if (plano.poder) adicionar(plano.poder, { anotacao: plano.anotacao });
 	for (const doc of plano.magias ?? []) {
 		const data = doCompendio(doc);
+		// prefixo do nível, como os poderes ("5 - Bola de Fogo")
+		data.name = `${n} - ${doc.name}`;
 		// as magias do compêndio vêm com um atributo fixo (Int nas arcanas, Sab nas divinas): vale o da classe
 		if (plano.atributoMagia && data.system?.resistencia) data.system.resistencia.atributo = plano.atributoMagia;
 		foundry.utils.setProperty(data, `flags.${MODULE_ID}.nivel`, n);

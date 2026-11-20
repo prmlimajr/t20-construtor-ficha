@@ -177,6 +177,7 @@ globalThis.CONFIG.T20 = T20;
 /* ==================== Construtor ==================== */
 
 const dadosMod = await import("../scripts/dados.js");
+const { aplicarNaFicha } = await import("../scripts/aplicar.js");
 const { ConstrutorFicha } = await import("../scripts/wizard.js");
 const { ModeloConstrutor } = await import("../scripts/construtor/modelo.js");
 
@@ -522,6 +523,17 @@ async function retratar(cenario) {
 
 	const cascata = retratarCascata(wiz, dados);
 
+	// gravação na ficha (ator simulado que só guarda os itens criados): nomes das magias, com o prefixo da fonte
+	const criados = [];
+	const atorFicha = {
+		...ator(cenario.nome), system: { detalhes: {}, attributes: {} },
+		update: async () => {}, setFlag: async () => {}, unsetFlag: async () => {},
+		createEmbeddedDocuments: async (tipo, lista) => { criados.push(...lista); return lista.map((d) => ({ ...d, update: async () => {} })); }
+	};
+	await aplicarNaFicha(atorFicha, plano, dados);
+	const magiasNaFicha = criados.filter((i) => i.type === "magia").map((i) => i.name).sort((a, b) => a.localeCompare(b, "pt-BR"));
+	for (const nome of magiasNaFicha) conferir(/^(?:[A-Z]|\d{1,2}) - /.test(nome), `${cenario.nome}: magia sem prefixo na ficha: ${nome}`);
+
 	return {
 		passos: passos.map((p) => (p.sub ? `${p.id}:${p.sub}` : p.id)),
 		pendencias,
@@ -547,6 +559,7 @@ async function retratar(cenario) {
 			escolhasRaciais: plano.escolhasRaciais ?? null,
 			escolhasClasse: plano.escolhasClasse ?? null
 		},
+		magiasNaFicha,
 		cascata
 	};
 }
