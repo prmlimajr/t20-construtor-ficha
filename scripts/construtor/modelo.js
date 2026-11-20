@@ -987,9 +987,10 @@ export class ModeloConstrutor {
 			return true;
 		});
 		const magiasDaRaca = unicas(magiasRaciais);
-		// magias que poderes escolhidos dão na ficha (ex.: Canção da Pedra → Transmutar Objetos)
-		const deOutrosPoderes = gruposPoderes.filter((g) => !g.raciais).flatMap((g) => g.poderes)
-			.flatMap((p) => (p.magiasConcedidas ?? []).map((n) => magiaPorNome(this.dados, n)).filter(Boolean).map((doc) => ({ doc, atributo: p.atributoMagias ?? null })));
+		// magias que poderes escolhidos dão na ficha (ex.: Canção da Pedra → Transmutar Objetos), com o
+		// prefixo do grupo do poder (origem, concedidos, complicação, idade, classe)
+		const deOutrosPoderes = gruposPoderes.filter((g) => !g.raciais).flatMap((g) => g.poderes.map((p) => ({ p, prefixo: g.prefixo })))
+			.flatMap(({ p, prefixo }) => (p.magiasConcedidas ?? []).map((n) => magiaPorNome(this.dados, n)).filter(Boolean).map((doc) => ({ doc, atributo: p.atributoMagias ?? null, prefixo })));
 		const magiasDePoderesClasse = unicas([...daClasse.magias, ...deOutrosPoderes]);
 
 		let conjuracao = this.conjurador?.atributo ?? null;

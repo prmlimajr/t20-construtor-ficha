@@ -18,3 +18,25 @@ export function rotuloPericia(k) {
 export function ordenarPericias(keys) {
 	return [...keys].sort((a, b) => rotuloPericia(a).localeCompare(rotuloPericia(b), "pt-BR"));
 }
+
+/**
+ * Agrupa cards pelo livro (campo fonte; "" = livro básico): o básico primeiro, depois Heróis de Arton e
+ * os demais em ordem alfabética. Usado na escolha de classe do construtor e do subir de nível.
+ * @returns {{titulo: string, itens: object[]}[]}
+ */
+export function agruparPorLivro(cards) {
+	const ORDEM = ["", "Heróis de Arton"];
+	const porLivro = new Map();
+	for (const card of cards) {
+		const fonte = card.fonte ?? "";
+		if (!porLivro.has(fonte)) porLivro.set(fonte, []);
+		porLivro.get(fonte).push(card);
+	}
+	return [...porLivro.entries()]
+		.sort(([a], [b]) => {
+			const ia = ORDEM.indexOf(a), ib = ORDEM.indexOf(b);
+			if (ia >= 0 || ib >= 0) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+			return a.localeCompare(b, "pt-BR");
+		})
+		.map(([fonte, itens]) => ({ titulo: fonte || "Tormenta20 — Jogo do Ano", itens }));
+}

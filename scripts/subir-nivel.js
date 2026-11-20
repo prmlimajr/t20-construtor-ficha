@@ -9,10 +9,11 @@ import { poderRacialPermitido } from "./poderes-raciais.js";
 import { poderDistincaoPermitido, ehPoderDeDistincao, distincaoDoPoder } from "./distincoes.js";
 import {
 	montarNivel, pendenciaNivel, montarPlano, variantesDe, classesParaSubir, vagasEfetivas, progressaoDe,
-	magiasDisponiveis, escolasEfetivas, conferirVagas, circuloDe
+	magiasDisponiveis, escolasEfetivas, conferirVagas, circuloDe, tiposDasVagas
 } from "./nivel.js";
 import { aplicarNivel, desfazerUltimoNivel, podeDesfazer, historico } from "./aplicar-nivel.js";
 import { animarSubidaDeNivel } from "./animacao-nivel.js";
+import { agruparPorLivro } from "./construtor/comum.js";
 import { statsMagia, aprimoramentosMagia } from "./magias-info.js";
 import { carregarDadosNivel, leitorPreRequisitos as leitorDe } from "./dados-nivel.js";
 import { categoriaPoder, compararCategorias } from "./categorias-poder.js";
@@ -166,7 +167,8 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 	#passos(nivel) {
 		if (!nivel) return ["classe"];
 		const m = nivel.magias;
-		const temMagias = !!m && (m.vagas.length > 0 || (m.escolas && !m.escolasFicha.length));
+		// o poder escolhido pode trazer magias (Conhecimento Mágico) mesmo num nível sem magia nova
+		const temMagias = !!m && (vagasEfetivas(m, this.selecoes, this.#poderEscolhido(nivel)).length > 0 || (m.escolas && !m.escolasFicha.length));
 		return ["classe", "nivel", ...(nivel.ganhaPoder ? ["poder"] : []), ...(temMagias ? ["magias"] : []), "revisao"];
 	}
 
@@ -260,7 +262,7 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			// Idades Variadas: níveis extras da faixa etária que ainda faltam subir
 			...(ficha.niveisExtras && 1 + ficha.niveisExtras - ficha.nivel > 0
 				? [{ rotulo: "Idade", valor: `faltam ${1 + ficha.niveisExtras - ficha.nivel} nível(is)` }] : []),
-			...(nivel.magias?.vagas.length ? [{ rotulo: "Magias", valor: `${magiasEsc.length}/${vagasEfetivas(nivel.magias, this.selecoes).length}` }] : [])
+			...(vagasEfetivas(nivel.magias, this.selecoes, poder).length ? [{ rotulo: "Magias", valor: `${magiasEsc.length}/${vagasEfetivas(nivel.magias, this.selecoes, poder).length}` }] : [])
 		];
 
 		const ctx = {
@@ -319,7 +321,9 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 				descricao: await this.#descricao(classe.doc)
 			};
 		} else infoClasse = { nome: classe.nome, img: classe.item?.img, nova: false, dados: dePv(classe.item), nivel: classe.niveis };
-		return { classesExistentes: existentes, classesNovas: novas, infoClasse, filtro: this.filtros.classe ?? "" };
+		// classes novas agrupadas por livro, como na escolha de classe do construtor
+		const gruposNovas = agruparPorLivro(novas).map((g) => ({ titulo: g.titulo, classes: g.itens }));
+		return { classesExistentes: existentes, classesNovas: novas, gruposNovas, infoClasse, filtro: this.filtros.classe ?? "" };
 	}
 
 	async #ctxNivel(nivel) {
@@ -437,9 +441,10 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 		}
 
 		const escolhidas = this.#magiasEscolhidas();
-		const vagasM = vagasEfetivas(m, this.selecoes);
+		const vagasM = vagasEfetivas(m, this.selecoes, this.#poderEscolhido(nivel));
 		const vagas = conferirVagas(vagasM, escolhidas);
-		const lista = escolasProntas ? magiasDisponiveis(this.dados, m, ficha, this.escolas) : [];
+		// a lista inclui os tipos que só as vagas do poder aceitam (Aumentar Repertório: arcanas ou divinas)
+		const lista = escolasProntas ? magiasDisponiveis(this.dados, { ...m, tipos: tiposDasVagas(m, vagasM) }, ficha, this.escolas) : [];
 		const porCirculo = new Map();
 		for (const x of lista) {
 			const c = circuloDe(x);
@@ -460,7 +465,7 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			escolasEscolhidas: this.escolas.length,
 			escolasFicha: m.escolasFicha.map(rotuloEscola).join(", "),
 			escolasProntas,
-			vagasTexto: vagasM.map((v) => (v.circulo ? `1 de ${v.circulo}º círculo${v.motivo ? ` (${v.motivo})` : ""}` : `1 de até ${v.ate}º círculo`)),
+			vagasTexto: vagasM.map((v) => `${v.circulo ? `1 de ${v.circulo}º círculo` : `1 de até ${v.ate}º círculo`}${v.motivo ? ` (${v.motivo})` : ""}`),
 			faltam: vagas.faltam,
 			circuloNovo: m.circuloNovo,
 			semMagiaNova: !vagasM.length,
@@ -570,6 +575,13 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 		const uuid = target.dataset.uuid;
 		if (this.escolha !== uuid) this.anotacao = "";
 		this.escolha = uuid;
+		// trocar Conhecimento Mágico (e afins) por outro poder tira as vagas que ele dava: as magias a
+		// mais saem (as escolhidas primeiro ficam), senão o passo de magias some com pendência
+		const { nivel } = this.#calcular();
+		if (nivel) {
+			const vagas = vagasEfetivas(nivel.magias, this.selecoes, this.#poderEscolhido(nivel)).length;
+			if (this.magias.length > vagas) this.magias = this.magias.slice(0, vagas);
+		}
 		this.render();
 	}
 
@@ -606,7 +618,7 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 		if (this.magias.includes(uuid)) this.magias = this.magias.filter((u) => u !== uuid);
 		else {
 			const { nivel } = this.#calcular();
-			const vagas = vagasEfetivas(nivel?.magias, this.selecoes);
+			const vagas = vagasEfetivas(nivel?.magias, this.selecoes, nivel ? this.#poderEscolhido(nivel) : null);
 			if (this.magias.length >= vagas.length) {
 				ui.notifications.warn(`Você já escolheu ${vagas.length === 1 ? "a magia" : `as ${vagas.length} magias`} deste nível. Desmarque uma para trocar.`);
 			} else this.magias = [...this.magias, uuid];

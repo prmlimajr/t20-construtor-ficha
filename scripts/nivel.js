@@ -209,6 +209,8 @@ export function montarNivel({
 		return {
 			doc,
 			nome: doc.name,
+			// Conhecimento Mágico e afins: magias que o poder ensina ao ser escolhido (vagas a mais no nível)
+			magias: magiasDoPoder(doc),
 			preRequisito: req?.texto ?? null,
 			avisos: r.avisos,
 			disponivel: !motivo,
@@ -273,9 +275,10 @@ export function pendenciaNivel(nivel, { poder = null, selecoes = {}, magias = []
 	for (const e of (nivel.escolhas ?? []).filter((x) => escolhaAtiva(x, selecoes))) if (!e.opcoes.some((o) => o.doc.uuid === selecoes[e.id])) faltam.push(e.titulo);
 	if (m) {
 		const esc = escolasEfetivas(m, escolas);
-		const vagas = vagasEfetivas(m, selecoes);
+		const vagas = vagasEfetivas(m, selecoes, poder);
 		if (m.escolas && esc.length !== m.escolas) faltam.push(`${m.escolas} escolas de magia`);
-		else if (vagas.length) {
+		// sem vaga nenhuma, magia escolhida também é pendência (ex.: sobrou do Conhecimento Mágico trocado)
+		else if (vagas.length || magias.length) {
 			const r = conferirVagas(vagas, magias);
 			if (r.faltam.length) faltam.push(r.faltam.join(", "));
 			if (r.sobram) faltam.push(`desmarcar ${r.sobram} magia(s) a mais`);
@@ -383,23 +386,30 @@ export function magiasDisponiveis(dados, m, ficha, escolhidas = null) {
 		.sort((a, b) => circuloDe(a) - circuloDe(b) || a.name.localeCompare(b.name, "pt-BR"));
 }
 
-const textoVaga = (v) => (v.circulo ? `1 magia de ${v.circulo}º círculo${v.motivo ? ` (${v.motivo})` : ""}` : `1 magia de até ${v.ate}º círculo`);
+const textoVaga = (v) => `${v.circulo ? `1 magia de ${v.circulo}º círculo` : `1 magia de até ${v.ate}º círculo`}${v.motivo ? ` (${v.motivo})` : ""}`;
+
+/** A magia cabe na vaga? (círculo exato ou até o círculo, e o tipo, se a vaga restringir) */
+const cabe = (v, mag) => (v.circulo ? v.circulo === circuloDe(mag) : circuloDe(mag) <= v.ate) && (!v.tipos || v.tipos.includes(mag.system?.tipo));
 
 /**
- * Distribui as magias escolhidas nas vagas (as de círculo exato primeiro).
+ * Distribui as magias escolhidas nas vagas. Emparelhamento máximo (caminhos aumentantes): uma magia
+ * arcana não ocupa a única vaga em que caberia a divina escolhida pelo Aumentar Repertório.
  * @returns {{ok: boolean, faltam: string[], sobram: number}}
  */
 export function conferirVagas(vagas, magias) {
-	const livres = [...vagas].sort((a, b) => (b.circulo ? 1 : 0) - (a.circulo ? 1 : 0));
-	const restantes = [...magias].sort((a, b) => circuloDe(b) - circuloDe(a));
-	const naoUsadas = [];
-	for (const mag of restantes) {
-		const c = circuloDe(mag);
-		const i = livres.findIndex((v) => (v.circulo ? v.circulo === c : c <= v.ate));
-		if (i >= 0) livres.splice(i, 1);
-		else naoUsadas.push(mag);
-	}
-	return { ok: !livres.length && !naoUsadas.length, faltam: livres.map(textoVaga), sobram: naoUsadas.length };
+	const donoDaVaga = new Array(vagas.length).fill(-1);
+	const tentar = (i, vistas) => {
+		for (let j = 0; j < vagas.length; j++) {
+			if (vistas.has(j) || !cabe(vagas[j], magias[i])) continue;
+			vistas.add(j);
+			if (donoDaVaga[j] < 0 || tentar(donoDaVaga[j], vistas)) { donoDaVaga[j] = i; return true; }
+		}
+		return false;
+	};
+	let usadas = 0;
+	for (let i = 0; i < magias.length; i++) if (tentar(i, new Set())) usadas++;
+	const livres = vagas.filter((_, j) => donoDaVaga[j] < 0);
+	return { ok: !livres.length && usadas === magias.length, faltam: livres.map(textoVaga), sobram: magias.length - usadas };
 }
 
 /* ---------- Multiclasse ---------- */
@@ -426,11 +436,38 @@ export function escolhaAtiva(e, selecoes = {}) {
 	return !e.requer || selecoes[e.requer.id] === e.requer.uuid;
 }
 
-/** Vagas de magia com as magias a mais da escolha feita agora (ex.: Mago começa com 4, não 3). */
-export function vagasEfetivas(m, selecoes = {}) {
+/**
+ * Vagas de magia com as magias a mais da escolha feita agora (ex.: Mago começa com 4, não 3) e as do
+ * poder escolhido (ex.: Conhecimento Mágico, duas magias de qualquer círculo que possa lançar).
+ */
+export function vagasEfetivas(m, selecoes = {}, poder = null) {
 	if (!m) return [];
 	const extra = Object.entries(m.porEscolha ?? {}).filter(([u]) => Object.values(selecoes).includes(u)).reduce((n, [, x]) => n + (x.extra ?? 0), 0);
-	return [...m.vagas, ...Array.from({ length: m.vagas.length ? extra : 0 }, () => ({ ate: m.circulo }))];
+	// classe que já aprende todas as magias (Usurpar) não tem o que aprender com o poder
+	const doPoder = poder?.disponivel && m.circulo && !m.todas ? poder.magias : null;
+	// cada vaga diz os tipos que aceita: os da classe, ou os do poder (Aumentar Repertório: arcanas ou divinas)
+	const tiposPoder = doPoder?.tipos ? [...new Set([...m.tipos, ...doPoder.tipos])] : m.tipos;
+	return [
+		...m.vagas.map((v) => ({ ...v, tipos: m.tipos })),
+		...Array.from({ length: m.vagas.length ? extra : 0 }, () => ({ ate: m.circulo, tipos: m.tipos })),
+		...Array.from({ length: doPoder?.qtd ?? 0 }, () => ({ ate: m.circulo, motivo: poder.nome, tipos: tiposPoder }))
+	];
+}
+
+/** Tipos de magia aceitos por alguma das vagas (para montar a lista de magias do nível). */
+export const tiposDasVagas = (m, vagas) => [...new Set([...(m?.tipos ?? []), ...vagas.flatMap((v) => v.tipos ?? [])])];
+
+const POR_EXTENSO = { uma: 1, duas: 2, tres: 3, quatro: 4 };
+/**
+ * Magias que um poder ensina ao ser escolhido: "Você aprende duas magias de qualquer círculo que possa
+ * lançar" (Conhecimento Mágico, Aumentar Repertório). {qtd, tipos} ou null; tipos só quando o texto
+ * libera outros tipos ("podem ser arcanas ou divinas").
+ */
+export function magiasDoPoder(doc) {
+	const texto = normalizar(String(doc?.system?.description?.value ?? "").replace(/<[^>]+>/g, " "));
+	const m = /voce aprende (uma|duas|tres|quatro) magias? de qualquer circulo que (?:possa|pode) lancar/.exec(texto);
+	if (!m) return null;
+	return { qtd: POR_EXTENSO[m[1]], tipos: /podem ser arcanas ou divinas/.test(texto) ? ["arc", "div", "uni"] : null };
 }
 
 /** Atributo-chave das magias: o da escolha feita agora (Caminho), senão o da classe. */

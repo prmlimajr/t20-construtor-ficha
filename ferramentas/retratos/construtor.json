@@ -112,6 +112,7 @@
       ],
       "escolhasClasse": []
     },
+    "magiasNaFicha": [],
     "cascata": {
       "raca": {
         "mudancas": [
@@ -535,6 +536,11 @@
       "escolhasRaciais": [],
       "escolhasClasse": []
     },
+    "magiasNaFicha": [
+      "1 - Abençoar Alimentos",
+      "1 - Acalmar Animal",
+      "1 - Arma Espiritual"
+    ],
     "cascata": {
       "raca": {
         "mudancas": [
@@ -959,6 +965,12 @@
       "escolhasRaciais": [],
       "escolhasClasse": []
     },
+    "magiasNaFicha": [
+      "1 - Adaga Mental",
+      "1 - Alarme",
+      "1 - Amedrontar",
+      "1 - Área Escorregadia"
+    ],
     "cascata": {
       "raca": {
         "mudancas": [
@@ -1412,6 +1424,12 @@
         "Linhagem Rubra Básica: Anatomia Insana"
       ]
     },
+    "magiasNaFicha": [
+      "1 - Adaga Mental",
+      "1 - Alarme",
+      "1 - Amedrontar",
+      "R - Explosão de Chamas"
+    ],
     "cascata": {
       "raca": {
         "mudancas": [
@@ -1857,6 +1875,10 @@
       "escolhasRaciais": [],
       "escolhasClasse": []
     },
+    "magiasNaFicha": [
+      "1 - Adaga Mental",
+      "1 - Aviso"
+    ],
     "cascata": {
       "raca": {
         "mudancas": [
@@ -2284,6 +2306,7 @@
         "Protótipo: Adaga (Banhado a Ouro)"
       ]
     },
+    "magiasNaFicha": [],
     "cascata": {
       "raca": {
         "mudancas": [
@@ -2720,6 +2743,11 @@
         "Presente dos Deuses (Cruzado): Alabarda (Banhado a Ouro)"
       ]
     },
+    "magiasNaFicha": [
+      "1 - Abençoar Alimentos",
+      "1 - Acalmar Animal",
+      "1 - Arma Espiritual"
+    ],
     "cascata": {
       "raca": {
         "mudancas": [
@@ -3167,6 +3195,7 @@
         "Especialista: Acrobacia, Adestramento, Ofício: Alfaiate"
       ]
     },
+    "magiasNaFicha": [],
     "cascata": {
       "raca": {
         "mudancas": [

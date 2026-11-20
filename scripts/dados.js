@@ -175,10 +175,13 @@ async function carregar() {
 	const equipPorNome = new Map([...indiceEquip].map((e) => [normalizar(e.name), e]));
 	for (const { doc } of sup.itens) if (!equipPorNome.has(normalizar(doc.name))) equipPorNome.set(normalizar(doc.name), doc);
 
+	// magias: em nomes repetidos (Conjurar Mortos-Vivos, Controlar Ar), vale a do livro básico
+	const nomesMagias = new Set(magias.map((m) => normalizar(m.name)));
+
 	const dados = {
 		racas: [...racas, ...sup.racas, ...racasDoConstrutor(racas, todosPoderes)].sort(ordenar),
 		classes: [...classes, ...sup.classes, ...classesDoConstrutor(classes)].sort(ordenar),
-		magias: [...magias, ...sup.magias].sort(ordenar),
+		magias: [...magias, ...sup.magias.filter((m) => !nomesMagias.has(normalizar(m.name)))].sort(ordenar),
 		poderes: todosPoderes,
 		poderesPorNome: porNome(todosPoderes),
 		equipPorNome,

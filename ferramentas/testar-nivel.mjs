@@ -10,9 +10,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { normalizar } from "../scripts/regras.js";
+import { MODULE_ID, normalizar } from "../scripts/regras.js";
 import { lerFicha, nomeBase } from "../scripts/ficha-atual.js";
-import { montarNivel, criarLeitorPreRequisitos, montarPlano, pendenciaNivel, progressaoDe, magiasDisponiveis, circuloDe, variantesDe, classesParaSubir, vagasEfetivas, atributoEfetivo, escolhaAtiva } from "../scripts/nivel.js";
+import { montarNivel, criarLeitorPreRequisitos, montarPlano, pendenciaNivel, progressaoDe, magiasDisponiveis, circuloDe, variantesDe, classesParaSubir, vagasEfetivas, atributoEfetivo, escolhaAtiva, tiposDasVagas, magiasDoPoder, conferirVagas } from "../scripts/nivel.js";
 
 const aqui = path.dirname(fileURLToPath(import.meta.url));
 const raizModulo = path.resolve(aqui, "..");
@@ -148,7 +148,8 @@ const dados = {
 	poderes,
 	poderesPorNome: new Map([...poderes].reverse().map((p) => [normalizar(p.name), p])),
 	classes: [...classesSistema, ...(sup?.itens ?? []).filter((i) => i.type === "classe"), ...classesDoConstrutor(classesSistema)],
-	magias: [...lerPack("magias"), ...(sup?.itens ?? []).filter((i) => i.type === "magia")],
+	// como em dados.js: magia do suplemento com o nome de uma do livro básico fica de fora
+	magias: ((base) => [...base, ...(sup?.itens ?? []).filter((i) => i.type === "magia" && !base.some((b) => normalizar(b.name) === normalizar(i.name)))])(lerPack("magias")),
 	racas: [...lerPack("racas"), ...(sup?.itens ?? []).filter((i) => i.type === "race")]
 };
 const progressao = json("progressao.json");
@@ -222,6 +223,7 @@ async function subirClasse(nomeClasse, variacao = {}) {
 	const ator = novoAtor(nomeClasse, docsNivel1, variacao.flags ?? {});
 	let escolasEscolhidas = null;
 	let magiasNovas = 0;
+	let magiasDePoderes = 0; // vagas dadas por poderes escolhidos (Conhecimento Mágico, Aumentar Repertório)
 	const resumo = [];
 	let desfazerTestado = false;
 
@@ -255,14 +257,22 @@ async function subirClasse(nomeClasse, variacao = {}) {
 				conferir(pendenciaNivel(r, { poder, selecoes, escolas: [] })?.includes("escolas"), `${titulo} ${n}: deveria pedir as escolas`);
 				escolasEscolhidas = variacao.escolher;
 			}
-			const lista = magiasDisponiveis(dados, r.magias, ficha, escolasEscolhidas);
-			for (const vaga of [...r.magias.vagas].sort((a, b) => (b.circulo ? 1 : 0) - (a.circulo ? 1 : 0))) {
-				const m = lista.find((x) => !magias.includes(x) && (vaga.circulo ? circuloDe(x) === vaga.circulo : circuloDe(x) === vaga.ate));
+			const vagasNivel = vagasEfetivas(r.magias, selecoes, poder);
+			const doPoder = vagasNivel.filter((v) => v.motivo && v.motivo === poder?.nome).length;
+			if (poder?.magias && !r.magias.todas) conferir(doPoder === poder.magias.qtd, `${titulo} ${n}: ${poder.nome} deveria dar ${poder.magias.qtd} vagas de magia (deu ${doPoder})`);
+			magiasDePoderes += doPoder;
+			const lista = magiasDisponiveis(dados, { ...r.magias, tipos: tiposDasVagas(r.magias, vagasNivel) }, ficha, escolasEscolhidas);
+			// vagas mais restritas primeiro (círculo exato, depois as só do tipo da classe); nas vagas do poder que
+			// liberam outro tipo (Aumentar Repertório), escolhe de propósito uma magia desse outro tipo
+			const restricao = (v) => (v.circulo ? 0 : 10) + (v.tipos?.length ?? 9);
+			for (const vaga of [...vagasNivel].sort((a, b) => restricao(a) - restricao(b))) {
+				const candidatas = lista.filter((x) => !magias.includes(x) && (vaga.circulo ? circuloDe(x) === vaga.circulo : circuloDe(x) === vaga.ate) && (!vaga.tipos || vaga.tipos.includes(x.system.tipo)));
+				const m = candidatas.find((x) => !r.magias.tipos.includes(x.system.tipo)) ?? candidatas[0];
 				if (conferir(m, `${titulo} ${n}: nenhuma magia para a vaga ${JSON.stringify(vaga)}`)) magias.push(m);
 			}
 			const esc = r.magias.escolasFicha.length ? r.magias.escolasFicha : escolasEscolhidas;
 			for (const m of magias) {
-				conferir(r.magias.tipos.includes(m.system.tipo), `${titulo} ${n}: ${m.name} é de tipo ${m.system.tipo}`);
+				conferir(tiposDasVagas(r.magias, vagasNivel).includes(m.system.tipo), `${titulo} ${n}: ${m.name} é de tipo ${m.system.tipo}`);
 				if (r.magias.escolas) conferir(esc.includes(m.system.escola), `${titulo} ${n}: ${m.name} fora das escolas`);
 			}
 			if ((variacao.extraPorCirculo ?? []).includes(n)) conferir(r.magias.vagas.some((v) => v.circulo === r.magias.circuloNovo), `${titulo} ${n}: faltou a vaga extra do círculo novo`);
@@ -310,6 +320,14 @@ async function subirClasse(nomeClasse, variacao = {}) {
 		const repetivel = /pode escolher (?:este|esse) poder (?:outras|v[áa]rias|mais de uma) vez/i.test(doc?.system?.description?.value ?? "");
 		conferir(qtd === 1 || repetivel, `${nomeClasse}: ${nome} aparece ${qtd} vezes`);
 	}
+	// magias: prefixo do nível em que entraram ("5 - Bola de Fogo") e nenhuma repetida (a ficha lê o nome sem prefixo)
+	const magiasFicha = ator.items.filter((i) => i.type === "magia");
+	for (const m of magiasFicha) {
+		const nivel = m.flags?.[MODULE_ID]?.nivel;
+		if (nivel) conferir(m.name === `${nivel} - ${nomeBase(m.name)}`, `${titulo}: magia sem o prefixo do nível: ${m.name}`);
+	}
+	const nomesMagias = magiasFicha.map((m) => nomeBase(m.name));
+	conferir(new Set(nomesMagias).size === nomesMagias.length, `${titulo}: magia repetida na ficha: ${nomesMagias.filter((n, i) => nomesMagias.indexOf(n) !== i).join(", ")}`);
 	for (const [nome, modo] of Object.entries(prog.valoresNaFicha ?? {})) {
 		let ultimo = null;
 		for (let n = 1; n <= 20; n++) ultimo = prog.niveis?.[n]?.valores?.[nome] ?? ultimo;
@@ -335,7 +353,8 @@ async function subirClasse(nomeClasse, variacao = {}) {
 	// magias e concessões
 	if (variacao.magias !== undefined) {
 		const naFicha = ator.items.filter((i) => i.type === "magia");
-		conferir(magiasNovas === variacao.magias && naFicha.length === variacao.magias, `${titulo}: ${naFicha.length} magias na ficha (${magiasNovas} escolhidas), esperado ${variacao.magias}`);
+		const esperadas = variacao.magias + magiasDePoderes;
+		conferir(magiasNovas === esperadas && naFicha.length === esperadas, `${titulo}: ${naFicha.length} magias na ficha (${magiasNovas} escolhidas), esperado ${esperadas} (${magiasDePoderes} de poderes)`);
 		conferir(new Set(naFicha.map((m) => m.name)).size === naFicha.length, `${titulo}: magia repetida na ficha`);
 		const maxCirculo = Math.max(0, ...naFicha.map((m) => circuloDe(m)));
 		const esperado = Math.max(...Object.values(prog.magias.circulos));
@@ -539,6 +558,31 @@ for (const c of classes) {
 		const vent = lerFicha(atorEm("Ventanista", 2), { regrasClasses, variantes });
 		const opV = classesParaSubir(dados, progressao, vent, variantes);
 		ok(opV.novas.find((c) => c.nome === "Ladino")?.bloqueio && !opV.novas.find((c) => c.nome === "Ermitão")?.bloqueio, "Ventanista não pode começar Ladino, mas pode Ermitão");
+	}
+
+	// F. poderes que ensinam magias ao serem escolhidos (Conhecimento Mágico, Aumentar Repertório)
+	{
+		// Feiticeiro 3 → 4: nível par, sem magia nova; Conhecimento Mágico dá 2 magias mesmo assim
+		const a = atorEm("Arcanista", 3, ["Caminho do Arcanista: Feiticeiro", "Linhagem Rubra Básica"]);
+		const { ficha, r } = calcular(a, { nome: "Arcanista", niveis: 3, id: a.items.find((i) => i.type === "classe").id });
+		const cm = r.poderesClasse.find((o) => o.nome === "Conhecimento Mágico (Arcanista)");
+		const outro = r.poderesClasse.find((o) => o.disponivel && !o.magias);
+		ok(r.magias && r.magias.vagas.length === 0 && cm?.disponivel && cm.magias?.qtd === 2, "Feiticeiro 4: sem magia do nível; Conhecimento Mágico disponível e ensina 2");
+		const vagas = vagasEfetivas(r.magias, {}, cm);
+		ok(vagas.length === 2 && vagas.every((v) => v.ate === r.magias.circulo && v.motivo === cm.nome), "Conhecimento Mágico: 2 vagas de até o maior círculo que lança");
+		ok(/Conhecimento Mágico/.test(pendenciaNivel(r, { poder: cm, magias: [] }) ?? ""), "sem as 2 magias, o nível fica pendente");
+		const duas = magiasDisponiveis(dados, r.magias, ficha).slice(0, 2);
+		ok(!pendenciaNivel(r, { poder: cm, magias: duas }) && montarPlano(r, { classeId: "x", poder: cm, magias: duas }).magias.length === 2, "com as 2 magias, sem pendência e as 2 no plano");
+		ok(/desmarcar 2/.test(pendenciaNivel(r, { poder: outro, magias: duas }) ?? ""), "trocar por outro poder tira as vagas (magias a mais ficam pendentes)");
+		// Aumentar Repertório: as magias do poder podem ser arcanas ou divinas; a da classe continua arcana
+		const ar = dados.poderesPorNome.get(normalizar("Aumentar Repertório"));
+		ok(JSON.stringify(magiasDoPoder(ar)) === JSON.stringify({ qtd: 2, tipos: ["arc", "div", "uni"] }), "Aumentar Repertório: 2 magias, arcanas ou divinas");
+		const arc = dados.magias.find((m) => m.system.tipo === "arc" && circuloDe(m) === 1);
+		const div = dados.magias.find((m) => m.system.tipo === "div" && circuloDe(m) === 1);
+		const daClasse = { ate: 1, tipos: ["arc", "uni"] };
+		const doPoder = { ate: 1, tipos: ["arc", "div", "uni"], motivo: "Aumentar Repertório" };
+		ok(conferirVagas([doPoder, daClasse], [arc, div]).ok, "a arcana vai para a vaga da classe e a divina para a do poder (em qualquer ordem)");
+		ok(!conferirVagas([daClasse, daClasse], [arc, div]).ok, "divina não entra na vaga da classe arcana");
 	}
 }
 
