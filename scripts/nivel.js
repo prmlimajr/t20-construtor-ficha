@@ -3,7 +3,7 @@
  * Funções puras (sem Foundry), testáveis em Node com os compêndios lidos do disco.
  */
 import { normalizar } from "./regras.js";
-import { extrairPreRequisito, interpretarPreRequisito, avaliarPreRequisito, podeRepetir } from "./pre-requisitos.js";
+import { extrairPreRequisito, interpretarPreRequisito, avaliarPreRequisito, podeRepetir, limiteRepeticoes } from "./pre-requisitos.js";
 
 export const NIVEL_MAXIMO = 20;
 
@@ -203,8 +203,12 @@ export function montarNivel({
 		const r = req ? avaliarPreRequisito(req, projetada) : { ok: true, falhas: [], avisos: [] };
 		const repetivel = podeRepetir(doc.system?.description?.value);
 		const jaTem = ficha.temPoder(doc.name);
+		// repetível com limite (Herança: duas vezes; Círculo Externo: até três)
+		const limite = repetivel ? limiteRepeticoes(doc.system?.description?.value) : null;
+		const vezes = jaTem ? ficha.vezesPoder(doc.name) : 0;
 		let motivo = null;
 		if (jaTem && !repetivel) motivo = "Você já tem este poder.";
+		else if (limite && vezes >= limite) motivo = `Você já escolheu este poder ${vezes} vezes (o máximo é ${limite}).`;
 		else if (!r.ok) motivo = `Pré-requisito não atendido: ${r.falhas.join(", ")}.`;
 		return {
 			doc,
@@ -240,6 +244,17 @@ export function montarNivel({
 		.filter((p) => ehGeral(p) && selecionavel(p))
 		.map((p) => ({ ...opcao(p), grupo: grupoGeral(p) }))
 		.sort(ordenar);
+
+	// poderes que ensinam magias: quantas magias ainda há para aprender (as vagas do poder não passam
+	// disso, senão o nível travaria); null quando as escolas ainda vão ser escolhidas na janela
+	if (magias) {
+		for (const o of [...poderesClasse, ...poderesGerais]) {
+			if (!o.magias) continue;
+			const tipos = o.magias.tipos ? [...new Set([...magias.tipos, ...o.magias.tipos])] : magias.tipos;
+			const semEscolas = magias.escolas && !magias.escolasFicha.length;
+			o.magias = { ...o.magias, livres: semEscolas ? null : magiasDisponiveis(dados, { ...magias, tipos }, ficha).length };
+		}
+	}
 
 	return {
 		classe: classe.nome,
@@ -447,11 +462,13 @@ export function vagasEfetivas(m, selecoes = {}, poder = null) {
 	const doPoder = poder?.disponivel && m.circulo && !m.todas ? poder.magias : null;
 	// cada vaga diz os tipos que aceita: os da classe, ou os do poder (Aumentar Repertório: arcanas ou divinas)
 	const tiposPoder = doPoder?.tipos ? [...new Set([...m.tipos, ...doPoder.tipos])] : m.tipos;
-	return [
+	const daClasse = [
 		...m.vagas.map((v) => ({ ...v, tipos: m.tipos })),
-		...Array.from({ length: m.vagas.length ? extra : 0 }, () => ({ ate: m.circulo, tipos: m.tipos })),
-		...Array.from({ length: doPoder?.qtd ?? 0 }, () => ({ ate: m.circulo, motivo: poder.nome, tipos: tiposPoder }))
+		...Array.from({ length: m.vagas.length ? extra : 0 }, () => ({ ate: m.circulo, tipos: m.tipos }))
 	];
+	// o poder pode ser escolhido sempre, mas só abre as vagas que ainda dá para preencher
+	const qtdPoder = doPoder ? (doPoder.livres == null ? doPoder.qtd : Math.min(doPoder.qtd, Math.max(0, doPoder.livres - daClasse.length))) : 0;
+	return [...daClasse, ...Array.from({ length: qtdPoder }, () => ({ ate: m.circulo, motivo: poder.nome, tipos: tiposPoder }))];
 }
 
 /** Tipos de magia aceitos por alguma das vagas (para montar a lista de magias do nível). */

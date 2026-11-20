@@ -401,7 +401,11 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			avisos: escolhida.avisos,
 			jaTem: escolhida.jaTem,
 			concede: escolhida.concede?.name ?? null,
-			pedeEscolha: escolhida.repetivel || /\bescolha\b/i.test(escolhida.doc.system?.description?.value ?? ""),
+			// poderes que ensinam magias: a escolha são as próprias magias (passo Magias), sem anotação
+			// restam menos magias para aprender do que o poder ensina: as vagas abertas são só as que dá para preencher
+			avisoMagias: escolhida.magias && escolhida.magias.livres != null && vagasEfetivas(nivel.magias, this.selecoes, escolhida).filter((v) => v.motivo === escolhida.nome).length < escolhida.magias.qtd
+				? `Restam poucas magias para aprender: este poder abre só ${vagasEfetivas(nivel.magias, this.selecoes, escolhida).filter((v) => v.motivo === escolhida.nome).length} de ${escolhida.magias.qtd} vagas.` : null,
+			pedeEscolha: !escolhida.magias && (escolhida.repetivel || /\bescolha\b/i.test(escolhida.doc.system?.description?.value ?? "")),
 			descricao: await this.#descricao(escolhida.doc)
 		} : null;
 		return {

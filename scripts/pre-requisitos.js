@@ -32,9 +32,24 @@ export function extrairPreRequisito(html) {
 	return m ? m[1].trim() : null;
 }
 
+/*
+ * Poder que pode ser escolhido mais de uma vez. Formas usadas nos livros: "outras vezes", "várias vezes",
+ * "mais vezes", "mais de uma vez", "quantas vezes quiser" (Conhecimento Mágico, Aumentar Repertório),
+ * "uma vez por patamar" e as limitadas "duas vezes" (Herança) e "até duas/três vezes" (Círculo Interno/Externo).
+ */
+const REPETE = /pode escolher (?:este|esse) poder (?:outras vezes|varias vezes|mais vezes|mais de uma vez|quantas vezes quiser|uma vez por patamar|(?:ate )?(duas|tres) vezes)/;
+/** Texto sem tags, entidades de acento (&aacute;) e acentos, em minúsculas, para as frases acima. */
+const textoComparavel = (html) => normalizar(textoPuro(html).replace(/&([a-zA-Z])(?:acute|circ|tilde|grave|cedil|uml);/g, "$1"));
+
 /** O poder pode ser escolhido mais de uma vez? ("Você pode escolher este poder outras vezes…") */
 export function podeRepetir(html) {
-	return /pode escolher (?:este|esse) poder (?:outras|v[áa]rias|mais de uma) vez/i.test(textoPuro(html));
+	return REPETE.test(textoComparavel(html));
+}
+
+/** Quantas vezes, no total, um poder repetível pode ser escolhido (2 ou 3); null = sem limite. */
+export function limiteRepeticoes(html) {
+	const m = REPETE.exec(textoComparavel(html));
+	return m?.[1] ? { duas: 2, tres: 3 }[m[1]] : null;
 }
 
 /** Separa por vírgulas fora de parênteses. */

@@ -12,6 +12,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { MODULE_ID, normalizar } from "../scripts/regras.js";
 import { lerFicha, nomeBase } from "../scripts/ficha-atual.js";
+import { podeRepetir, limiteRepeticoes } from "../scripts/pre-requisitos.js";
 import { montarNivel, criarLeitorPreRequisitos, montarPlano, pendenciaNivel, progressaoDe, magiasDisponiveis, circuloDe, variantesDe, classesParaSubir, vagasEfetivas, atributoEfetivo, escolhaAtiva, tiposDasVagas, magiasDoPoder, conferirVagas } from "../scripts/nivel.js";
 
 const aqui = path.dirname(fileURLToPath(import.meta.url));
@@ -266,8 +267,10 @@ async function subirClasse(nomeClasse, variacao = {}) {
 			// liberam outro tipo (Aumentar Repertório), escolhe de propósito uma magia desse outro tipo
 			const restricao = (v) => (v.circulo ? 0 : 10) + (v.tipos?.length ?? 9);
 			for (const vaga of [...vagasNivel].sort((a, b) => restricao(a) - restricao(b))) {
-				const candidatas = lista.filter((x) => !magias.includes(x) && (vaga.circulo ? circuloDe(x) === vaga.circulo : circuloDe(x) === vaga.ate) && (!vaga.tipos || vaga.tipos.includes(x.system.tipo)));
-				const m = candidatas.find((x) => !r.magias.tipos.includes(x.system.tipo)) ?? candidatas[0];
+				// de preferência do maior círculo da vaga; se acabaram, de um círculo menor (como no jogo)
+				const livres = lista.filter((x) => !magias.includes(x) && (vaga.circulo ? circuloDe(x) === vaga.circulo : circuloDe(x) <= vaga.ate) && (!vaga.tipos || vaga.tipos.includes(x.system.tipo)))
+					.sort((a, b) => circuloDe(b) - circuloDe(a));
+				const m = livres.find((x) => !r.magias.tipos.includes(x.system.tipo) && circuloDe(x) === (vaga.circulo ?? vaga.ate)) ?? livres[0];
 				if (conferir(m, `${titulo} ${n}: nenhuma magia para a vaga ${JSON.stringify(vaga)}`)) magias.push(m);
 			}
 			const esc = r.magias.escolasFicha.length ? r.magias.escolasFicha : escolasEscolhidas;
@@ -317,7 +320,7 @@ async function subirClasse(nomeClasse, variacao = {}) {
 	for (const p of poderesFicha) contagem.set(nomeBase(p.name), (contagem.get(nomeBase(p.name)) ?? 0) + 1);
 	for (const [nome, qtd] of contagem) {
 		const doc = dados.poderesPorNome.get(normalizar(nome));
-		const repetivel = /pode escolher (?:este|esse) poder (?:outras|v[áa]rias|mais de uma) vez/i.test(doc?.system?.description?.value ?? "");
+		const repetivel = podeRepetir(doc?.system?.description?.value);
 		conferir(qtd === 1 || repetivel, `${nomeClasse}: ${nome} aparece ${qtd} vezes`);
 	}
 	// magias: prefixo do nível em que entraram ("5 - Bola de Fogo") e nenhuma repetida (a ficha lê o nome sem prefixo)
@@ -583,6 +586,18 @@ for (const c of classes) {
 		const doPoder = { ate: 1, tipos: ["arc", "div", "uni"], motivo: "Aumentar Repertório" };
 		ok(conferirVagas([doPoder, daClasse], [arc, div]).ok, "a arcana vai para a vaga da classe e a divina para a do poder (em qualquer ordem)");
 		ok(!conferirVagas([daClasse, daClasse], [arc, div]).ok, "divina não entra na vaga da classe arcana");
+
+		// repetíveis: "quantas vezes quiser" sempre disponível; "duas vezes" com limite
+		const desc = (nome) => dados.poderesPorNome.get(normalizar(nome))?.system?.description?.value;
+		ok(podeRepetir(desc("Conhecimento Mágico (Arcanista)")) && podeRepetir(desc("Aumentar Repertório")) && !limiteRepeticoes(desc("Aumentar Repertório")), "Conhecimento Mágico e Aumentar Repertório: repetíveis, sem limite");
+		ok(podeRepetir("<p>Voc&ecirc; pode escolher este poder v&aacute;rias vezes.</p>") && limiteRepeticoes("Você pode escolher este poder duas vezes, para um item") === 2
+			&& limiteRepeticoes("Você pode escolher este poder até três vezes para conceitos diferentes") === 3 && !podeRepetir("Você recebe +2 em Luta."), "frases de repetição (com entidades HTML) e limites de 2 e 3 vezes");
+		const a2 = atorEm("Arcanista", 3, ["Caminho do Arcanista: Feiticeiro", "Linhagem Rubra Básica", "Conhecimento Mágico (Arcanista)", "Conhecimento Mágico (Arcanista)"]);
+		const { r: r2 } = calcular(a2, { nome: "Arcanista", niveis: 3, id: a2.items.find((i) => i.type === "classe").id });
+		const cm2 = r2.poderesClasse.find((o) => o.nome === "Conhecimento Mágico (Arcanista)");
+		ok(cm2?.jaTem && cm2.disponivel && vagasEfetivas(r2.magias, {}, cm2).length === 2, "ficha com Conhecimento Mágico 2 vezes: continua disponível e dá mais 2 magias");
+		ok(cm2.magias.livres > 2 && vagasEfetivas(r2.magias, {}, { ...cm2, magias: { ...cm2.magias, livres: 1 } }).length === 1
+			&& vagasEfetivas(r2.magias, {}, { ...cm2, magias: { ...cm2.magias, livres: 0 } }).length === 0, "com só 1 (ou 0) magia para aprender, o poder abre 1 (ou 0) vaga: o nível não trava");
 	}
 }
 
