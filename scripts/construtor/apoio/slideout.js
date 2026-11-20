@@ -110,6 +110,11 @@ export class Tela {
 				return this.dados.poderes.filter((p) => p.system.tipo === "geral" && poderSelecionavel(this.dados, p) && this.poderListavel(p) && (!ja.has(p.name) || p.name === atual))
 					.sort((a, b) => a.name.localeCompare(b.name, "pt-BR")).map(poderCard);
 			}
+			case "poderClasse": {
+				// Futura Lenda: um poder da classe escolhida
+				const atual = foundry.utils.getProperty(this.estado, this.slideout?.campo ?? "") ?? "";
+				return this.poderesDeClasseEscolhiveis(atual).map(poderCard);
+			}
 			case "complicacoesIdade":
 				return (this.dados.idades?.complicacoes ?? []).map((n) => poder(this.dados, n)).filter(Boolean).map(poderCard);
 			case "poderGeral":
@@ -156,12 +161,12 @@ export class Tela {
 				descricao: f.doc ? await this.html(f.doc.uuid, f.doc.system?.description?.value) : ""
 			};
 		}
-		if (["grupo", "poderGeral", "poderes", "poderGeralOrigem", "poderGeralComplicacao", "poderGeralIdade", "complicacoesIdade"].includes(tipo)) {
+		if (["grupo", "poderGeral", "poderes", "poderGeralOrigem", "poderGeralComplicacao", "poderGeralIdade", "complicacoesIdade", "poderClasse"].includes(tipo)) {
 			const p = poder(this.dados, valor);
 			if (!p) return null;
 			const i = await this.infoPoder(p);
 			const stats = [{ rotulo: "Tipo", valor: p.system.subtipo }];
-			const r = this.lerPreRequisito ? this.preRequisito(p, this.fichaProvisoria({ semComplicacao: tipo === "poderGeralComplicacao", semIdade: tipo === "poderGeralIdade" })) : null;
+			const r = this.lerPreRequisito ? this.preRequisito(p, this.fichaProvisoria({ semComplicacao: tipo === "poderGeralComplicacao", semIdade: tipo === "poderGeralIdade" }), { classe: tipo === "poderClasse" }) : null;
 			if (r) stats.push({ rotulo: "Pré-requisito", valor: r.ok ? r.texto : `${r.texto} — não atendido: ${r.falhas.join(", ")}` });
 			// a partir do passo Origem, não dá para escolher um poder com pré-requisito não atendido
 			const bloqueado = r && !r.ok && this.listasFiltramPreRequisito;
@@ -202,7 +207,7 @@ export class Tela {
 			// a lista da complicação/idade não conta o poder que ela mesma dá
 			const ficha = this.fichaProvisoria({ semComplicacao: tipoLista === "poderGeralComplicacao", semIdade: tipoLista === "poderGeralIdade" });
 			cards = cards.map((c) => {
-				const r = this.preRequisito(poder(this.dados, c.valor), ficha);
+				const r = this.preRequisito(poder(this.dados, c.valor), ficha, { classe: tipoLista === "poderClasse" });
 				if (!r || r.ok) return c;
 				if (!filtrar) return { ...c, sub: `⚠ Pré-requisito ainda não conferido: ${r.texto}`, aviso: true };
 				indisponiveis++;
@@ -263,7 +268,7 @@ export class Tela {
 		const tipoLista = this.slideout.lista.split(":")[0];
 		if (LISTAS_PODERES_GERAIS.has(tipoLista) && this.listasFiltramPreRequisito) {
 			const ficha = this.fichaProvisoria({ semComplicacao: tipoLista === "poderGeralComplicacao", semIdade: tipoLista === "poderGeralIdade" });
-			const r = this.preRequisito(poder(this.dados, valor), ficha);
+			const r = this.preRequisito(poder(this.dados, valor), ficha, { classe: tipoLista === "poderClasse" });
 			if (r && !r.ok) return ui.notifications.warn(`Pré-requisito não atendido: ${r.falhas.join(", ")}.`);
 		}
 		const atual = foundry.utils.getProperty(this.estado, campo);

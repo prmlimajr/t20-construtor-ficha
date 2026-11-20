@@ -177,6 +177,7 @@ globalThis.CONFIG.T20 = T20;
 /* ==================== Construtor ==================== */
 
 const dadosMod = await import("../scripts/dados.js");
+const { poder } = dadosMod;
 const { aplicarNaFicha } = await import("../scripts/aplicar.js");
 const { ConstrutorFicha } = await import("../scripts/wizard.js");
 const { ModeloConstrutor } = await import("../scripts/construtor/modelo.js");
@@ -414,8 +415,41 @@ const CENARIOS = [
 			const especialista = [...wiz.periciasTreinadas()].sort().slice(0, wiz.qtdEspecialista);
 			return { periciasClasse, periciasInt: wiz.estado.periciasInt, classePoderEscolhas: { especialista } };
 		}
+	},
+	{
+		nome: "Humano guerreiro de Nova Malpetrim (Atlas: Futura Lenda, poder de classe)",
+		precisaSuplemento: true,
+		config: { suplementos: true, supOrigensRegionais: true, origemDupla: true },
+		estado: (d) => ({
+			nome: "Tarik",
+			raca: porNome(d.racas, "Humano", "raça").uuid,
+			racaAtributos: ["for", "con", "des"],
+			racaEscolhas: { versatil: { pericias: ["atle", "inti"], poderes: [] } },
+			atrModo: "pontos",
+			atrPontos: { for: 3, des: 2, con: 2, int: 0, sab: 0, car: -1 },
+			classe: porNome(d.classes, "Guerreiro", "classe").uuid,
+			periciasOu: ["luta"],
+			origens: {
+				principal: { nome: "Acólito", beneficios: ["pericia:cura"], grupos: {}, itens: {} },
+				regional: { nome: "Nova Malpetrim", beneficios: ["poder:Futura Lenda"], grupos: {}, itens: {} }
+			},
+			devoto: false,
+			equip: { arma: arma(d, "simples"), armaMarcial: arma(d, "marcial"), armadura: "" },
+			dinheiro: 12
+		}),
+		depois: (d, wiz) => {
+			const periciasClasse = periciasDaClasse(wiz, 2);
+			wiz.estado.periciasClasse = periciasClasse;
+			return { periciasClasse, origens: { regional: { escolhasPoder: { "Futura Lenda": poderDeClasseSemRequisito(wiz).name } } } };
+		}
 	}
 ];
+
+/** Primeiro poder da classe (por nome) que a Futura Lenda pode dar sem pré-requisito. */
+function poderDeClasseSemRequisito(wiz) {
+	const ficha = wiz.fichaProvisoria();
+	return wiz.poderesDeClasseEscolhiveis().find((p) => !wiz.preRequisito(p, ficha, { classe: true }));
+}
 
 /* ---------- Retrato de um personagem ---------- */
 
@@ -615,6 +649,64 @@ for (const c of CENARIOS) {
 		}
 	}
 }
+/* ---------- Futura Lenda (Atlas de Arton): o benefício manda escolher um poder de classe ---------- */
+if (sup) {
+	const c = CENARIOS.find((x) => x.nome.includes("Futura Lenda"));
+	const dados = await dadosCom(c.config);
+	const wiz = new ConstrutorFicha(ator("Futura Lenda"));
+	await wiz._prepareContext();
+	wiz.estado = mergeObject(wiz.estado, c.estado(dados));
+	wiz.estado.periciasClasse = periciasDaClasse(wiz, 2);
+	const iRegional = wiz.passos().findIndex((p) => p.id === "origem" && p.sub === "regional");
+	const regional = wiz.passos()[iRegional];
+	const campo = "origens.regional.escolhasPoder.Futura Lenda";
+	const doPlano = () => wiz.plano().gruposPoderes.flatMap((g) => g.poderes.map((p) => `${g.prefixo} - ${p.name}`));
+
+	// o cartão do benefício marcado tem o botão que abre o slideout
+	wiz.indice = iRegional;
+	wiz.estado.alcancado = wiz.passos().length;
+	const ctx = await wiz._prepareContext();
+	const card = ctx.passo?.info?.beneficios?.find((b) => b.id === "poder:Futura Lenda") ?? (await wiz.ctxOrigem("regional")).info.beneficios.find((b) => b.id === "poder:Futura Lenda");
+	conferir(card?.grupo?.lista === "poderClasse" && card.grupo.campo === campo, `Futura Lenda: o benefício marcado não abre o slideout de poder de classe (${JSON.stringify(card?.grupo)})`);
+	conferir(/Futura Lenda: escolha o poder de classe/.test(wiz.pendencia(regional) ?? ""), `Futura Lenda: sem escolha, a pendência deveria pedir o poder (${wiz.pendencia(regional)})`);
+
+	// a lista: só poderes de Guerreiro, sem os de pré-requisito não atendido (ex.: nível mínimo)
+	wiz.slideout = { campo, lista: "poderClasse", titulo: "x", foco: "", filtro: "" };
+	const opcoes = wiz.opcoesSlideout("poderClasse");
+	conferir(opcoes.length > 0 && opcoes.every((o) => poder(dados, o.valor)?.system.subtipo === "Guerreiro"), "Futura Lenda: a lista deveria ter só poderes de Guerreiro");
+	const so = await wiz.ctxSlideout();
+	const ficha = wiz.fichaProvisoria();
+	const comRequisito = opcoes.map((o) => poder(dados, o.valor)).find((p) => { const r = wiz.preRequisito(p, ficha, { classe: true }); return r && !r.ok; });
+	conferir(comRequisito && so.indisponiveis > 0 && !so.cards.some((x) => x.valor === comRequisito.name), `Futura Lenda: poder com pré-requisito não atendido deveria sumir da lista (${comRequisito?.name})`);
+	console.log(`  ✓ Futura Lenda: ${opcoes.length} poderes de Guerreiro, ${so.indisponiveis} escondidos por pré-requisito`);
+	if (VERBOSO) for (const o of opcoes) { const r = wiz.preRequisito(poder(dados, o.valor), ficha, { classe: true }); console.log(`      ${o.valor}: ${r ? (r.ok ? "ok" : r.falhas.join(", ")) : "sem pré-requisito"}`); }
+
+	// escolher pelo slideout: o poder entra na ficha como poder de origem e a pendência some
+	const escolhido = poderDeClasseSemRequisito(wiz).name;
+	ConstrutorFicha.DEFAULT_OPTIONS.actions.confirmarSlideout.call(wiz, null, { dataset: { valor: escolhido } });
+	conferir(wiz.estado.origens.regional.escolhasPoder["Futura Lenda"] === escolhido, "Futura Lenda: confirmar no slideout não gravou o poder");
+	conferir(doPlano().includes(`O - ${escolhido}`) && doPlano().includes("O - Futura Lenda"), `Futura Lenda: o plano deveria ter "O - ${escolhido}" (${doPlano().join(", ")})`);
+	conferir(wiz.pendencia(regional) === null, `Futura Lenda: com o poder escolhido, sem pendência (${wiz.pendencia(regional)})`);
+	conferir(!wiz.poderesDeClasseEscolhiveis().some((p) => p.name !== escolhido && doPlano().includes(`O - ${p.name}`)), "Futura Lenda: a lista não deveria ter poderes que o personagem já recebe");
+	console.log(`  ✓ Futura Lenda: ${escolhido} entra na ficha como poder de origem`);
+
+	// poder de pré-requisito não atendido (estado antigo ou editado): pendência
+	if (comRequisito) {
+		wiz.estado.origens.regional.escolhasPoder["Futura Lenda"] = comRequisito.name;
+		conferir(/pré-requisito/.test(wiz.pendencia(regional) ?? ""), `Futura Lenda: ${comRequisito.name} sem o pré-requisito deveria ficar pendente (${wiz.pendencia(regional)})`);
+		wiz.estado.origens.regional.escolhasPoder["Futura Lenda"] = escolhido;
+	}
+
+	// desmarcar o benefício e trocar de classe limpam a escolha
+	const base = structuredClone(wiz.estado);
+	ConstrutorFicha.DEFAULT_OPTIONS.actions.alternar.call(wiz, null, { dataset: { campo: "origens.regional.beneficios", valor: "poder:Futura Lenda", limite: "1" } });
+	conferir(!wiz.estado.origens.regional.escolhasPoder["Futura Lenda"] && !doPlano().includes(`O - ${escolhido}`), "Futura Lenda: desmarcar o benefício deveria tirar o poder escolhido");
+	wiz.estado = structuredClone(base);
+	wiz.definirCampo("classe", outro(dados.classes, wiz.estado.classe));
+	conferir(!wiz.estado.origens.regional.escolhasPoder["Futura Lenda"], "Futura Lenda: trocar de classe deveria tirar o poder escolhido");
+	console.log("  ✓ Futura Lenda: desmarcar o benefício ou trocar de classe limpa o poder");
+}
+
 if (ATUALIZAR) {
 	fs.mkdirSync(path.dirname(caminhoRetrato), { recursive: true });
 	fs.writeFileSync(caminhoRetrato, JSON.stringify(atual, null, 2) + "\n");

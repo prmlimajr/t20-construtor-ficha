@@ -2,8 +2,22 @@
  * Passo "Origem (profissional e regional)" do construtor.
  */
 import { poder } from "../../dados.js";
-import { OFICIOS, expandirPericias } from "../../regras.js";
+import { OFICIOS, expandirPericias, normalizar } from "../../regras.js";
 import { rotuloPericia, ordenarPericias } from "../comum.js";
+
+/**
+ * Poderes de origem cujo benefício é outro poder, escolhido pelo jogador (lista do slideout).
+ * O escolhido fica em origens.<sub>.escolhasPoder[nome do poder].
+ */
+export const PODERES_COM_ESCOLHA = {
+	// Atlas de Arton (Nova Malpetrim): "Escolha um dos poderes de sua classe [...] Você recebe esse poder."
+	"futura lenda": { lista: "poderClasse", titulo: "Escolha um poder de sua classe", rotulo: "o poder de classe" }
+};
+
+/** Regra de escolha do poder (ou null). */
+export function escolhaDoPoder(nome) {
+	return PODERES_COM_ESCOLHA[normalizar(nome)] ?? null;
+}
 
 export const passo = {
 	id: "origem",
@@ -39,6 +53,8 @@ export const passo = {
 			if (o.beneficios.length !== n) return `Escolha ${n === 1 ? "1 benefício" : `${n} benefícios`} (${o.beneficios.length} escolhidos).`;
 			for (const b of o.beneficios) {
 				if (b.startsWith("grupo:") && !o.grupos[b.slice(6)]) return `Escolha o poder de ${b.slice(6)}.`;
+				const pendente = b.startsWith("poder:") && this.pendenciaEscolhaPoder(b.slice(6), o);
+				if (pendente) return pendente;
 			}
 		}
 		const itens = def.itens ?? [];
@@ -101,9 +117,18 @@ export class Tela {
 				if (def.especial === "amnesico") continue;
 				const p = poder(this.dados, nome);
 				const id = `poder:${nome}`;
+				const sel = est.beneficios.includes(id);
+				// Futura Lenda e afins: o benefício manda escolher outro poder
+				const esc = escolhaDoPoder(nome);
 				beneficios.push({
 					id, tipo: p?.system.tipo === "origem" ? "Poder único" : "Poder", nome,
-					selecionado: est.beneficios.includes(id),
+					selecionado: sel,
+					grupo: sel && esc ? {
+						campo: `${base}.escolhasPoder.${nome}`,
+						lista: esc.lista,
+						titulo: esc.titulo,
+						escolhido: est.escolhasPoder?.[nome] ?? ""
+					} : null,
 					info: await this.infoPoder(p)
 				});
 			}

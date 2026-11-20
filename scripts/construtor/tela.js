@@ -34,5 +34,5 @@ export async function enriquecer(html) {
 	return foundry.applications.ux.TextEditor.implementation.enrichHTML(limpo, { async: true });
 }
 
-/** Listas de slideout com poderes gerais (pré-requisito conferido; ver #ctxSlideout). */
-export const LISTAS_PODERES_GERAIS = new Set(["grupo", "poderGeral", "poderes", "poderGeralOrigem", "poderGeralComplicacao", "poderGeralIdade"]);
+/** Listas de slideout com poderes gerais ou de classe (pré-requisito conferido; ver ctxSlideout). */
+export const LISTAS_PODERES_GERAIS = new Set(["grupo", "poderGeral", "poderes", "poderGeralOrigem", "poderGeralComplicacao", "poderGeralIdade", "poderClasse"]);
