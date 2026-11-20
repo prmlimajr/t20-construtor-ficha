@@ -1,5 +1,5 @@
 {
-  "_comentario": "Origens do T20 Jogo do Ano (p. 85-95). O personagem recebe os itens e escolhe 2 benefícios (duas perícias, dois poderes ou uma perícia e um poder). Itens: 'Nome' | {nome, qtd} | {escolha:[nomes]} | {arma:[proficiências], proposito:'distancia'|'corpo'} | {escolha + arma} | {texto}. 'tibares': dinheiro extra rolado junto com os 4d6. Perícias: chaves de CONFIG.T20.pericias ('oficio' = qualquer Ofício). Poderes: nomes no compêndio tormenta20.poderes. Grupos: subtipo de poder geral (Combate, Tormenta).",
+  "_comentario": "Origens do T20 Jogo do Ano (p. 85-95). O personagem recebe os itens e escolhe 2 benefícios (duas perícias, dois poderes ou uma perícia e um poder). Itens: 'Nome' | {nome, qtd} | {escolha:[nomes]} | {arma:[proficiências], proposito:'distancia'|'corpo'} | {escolha + arma} | {texto}. 'tibares': dinheiro extra rolado junto com os 4d6. Perícias: chaves de CONFIG.T20.pericias ('oficio' = qualquer Ofício). Poderes: nomes no compêndio tormenta20.poderes. Grupos: subtipo de poder geral (Combate, Tormenta). Conteúdo de Tormenta20 protegido por direitos autorais da Jambô Editora. Uso pessoal: não compartilhe nem redistribua.",
   "origens": [
     {
       "nome": "Acólito",

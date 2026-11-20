@@ -4,6 +4,8 @@ Wizard passo a passo para criar personagens de **Tormenta20** no Foundry VTT e a
 
 Requer Foundry **v14** e o sistema **Tormenta20 ≥ 1.6.7**.
 
+> **Direitos autorais.** Tormenta20 e os textos dos livros reproduzidos neste módulo (descrições de origens, divindades, escolas de magia, idades, raças, classes e poderes definidos pelo construtor, incluindo conteúdo do *Bestiário de Arton*, do *Heróis de Arton* e da *Dragão Brasil*) são protegidos por direitos autorais da **Jambô Editora**. Este módulo é para uso pessoal: **não compartilhe nem redistribua esse conteúdo**. As descrições que o construtor grava na ficha levam o mesmo aviso.
+
 ## Como usar
 
 - **Diretório de Atores → "Criar personagem (wizard)"**: cria um personagem e abre o construtor.
@@ -124,5 +126,6 @@ O suplemento foi feito para Foundry v13 / Tormenta20 1.5. O Foundry converte os 
 Ferramentas em `ferramentas/` (fora do `module.zip`):
 
 - `node ferramentas/testar-nivel.mjs [Classe…] [-v]`: sobe cada classe de 1 a 20 com os compêndios do sistema (repositório Tormenta20 em `../Tormenta20`) e roda o código real de gravação e desfazer contra um ator simulado; também confere casos de pré-requisito e de multiclasse.
+- `node ferramentas/testar-construtor.mjs [--atualizar] [-v] [--telas=arquivo]`: carrega o construtor de verdade (Foundry simulado, dados pelo `carregarDados` real), preenche 8 personagens de exemplo (incluindo um com o suplemento, Idades Variadas e complicação) e compara passos, pendências, o plano final, se cada tela monta e a cascata de invalidações ao trocar escolhas (raça, classe, origem, divindade…) com o retrato salvo (e confere que todo `data-action` dos templates tem ação registrada) em `ferramentas/retratos/construtor.json`. Qualquer mudança no resultado falha; depois de conferir que a mudança é a desejada, `--atualizar` grava o retrato novo. `--telas=arquivo` grava o contexto completo de cada tela, para comparar duas versões numa refatoração.
 - `(cd ferramentas && npm install) && node ferramentas/extrair-suplemento.mjs`: extrai os compêndios do Suplementos de Arton (repositório em `../Suplementos-de-Arton`) para o cache usado pelo teste. Sem o cache, as classes do suplemento são puladas.
 - `ferramentas/previa-animacao.html`: prévia da animação de subir de nível (sirva a pasta do módulo por HTTP).

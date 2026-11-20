@@ -1,0 +1,3514 @@
+{
+  "Humano guerreiro (Versátil, origem, arma marcial)": {
+    "passos": [
+      "raca",
+      "atributos",
+      "classe",
+      "pericias",
+      "origem:principal",
+      "devocao",
+      "equipamento",
+      "dinheiro",
+      "revisao"
+    ],
+    "pendencias": {
+      "raca": null,
+      "atributos": null,
+      "classe": null,
+      "pericias": null,
+      "origem:principal": null,
+      "devocao": null,
+      "equipamento": null,
+      "dinheiro": null,
+      "revisao": null
+    },
+    "telas": {
+      "raca": "ok",
+      "atributos": "ok",
+      "classe": "ok",
+      "pericias": "ok",
+      "origem:principal": "ok",
+      "devocao": "ok",
+      "equipamento": "ok",
+      "dinheiro": "ok",
+      "revisao": "ok"
+    },
+    "plano": {
+      "nome": "Valen",
+      "raca": "Humano",
+      "classe": "Guerreiro",
+      "atributos": {
+        "for": {
+          "base": 3,
+          "racial": 1
+        },
+        "des": {
+          "base": 2,
+          "racial": 1
+        },
+        "con": {
+          "base": 2,
+          "racial": 1
+        },
+        "int": {
+          "base": 0,
+          "racial": 0
+        },
+        "sab": {
+          "base": 0,
+          "racial": 0
+        },
+        "car": {
+          "base": -1,
+          "racial": 0
+        }
+      },
+      "pericias": [
+        "ades",
+        "atle",
+        "cava",
+        "cura",
+        "fort",
+        "inti",
+        "luta",
+        "reli"
+      ],
+      "poderes": [
+        {
+          "grupo": "R",
+          "poderes": [
+            "Versátil"
+          ]
+        },
+        {
+          "grupo": "1",
+          "poderes": [
+            "Ataque Especial"
+          ]
+        }
+      ],
+      "magias": [],
+      "magiasRaciais": [],
+      "magiasPoderesClasse": [],
+      "itens": [
+        "Mochila",
+        "Saco de Dormir",
+        "Traje de viajante",
+        "Símbolo Sagrado",
+        "Traje de sacerdote",
+        "Adaga",
+        "Alabarda",
+        "Escudo leve"
+      ],
+      "conjuracao": null,
+      "escolasMagia": null,
+      "origem": "Acólito",
+      "divindade": "",
+      "idade": null,
+      "niveisExtras": 0,
+      "dinheiro": 12,
+      "escolhasRaciais": [
+        "Versátil: Atletismo, Intimidação"
+      ],
+      "escolhasClasse": []
+    },
+    "cascata": {
+      "raca": {
+        "mudancas": [
+          [
+            "raca",
+            "Compendium.tormenta20.racas.Item.guBAxwQ5PEo5GRZv"
+          ]
+        ],
+        "estado": {
+          "raca": "Compendium.tormenta20.racas.Item.guBAxwQ5PEo5GRZv",
+          "racaAtributos": [],
+          "racaEscolhas.versatil": "(removido)"
+        },
+        "tela": {}
+      },
+      "racaEscolhas": {
+        "mudancas": [
+          [
+            "racaEscolhas.versatil.pericias",
+            [
+              "acro",
+              "atle"
+            ]
+          ]
+        ],
+        "estado": {
+          "racaEscolhas.versatil.pericias": [
+            "acro",
+            "atle"
+          ]
+        },
+        "tela": {}
+      },
+      "classe": {
+        "mudancas": [
+          [
+            "classe",
+            "Compendium.tormenta20.classes.Item.TH7OIKaDqtLLQUrs"
+          ]
+        ],
+        "estado": {
+          "classe": "Compendium.tormenta20.classes.Item.TH7OIKaDqtLLQUrs",
+          "periciasOu": [],
+          "periciasClasse": [],
+          "devoto": null,
+          "equip.arma": "",
+          "equip.armaMarcial": ""
+        },
+        "tela": {}
+      },
+      "escolhaClasse": null,
+      "escolhaClasseInvalida": {
+        "mudancas": [
+          [
+            "escolhasClasse.inexistente",
+            "x"
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "magiasEscolas": {
+        "mudancas": [
+          [
+            "magiasEscolas",
+            [
+              "ench"
+            ]
+          ]
+        ],
+        "estado": {
+          "magiasEscolas": [
+            "ench"
+          ]
+        },
+        "tela": {}
+      },
+      "periciasFixasManuais": {
+        "mudancas": [
+          [
+            "periciasFixasManuais",
+            [
+              "ades"
+            ]
+          ]
+        ],
+        "estado": {
+          "periciasFixasManuais": [
+            "ades"
+          ],
+          "periciasClasse": [
+            "cava"
+          ]
+        },
+        "tela": {}
+      },
+      "periciasOu": {
+        "mudancas": [
+          [
+            "periciasOu.0",
+            "pont"
+          ]
+        ],
+        "estado": {
+          "periciasOu": [
+            "pont"
+          ]
+        },
+        "tela": {}
+      },
+      "origem": {
+        "mudancas": [
+          [
+            "origens.principal.nome",
+            "Artista"
+          ]
+        ],
+        "estado": {
+          "origens.principal.nome": "Artista",
+          "origens.principal.beneficios": []
+        },
+        "tela": {}
+      },
+      "divindade": {
+        "mudancas": [
+          [
+            "divindade",
+            "Azgher"
+          ]
+        ],
+        "estado": {
+          "divindade": "Azgher"
+        },
+        "tela": {
+          "focoDivindade": ""
+        }
+      },
+      "complicacoes": {
+        "mudancas": [
+          [
+            "complicacoes",
+            []
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "faixa": {
+        "mudancas": [
+          [
+            "idade.faixa",
+            "velho"
+          ]
+        ],
+        "estado": {
+          "idade.faixa": "velho"
+        },
+        "tela": {}
+      },
+      "poderGeralIdade": {
+        "mudancas": [
+          [
+            "idade.poderGeral",
+            "Atlético"
+          ],
+          [
+            "idade.poderGeral",
+            ""
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "itemSuperior": {
+        "mudancas": [
+          [
+            "classePoderEscolhas.teste.melhoria",
+            "m"
+          ],
+          [
+            "classePoderEscolhas.teste.item",
+            "Outro item"
+          ]
+        ],
+        "estado": {
+          "classePoderEscolhas.teste": {
+            "melhoria": "",
+            "item": "Outro item"
+          }
+        },
+        "tela": {}
+      },
+      "devoto": {
+        "mudancas": [
+          [
+            "devoto",
+            false
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "fundamentalista": {
+        "mudancas": [
+          [
+            "fundamentalista",
+            true
+          ],
+          [
+            "poderesConcedidos",
+            [
+              "Coragem Total",
+              "Dom da Verdade"
+            ]
+          ],
+          [
+            "fundamentalista",
+            false
+          ]
+        ],
+        "estado": {
+          "poderesConcedidos": [
+            "Coragem Total"
+          ]
+        },
+        "tela": {}
+      },
+      "vendas": {
+        "mudancas": [
+          [
+            "vendas",
+            [
+              "Adaga"
+            ]
+          ],
+          [
+            "equip.arma",
+            "Arco curto"
+          ]
+        ],
+        "estado": {
+          "equip.arma": "Arco curto"
+        },
+        "tela": {}
+      },
+      "atrModo": {
+        "mudancas": [
+          [
+            "atrModo",
+            "rolagem"
+          ]
+        ],
+        "estado": {
+          "atrModo": "rolagem"
+        },
+        "tela": {
+          "dadoSelecionado": null
+        }
+      },
+      "arranjo": {
+        "mudancas": [
+          [
+            "atrFixo.arranjo",
+            1
+          ]
+        ],
+        "estado": {
+          "atrFixo.arranjo": 1
+        },
+        "tela": {
+          "dadoSelecionado": null
+        }
+      },
+      "inteligencia": {
+        "mudancas": [
+          [
+            "atrPontos.int",
+            -1
+          ]
+        ],
+        "estado": {
+          "atrPontos.int": -1
+        },
+        "tela": {}
+      },
+      "semMudanca": {
+        "mudancas": [
+          [
+            "nome",
+            "Valen"
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      }
+    }
+  },
+  "Anão clérigo de Khalmyr (devoção, magias divinas)": {
+    "passos": [
+      "raca",
+      "atributos",
+      "classe",
+      "magias",
+      "pericias",
+      "origem:principal",
+      "devocao",
+      "equipamento",
+      "dinheiro",
+      "revisao"
+    ],
+    "pendencias": {
+      "raca": null,
+      "atributos": null,
+      "classe": null,
+      "magias": null,
+      "pericias": null,
+      "origem:principal": null,
+      "devocao": null,
+      "equipamento": null,
+      "dinheiro": null,
+      "revisao": null
+    },
+    "telas": {
+      "raca": "ok",
+      "atributos": "ok",
+      "classe": "ok",
+      "magias": "ok",
+      "pericias": "ok",
+      "origem:principal": "ok",
+      "devocao": "ok",
+      "equipamento": "ok",
+      "dinheiro": "ok",
+      "revisao": "ok"
+    },
+    "plano": {
+      "nome": "Borin",
+      "raca": "Anão",
+      "classe": "Clérigo",
+      "atributos": {
+        "for": {
+          "base": 1,
+          "racial": 0
+        },
+        "des": {
+          "base": 0,
+          "racial": -1
+        },
+        "con": {
+          "base": 2,
+          "racial": 2
+        },
+        "int": {
+          "base": 0,
+          "racial": 0
+        },
+        "sab": {
+          "base": 4,
+          "racial": 1
+        },
+        "car": {
+          "base": 0,
+          "racial": 0
+        }
+      },
+      "pericias": [
+        "conh",
+        "cura",
+        "dipl",
+        "reli",
+        "vont"
+      ],
+      "poderes": [
+        {
+          "grupo": "R",
+          "poderes": [
+            "Conhecimento das Rochas",
+            "Devagar e sempre",
+            "Duro como Pedra",
+            "Tradição"
+          ]
+        },
+        {
+          "grupo": "D",
+          "poderes": [
+            "Coragem Total",
+            "Dom da Verdade"
+          ]
+        },
+        {
+          "grupo": "1",
+          "poderes": [
+            "Devoto Fiel (Clérigo)",
+            "Magias (Clérigo)"
+          ]
+        }
+      ],
+      "magias": [
+        "Abençoar Alimentos",
+        "Acalmar Animal",
+        "Arma Espiritual"
+      ],
+      "magiasRaciais": [],
+      "magiasPoderesClasse": [],
+      "itens": [
+        "Mochila",
+        "Saco de Dormir",
+        "Traje de viajante",
+        "Símbolo Sagrado",
+        "Símbolo Sagrado",
+        "Traje de sacerdote",
+        "Adaga",
+        "Escudo leve"
+      ],
+      "conjuracao": "sab",
+      "escolasMagia": null,
+      "origem": "Acólito",
+      "divindade": "Khalmyr",
+      "idade": null,
+      "niveisExtras": 0,
+      "dinheiro": 9,
+      "escolhasRaciais": [],
+      "escolhasClasse": []
+    },
+    "cascata": {
+      "raca": {
+        "mudancas": [
+          [
+            "raca",
+            "Compendium.tormenta20.racas.Item.guBAxwQ5PEo5GRZv"
+          ]
+        ],
+        "estado": {
+          "raca": "Compendium.tormenta20.racas.Item.guBAxwQ5PEo5GRZv"
+        },
+        "tela": {}
+      },
+      "racaEscolhas": {
+        "mudancas": [
+          [
+            "racaEscolhas.versatil.pericias",
+            [
+              "acro",
+              "atle"
+            ]
+          ]
+        ],
+        "estado": {
+          "racaEscolhas.versatil": {
+            "pericias": [
+              "acro",
+              "atle"
+            ]
+          }
+        },
+        "tela": {}
+      },
+      "classe": {
+        "mudancas": [
+          [
+            "classe",
+            "Compendium.tormenta20.classes.Item.TH7OIKaDqtLLQUrs"
+          ]
+        ],
+        "estado": {
+          "classe": "Compendium.tormenta20.classes.Item.TH7OIKaDqtLLQUrs",
+          "magias": [],
+          "periciasClasse": [],
+          "devoto": null,
+          "divindade": "",
+          "poderesConcedidos": [],
+          "equip.arma": ""
+        },
+        "tela": {}
+      },
+      "escolhaClasse": null,
+      "escolhaClasseInvalida": {
+        "mudancas": [
+          [
+            "escolhasClasse.inexistente",
+            "x"
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "magiasEscolas": {
+        "mudancas": [
+          [
+            "magiasEscolas",
+            [
+              "ench"
+            ]
+          ]
+        ],
+        "estado": {
+          "magiasEscolas": [
+            "ench"
+          ]
+        },
+        "tela": {}
+      },
+      "periciasFixasManuais": {
+        "mudancas": [
+          [
+            "periciasFixasManuais",
+            [
+              "conh"
+            ]
+          ]
+        ],
+        "estado": {
+          "periciasFixasManuais": [
+            "conh"
+          ],
+          "periciasClasse": [
+            "dipl"
+          ]
+        },
+        "tela": {}
+      },
+      "periciasOu": {
+        "mudancas": [
+          [
+            "periciasOu.0",
+            "pont"
+          ]
+        ],
+        "estado": {
+          "periciasOu": [
+            "pont"
+          ]
+        },
+        "tela": {}
+      },
+      "origem": {
+        "mudancas": [
+          [
+            "origens.principal.nome",
+            "Artista"
+          ]
+        ],
+        "estado": {
+          "origens.principal.nome": "Artista",
+          "origens.principal.beneficios": []
+        },
+        "tela": {}
+      },
+      "divindade": {
+        "mudancas": [
+          [
+            "divindade",
+            "Azgher"
+          ]
+        ],
+        "estado": {
+          "divindade": "Azgher",
+          "poderesConcedidos": []
+        },
+        "tela": {
+          "focoDivindade": ""
+        }
+      },
+      "complicacoes": {
+        "mudancas": [
+          [
+            "complicacoes",
+            []
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "faixa": {
+        "mudancas": [
+          [
+            "idade.faixa",
+            "velho"
+          ]
+        ],
+        "estado": {
+          "idade.faixa": "velho"
+        },
+        "tela": {}
+      },
+      "poderGeralIdade": {
+        "mudancas": [
+          [
+            "idade.poderGeral",
+            "Atlético"
+          ],
+          [
+            "idade.poderGeral",
+            ""
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "itemSuperior": {
+        "mudancas": [
+          [
+            "classePoderEscolhas.teste.melhoria",
+            "m"
+          ],
+          [
+            "classePoderEscolhas.teste.item",
+            "Outro item"
+          ]
+        ],
+        "estado": {
+          "classePoderEscolhas.teste": {
+            "melhoria": "",
+            "item": "Outro item"
+          }
+        },
+        "tela": {}
+      },
+      "devoto": {
+        "mudancas": [
+          [
+            "devoto",
+            false
+          ]
+        ],
+        "estado": {
+          "devoto": false,
+          "divindade": "",
+          "poderesConcedidos": []
+        },
+        "tela": {}
+      },
+      "fundamentalista": {
+        "mudancas": [
+          [
+            "fundamentalista",
+            true
+          ],
+          [
+            "poderesConcedidos",
+            [
+              "Coragem Total",
+              "Dom da Verdade",
+              "Espada Justiceira"
+            ]
+          ],
+          [
+            "fundamentalista",
+            false
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "vendas": {
+        "mudancas": [
+          [
+            "vendas",
+            [
+              "Adaga"
+            ]
+          ],
+          [
+            "equip.arma",
+            "Arco curto"
+          ]
+        ],
+        "estado": {
+          "equip.arma": "Arco curto"
+        },
+        "tela": {}
+      },
+      "atrModo": {
+        "mudancas": [
+          [
+            "atrModo",
+            "rolagem"
+          ]
+        ],
+        "estado": {
+          "atrModo": "rolagem"
+        },
+        "tela": {
+          "dadoSelecionado": null
+        }
+      },
+      "arranjo": {
+        "mudancas": [
+          [
+            "atrFixo.arranjo",
+            1
+          ]
+        ],
+        "estado": {
+          "atrFixo.arranjo": 1
+        },
+        "tela": {
+          "dadoSelecionado": null
+        }
+      },
+      "inteligencia": {
+        "mudancas": [
+          [
+            "atrPontos.int",
+            -1
+          ]
+        ],
+        "estado": {
+          "atrPontos.int": -1
+        },
+        "tela": {}
+      },
+      "semMudanca": {
+        "mudancas": [
+          [
+            "nome",
+            "Borin"
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      }
+    }
+  },
+  "Elfo arcanista Mago (Caminho, perícias por Inteligência)": {
+    "passos": [
+      "raca",
+      "atributos",
+      "classe",
+      "magias",
+      "pericias",
+      "origem:principal",
+      "devocao",
+      "equipamento",
+      "dinheiro",
+      "revisao"
+    ],
+    "pendencias": {
+      "raca": null,
+      "atributos": null,
+      "classe": null,
+      "magias": null,
+      "pericias": null,
+      "origem:principal": null,
+      "devocao": null,
+      "equipamento": null,
+      "dinheiro": null,
+      "revisao": null
+    },
+    "telas": {
+      "raca": "ok",
+      "atributos": "ok",
+      "classe": "ok",
+      "magias": "ok",
+      "pericias": "ok",
+      "origem:principal": "ok",
+      "devocao": "ok",
+      "equipamento": "ok",
+      "dinheiro": "ok",
+      "revisao": "ok"
+    },
+    "plano": {
+      "nome": "Lyra",
+      "raca": "Elfo",
+      "classe": "Arcanista",
+      "atributos": {
+        "for": {
+          "base": -1,
+          "racial": 0
+        },
+        "des": {
+          "base": 1,
+          "racial": 1
+        },
+        "con": {
+          "base": 1,
+          "racial": -1
+        },
+        "int": {
+          "base": 4,
+          "racial": 2
+        },
+        "sab": {
+          "base": 1,
+          "racial": 0
+        },
+        "car": {
+          "base": 0,
+          "racial": 0
+        }
+      },
+      "pericias": [
+        "acro",
+        "ades",
+        "conh",
+        "cura",
+        "dipl",
+        "mist",
+        "alfa",
+        "alqu",
+        "arme",
+        "arte",
+        "reli",
+        "vont"
+      ],
+      "poderes": [
+        {
+          "grupo": "R",
+          "poderes": [
+            "Graça",
+            "Sangue Mágico",
+            "Sentidos Élficos"
+          ]
+        },
+        {
+          "grupo": "1",
+          "poderes": [
+            "Magias (Arcanista)",
+            "Caminho do Arcanista: Mago"
+          ]
+        }
+      ],
+      "magias": [
+        "Adaga Mental",
+        "Alarme",
+        "Amedrontar",
+        "Área Escorregadia"
+      ],
+      "magiasRaciais": [],
+      "magiasPoderesClasse": [],
+      "itens": [
+        "Mochila",
+        "Saco de Dormir",
+        "Traje de viajante",
+        "Símbolo Sagrado",
+        "Traje de sacerdote",
+        "Adaga"
+      ],
+      "conjuracao": "int",
+      "escolasMagia": null,
+      "origem": "Acólito",
+      "divindade": "",
+      "idade": null,
+      "niveisExtras": 0,
+      "dinheiro": 14,
+      "escolhasRaciais": [],
+      "escolhasClasse": []
+    },
+    "cascata": {
+      "raca": {
+        "mudancas": [
+          [
+            "raca",
+            "Compendium.tormenta20.racas.Item.guBAxwQ5PEo5GRZv"
+          ]
+        ],
+        "estado": {
+          "raca": "Compendium.tormenta20.racas.Item.guBAxwQ5PEo5GRZv",
+          "periciasInt": [
+            "acro",
+            "ades",
+            "alfa",
+            "alqu"
+          ]
+        },
+        "tela": {}
+      },
+      "racaEscolhas": {
+        "mudancas": [
+          [
+            "racaEscolhas.versatil.pericias",
+            [
+              "acro",
+              "atle"
+            ]
+          ]
+        ],
+        "estado": {
+          "racaEscolhas.versatil": {
+            "pericias": [
+              "acro",
+              "atle"
+            ]
+          }
+        },
+        "tela": {}
+      },
+      "classe": {
+        "mudancas": [
+          [
+            "classe",
+            "Compendium.tormenta20.classes.Item.FiMbJLurhpstUxu1"
+          ]
+        ],
+        "estado": {
+          "classe": "Compendium.tormenta20.classes.Item.FiMbJLurhpstUxu1",
+          "escolhasClasse.caminho": "(removido)",
+          "magias": [],
+          "periciasClasse": [],
+          "devoto": null,
+          "equip.arma": ""
+        },
+        "tela": {}
+      },
+      "escolhaClasse": {
+        "mudancas": [
+          [
+            "escolhasClasse.caminho",
+            "Caminho do Arcanista: Bruxo"
+          ]
+        ],
+        "estado": {
+          "escolhasClasse.caminho": "Caminho do Arcanista: Bruxo",
+          "magias": [
+            "Compendium.tormenta20.magias.Item.xfYTGGsdd81Pa0AN",
+            "Compendium.tormenta20.magias.Item.kgD9swQEhzwDC1tb",
+            "Compendium.tormenta20.magias.Item.m14TgW19d1JTBz8U"
+          ]
+        },
+        "tela": {}
+      },
+      "escolhaClasseInvalida": {
+        "mudancas": [
+          [
+            "escolhasClasse.inexistente",
+            "x"
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "magiasEscolas": {
+        "mudancas": [
+          [
+            "magiasEscolas",
+            [
+              "ench"
+            ]
+          ]
+        ],
+        "estado": {
+          "magiasEscolas": [
+            "ench"
+          ]
+        },
+        "tela": {}
+      },
+      "periciasFixasManuais": {
+        "mudancas": [
+          [
+            "periciasFixasManuais",
+            [
+              "conh"
+            ]
+          ]
+        ],
+        "estado": {
+          "periciasFixasManuais": [
+            "conh"
+          ],
+          "periciasClasse": [
+            "dipl"
+          ]
+        },
+        "tela": {}
+      },
+      "periciasOu": {
+        "mudancas": [
+          [
+            "periciasOu.0",
+            "pont"
+          ]
+        ],
+        "estado": {
+          "periciasOu": [
+            "pont"
+          ]
+        },
+        "tela": {}
+      },
+      "origem": {
+        "mudancas": [
+          [
+            "origens.principal.nome",
+            "Artista"
+          ]
+        ],
+        "estado": {
+          "origens.principal.nome": "Artista",
+          "origens.principal.beneficios": []
+        },
+        "tela": {}
+      },
+      "divindade": {
+        "mudancas": [
+          [
+            "divindade",
+            "Azgher"
+          ]
+        ],
+        "estado": {
+          "divindade": "Azgher"
+        },
+        "tela": {
+          "focoDivindade": ""
+        }
+      },
+      "complicacoes": {
+        "mudancas": [
+          [
+            "complicacoes",
+            []
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "faixa": {
+        "mudancas": [
+          [
+            "idade.faixa",
+            "velho"
+          ]
+        ],
+        "estado": {
+          "idade.faixa": "velho"
+        },
+        "tela": {}
+      },
+      "poderGeralIdade": {
+        "mudancas": [
+          [
+            "idade.poderGeral",
+            "Atlético"
+          ],
+          [
+            "idade.poderGeral",
+            ""
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "itemSuperior": {
+        "mudancas": [
+          [
+            "classePoderEscolhas.teste.melhoria",
+            "m"
+          ],
+          [
+            "classePoderEscolhas.teste.item",
+            "Outro item"
+          ]
+        ],
+        "estado": {
+          "classePoderEscolhas.teste": {
+            "melhoria": "",
+            "item": "Outro item"
+          }
+        },
+        "tela": {}
+      },
+      "devoto": {
+        "mudancas": [
+          [
+            "devoto",
+            false
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "fundamentalista": {
+        "mudancas": [
+          [
+            "fundamentalista",
+            true
+          ],
+          [
+            "poderesConcedidos",
+            [
+              "Coragem Total",
+              "Dom da Verdade"
+            ]
+          ],
+          [
+            "fundamentalista",
+            false
+          ]
+        ],
+        "estado": {
+          "poderesConcedidos": [
+            "Coragem Total"
+          ]
+        },
+        "tela": {}
+      },
+      "vendas": {
+        "mudancas": [
+          [
+            "vendas",
+            [
+              "Adaga"
+            ]
+          ],
+          [
+            "equip.arma",
+            "Arco curto"
+          ]
+        ],
+        "estado": {
+          "equip.arma": "Arco curto"
+        },
+        "tela": {}
+      },
+      "atrModo": {
+        "mudancas": [
+          [
+            "atrModo",
+            "rolagem"
+          ]
+        ],
+        "estado": {
+          "atrModo": "rolagem",
+          "periciasInt": [
+            "acro",
+            "ades"
+          ]
+        },
+        "tela": {
+          "dadoSelecionado": null
+        }
+      },
+      "arranjo": {
+        "mudancas": [
+          [
+            "atrFixo.arranjo",
+            1
+          ]
+        ],
+        "estado": {
+          "atrFixo.arranjo": 1
+        },
+        "tela": {
+          "dadoSelecionado": null
+        }
+      },
+      "inteligencia": {
+        "mudancas": [
+          [
+            "atrPontos.int",
+            -1
+          ]
+        ],
+        "estado": {
+          "atrPontos.int": -1,
+          "periciasInt": [
+            "acro"
+          ]
+        },
+        "tela": {}
+      },
+      "semMudanca": {
+        "mudancas": [
+          [
+            "nome",
+            "Lyra"
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      }
+    }
+  },
+  "Qareen feiticeira Linhagem Rubra (sub-escolhas, escolhas raciais)": {
+    "passos": [
+      "raca",
+      "atributos",
+      "classe",
+      "magias",
+      "pericias",
+      "origem:principal",
+      "devocao",
+      "equipamento",
+      "dinheiro",
+      "revisao"
+    ],
+    "pendencias": {
+      "raca": null,
+      "atributos": null,
+      "classe": null,
+      "magias": null,
+      "pericias": null,
+      "origem:principal": null,
+      "devocao": null,
+      "equipamento": null,
+      "dinheiro": null,
+      "revisao": null
+    },
+    "telas": {
+      "raca": "ok",
+      "atributos": "ok",
+      "classe": "ok",
+      "magias": "ok",
+      "pericias": "ok",
+      "origem:principal": "ok",
+      "devocao": "ok",
+      "equipamento": "ok",
+      "dinheiro": "ok",
+      "revisao": "ok"
+    },
+    "plano": {
+      "nome": "Zafira",
+      "raca": "Qareen",
+      "classe": "Arcanista",
+      "atributos": {
+        "for": {
+          "base": 0,
+          "racial": 0
+        },
+        "des": {
+          "base": 2,
+          "racial": 0
+        },
+        "con": {
+          "base": 1,
+          "racial": 0
+        },
+        "int": {
+          "base": 0,
+          "racial": 1
+        },
+        "sab": {
+          "base": 0,
+          "racial": -1
+        },
+        "car": {
+          "base": 4,
+          "racial": 2
+        }
+      },
+      "pericias": [
+        "acro",
+        "conh",
+        "cura",
+        "dipl",
+        "mist",
+        "reli",
+        "vont"
+      ],
+      "poderes": [
+        {
+          "grupo": "R",
+          "poderes": [
+            "Desejos",
+            "Resistência Elemental",
+            "Tatuagem Mística"
+          ]
+        },
+        {
+          "grupo": "1",
+          "poderes": [
+            "Magias (Arcanista)",
+            "Caminho do Arcanista: Feiticeiro",
+            "Linhagem Rubra Básica",
+            "Anatomia Insana"
+          ]
+        }
+      ],
+      "magias": [
+        "Adaga Mental",
+        "Alarme",
+        "Amedrontar"
+      ],
+      "magiasRaciais": [
+        "Explosão de Chamas"
+      ],
+      "magiasPoderesClasse": [],
+      "itens": [
+        "Mochila",
+        "Saco de Dormir",
+        "Traje de viajante",
+        "Símbolo Sagrado",
+        "Traje de sacerdote",
+        "Adaga"
+      ],
+      "conjuracao": "car",
+      "escolasMagia": null,
+      "origem": "Acólito",
+      "divindade": "",
+      "idade": null,
+      "niveisExtras": 0,
+      "dinheiro": 7,
+      "escolhasRaciais": [
+        "Resistência Elemental: Fogo (fogo)",
+        "Tatuagem Mística: Explosão de Chamas"
+      ],
+      "escolhasClasse": [
+        "Linhagem Rubra Básica: Anatomia Insana"
+      ]
+    },
+    "cascata": {
+      "raca": {
+        "mudancas": [
+          [
+            "raca",
+            "Compendium.tormenta20.racas.Item.guBAxwQ5PEo5GRZv"
+          ]
+        ],
+        "estado": {
+          "raca": "Compendium.tormenta20.racas.Item.guBAxwQ5PEo5GRZv",
+          "racaEscolhas.resistenciaElemental": "(removido)",
+          "racaEscolhas.tatuagemMistica": "(removido)",
+          "periciasInt": []
+        },
+        "tela": {}
+      },
+      "racaEscolhas": {
+        "mudancas": [
+          [
+            "racaEscolhas.versatil.pericias",
+            [
+              "acro",
+              "atle"
+            ]
+          ]
+        ],
+        "estado": {
+          "racaEscolhas.versatil": {
+            "pericias": [
+              "acro",
+              "atle"
+            ]
+          }
+        },
+        "tela": {}
+      },
+      "classe": {
+        "mudancas": [
+          [
+            "classe",
+            "Compendium.tormenta20.classes.Item.FiMbJLurhpstUxu1"
+          ]
+        ],
+        "estado": {
+          "classePoderEscolhas.linhagemRubra": "(removido)",
+          "classe": "Compendium.tormenta20.classes.Item.FiMbJLurhpstUxu1",
+          "escolhasClasse.caminho": "(removido)",
+          "escolhasClasse.linhagem": "(removido)",
+          "magias": [],
+          "periciasClasse": [],
+          "devoto": null,
+          "equip.arma": ""
+        },
+        "tela": {}
+      },
+      "escolhaClasse": {
+        "mudancas": [
+          [
+            "escolhasClasse.caminho",
+            "Caminho do Arcanista: Bruxo"
+          ]
+        ],
+        "estado": {
+          "classePoderEscolhas.linhagemRubra": "(removido)",
+          "escolhasClasse.caminho": "Caminho do Arcanista: Bruxo",
+          "escolhasClasse.linhagem": "(removido)"
+        },
+        "tela": {}
+      },
+      "escolhaClasseInvalida": {
+        "mudancas": [
+          [
+            "escolhasClasse.inexistente",
+            "x"
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "magiasEscolas": {
+        "mudancas": [
+          [
+            "magiasEscolas",
+            [
+              "ench"
+            ]
+          ]
+        ],
+        "estado": {
+          "magiasEscolas": [
+            "ench"
+          ]
+        },
+        "tela": {}
+      },
+      "periciasFixasManuais": {
+        "mudancas": [
+          [
+            "periciasFixasManuais",
+            [
+              "conh"
+            ]
+          ]
+        ],
+        "estado": {
+          "periciasFixasManuais": [
+            "conh"
+          ],
+          "periciasClasse": [
+            "dipl"
+          ]
+        },
+        "tela": {}
+      },
+      "periciasOu": {
+        "mudancas": [
+          [
+            "periciasOu.0",
+            "pont"
+          ]
+        ],
+        "estado": {
+          "periciasOu": [
+            "pont"
+          ]
+        },
+        "tela": {}
+      },
+      "origem": {
+        "mudancas": [
+          [
+            "origens.principal.nome",
+            "Artista"
+          ]
+        ],
+        "estado": {
+          "origens.principal.nome": "Artista",
+          "origens.principal.beneficios": []
+        },
+        "tela": {}
+      },
+      "divindade": {
+        "mudancas": [
+          [
+            "divindade",
+            "Azgher"
+          ]
+        ],
+        "estado": {
+          "divindade": "Azgher"
+        },
+        "tela": {
+          "focoDivindade": ""
+        }
+      },
+      "complicacoes": {
+        "mudancas": [
+          [
+            "complicacoes",
+            []
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "faixa": {
+        "mudancas": [
+          [
+            "idade.faixa",
+            "velho"
+          ]
+        ],
+        "estado": {
+          "idade.faixa": "velho"
+        },
+        "tela": {}
+      },
+      "poderGeralIdade": {
+        "mudancas": [
+          [
+            "idade.poderGeral",
+            "Atlético"
+          ],
+          [
+            "idade.poderGeral",
+            ""
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "itemSuperior": {
+        "mudancas": [
+          [
+            "classePoderEscolhas.teste.melhoria",
+            "m"
+          ],
+          [
+            "classePoderEscolhas.teste.item",
+            "Outro item"
+          ]
+        ],
+        "estado": {
+          "classePoderEscolhas.teste": {
+            "melhoria": "",
+            "item": "Outro item"
+          }
+        },
+        "tela": {}
+      },
+      "devoto": {
+        "mudancas": [
+          [
+            "devoto",
+            false
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "fundamentalista": {
+        "mudancas": [
+          [
+            "fundamentalista",
+            true
+          ],
+          [
+            "poderesConcedidos",
+            [
+              "Coragem Total",
+              "Dom da Verdade"
+            ]
+          ],
+          [
+            "fundamentalista",
+            false
+          ]
+        ],
+        "estado": {
+          "poderesConcedidos": [
+            "Coragem Total"
+          ]
+        },
+        "tela": {}
+      },
+      "vendas": {
+        "mudancas": [
+          [
+            "vendas",
+            [
+              "Adaga"
+            ]
+          ],
+          [
+            "equip.arma",
+            "Arco curto"
+          ]
+        ],
+        "estado": {
+          "equip.arma": "Arco curto"
+        },
+        "tela": {}
+      },
+      "atrModo": {
+        "mudancas": [
+          [
+            "atrModo",
+            "rolagem"
+          ]
+        ],
+        "estado": {
+          "atrModo": "rolagem"
+        },
+        "tela": {
+          "dadoSelecionado": null
+        }
+      },
+      "arranjo": {
+        "mudancas": [
+          [
+            "atrFixo.arranjo",
+            1
+          ]
+        ],
+        "estado": {
+          "atrFixo.arranjo": 1
+        },
+        "tela": {
+          "dadoSelecionado": null
+        }
+      },
+      "inteligencia": {
+        "mudancas": [
+          [
+            "atrPontos.int",
+            -1
+          ]
+        ],
+        "estado": {
+          "atrPontos.int": -1,
+          "periciasInt": []
+        },
+        "tela": {}
+      },
+      "semMudanca": {
+        "mudancas": [
+          [
+            "nome",
+            "Zafira"
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      }
+    }
+  },
+  "Goblin bardo (escolas de magia)": {
+    "passos": [
+      "raca",
+      "atributos",
+      "classe",
+      "magias",
+      "pericias",
+      "origem:principal",
+      "devocao",
+      "equipamento",
+      "dinheiro",
+      "revisao"
+    ],
+    "pendencias": {
+      "raca": null,
+      "atributos": null,
+      "classe": null,
+      "magias": null,
+      "pericias": null,
+      "origem:principal": null,
+      "devocao": null,
+      "equipamento": null,
+      "dinheiro": null,
+      "revisao": null
+    },
+    "telas": {
+      "raca": "ok",
+      "atributos": "ok",
+      "classe": "ok",
+      "magias": "ok",
+      "pericias": "ok",
+      "origem:principal": "ok",
+      "devocao": "ok",
+      "equipamento": "ok",
+      "dinheiro": "ok",
+      "revisao": "ok"
+    },
+    "plano": {
+      "nome": "Pip",
+      "raca": "Goblin",
+      "classe": "Bardo",
+      "atributos": {
+        "for": {
+          "base": -1,
+          "racial": 0
+        },
+        "des": {
+          "base": 2,
+          "racial": 2
+        },
+        "con": {
+          "base": 1,
+          "racial": 0
+        },
+        "int": {
+          "base": 1,
+          "racial": 1
+        },
+        "sab": {
+          "base": 0,
+          "racial": 0
+        },
+        "car": {
+          "base": 3,
+          "racial": -1
+        }
+      },
+      "pericias": [
+        "acro",
+        "ades",
+        "atua",
+        "cava",
+        "conh",
+        "cura",
+        "dipl",
+        "enga",
+        "furt",
+        "alfa",
+        "refl",
+        "reli"
+      ],
+      "poderes": [
+        {
+          "grupo": "R",
+          "poderes": [
+            "Engenhoso",
+            "Espelunqueiro",
+            "Peste Esguia",
+            "Rato das Ruas"
+          ]
+        },
+        {
+          "grupo": "1",
+          "poderes": [
+            "Inspiração",
+            "Magias (Bardo)"
+          ]
+        }
+      ],
+      "magias": [
+        "Adaga Mental",
+        "Aviso"
+      ],
+      "magiasRaciais": [],
+      "magiasPoderesClasse": [],
+      "itens": [
+        "Mochila",
+        "Saco de Dormir",
+        "Traje de viajante",
+        "Instrumento Musical",
+        "Símbolo Sagrado",
+        "Traje de sacerdote",
+        "Adaga",
+        "Alabarda"
+      ],
+      "conjuracao": "car",
+      "escolasMagia": [
+        "enc",
+        "ilu",
+        "adv"
+      ],
+      "origem": "Acólito",
+      "divindade": "",
+      "idade": null,
+      "niveisExtras": 0,
+      "dinheiro": 15,
+      "escolhasRaciais": [],
+      "escolhasClasse": []
+    },
+    "cascata": {
+      "raca": {
+        "mudancas": [
+          [
+            "raca",
+            "Compendium.tormenta20.racas.Item.guBAxwQ5PEo5GRZv"
+          ]
+        ],
+        "estado": {
+          "raca": "Compendium.tormenta20.racas.Item.guBAxwQ5PEo5GRZv",
+          "periciasInt": [
+            "ades"
+          ]
+        },
+        "tela": {}
+      },
+      "racaEscolhas": {
+        "mudancas": [
+          [
+            "racaEscolhas.versatil.pericias",
+            [
+              "acro",
+              "atle"
+            ]
+          ]
+        ],
+        "estado": {
+          "racaEscolhas.versatil": {
+            "pericias": [
+              "acro",
+              "atle"
+            ]
+          }
+        },
+        "tela": {}
+      },
+      "classe": {
+        "mudancas": [
+          [
+            "classe",
+            "Compendium.tormenta20.classes.Item.TH7OIKaDqtLLQUrs"
+          ]
+        ],
+        "estado": {
+          "classe": "Compendium.tormenta20.classes.Item.TH7OIKaDqtLLQUrs",
+          "magiasEscolas": [],
+          "magias": [],
+          "periciasClasse": [],
+          "devoto": null,
+          "equip.arma": "",
+          "equip.armaMarcial": ""
+        },
+        "tela": {}
+      },
+      "escolhaClasse": null,
+      "escolhaClasseInvalida": {
+        "mudancas": [
+          [
+            "escolhasClasse.inexistente",
+            "x"
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "magiasEscolas": {
+        "mudancas": [
+          [
+            "magiasEscolas",
+            [
+              "ench"
+            ]
+          ]
+        ],
+        "estado": {
+          "magiasEscolas": [
+            "ench"
+          ],
+          "magias": []
+        },
+        "tela": {}
+      },
+      "periciasFixasManuais": {
+        "mudancas": [
+          [
+            "periciasFixasManuais",
+            [
+              "acro"
+            ]
+          ]
+        ],
+        "estado": {
+          "periciasFixasManuais": [
+            "acro"
+          ],
+          "periciasClasse": [
+            "cava",
+            "conh",
+            "dipl",
+            "enga",
+            "furt"
+          ]
+        },
+        "tela": {}
+      },
+      "periciasOu": {
+        "mudancas": [
+          [
+            "periciasOu.0",
+            "pont"
+          ]
+        ],
+        "estado": {
+          "periciasOu": [
+            "pont"
+          ]
+        },
+        "tela": {}
+      },
+      "origem": {
+        "mudancas": [
+          [
+            "origens.principal.nome",
+            "Artista"
+          ]
+        ],
+        "estado": {
+          "origens.principal.nome": "Artista",
+          "origens.principal.beneficios": []
+        },
+        "tela": {}
+      },
+      "divindade": {
+        "mudancas": [
+          [
+            "divindade",
+            "Azgher"
+          ]
+        ],
+        "estado": {
+          "divindade": "Azgher"
+        },
+        "tela": {
+          "focoDivindade": ""
+        }
+      },
+      "complicacoes": {
+        "mudancas": [
+          [
+            "complicacoes",
+            []
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "faixa": {
+        "mudancas": [
+          [
+            "idade.faixa",
+            "velho"
+          ]
+        ],
+        "estado": {
+          "idade.faixa": "velho"
+        },
+        "tela": {}
+      },
+      "poderGeralIdade": {
+        "mudancas": [
+          [
+            "idade.poderGeral",
+            "Atlético"
+          ],
+          [
+            "idade.poderGeral",
+            ""
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "itemSuperior": {
+        "mudancas": [
+          [
+            "classePoderEscolhas.teste.melhoria",
+            "m"
+          ],
+          [
+            "classePoderEscolhas.teste.item",
+            "Outro item"
+          ]
+        ],
+        "estado": {
+          "classePoderEscolhas.teste": {
+            "melhoria": "",
+            "item": "Outro item"
+          }
+        },
+        "tela": {}
+      },
+      "devoto": {
+        "mudancas": [
+          [
+            "devoto",
+            false
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "fundamentalista": {
+        "mudancas": [
+          [
+            "fundamentalista",
+            true
+          ],
+          [
+            "poderesConcedidos",
+            [
+              "Coragem Total",
+              "Dom da Verdade"
+            ]
+          ],
+          [
+            "fundamentalista",
+            false
+          ]
+        ],
+        "estado": {
+          "poderesConcedidos": [
+            "Coragem Total"
+          ]
+        },
+        "tela": {}
+      },
+      "vendas": {
+        "mudancas": [
+          [
+            "vendas",
+            [
+              "Adaga"
+            ]
+          ],
+          [
+            "equip.arma",
+            "Arco curto"
+          ]
+        ],
+        "estado": {
+          "equip.arma": "Arco curto"
+        },
+        "tela": {}
+      },
+      "atrModo": {
+        "mudancas": [
+          [
+            "atrModo",
+            "rolagem"
+          ]
+        ],
+        "estado": {
+          "atrModo": "rolagem",
+          "periciasInt": [
+            "ades"
+          ]
+        },
+        "tela": {
+          "dadoSelecionado": null
+        }
+      },
+      "arranjo": {
+        "mudancas": [
+          [
+            "atrFixo.arranjo",
+            1
+          ]
+        ],
+        "estado": {
+          "atrFixo.arranjo": 1
+        },
+        "tela": {
+          "dadoSelecionado": null
+        }
+      },
+      "inteligencia": {
+        "mudancas": [
+          [
+            "atrPontos.int",
+            -1
+          ]
+        ],
+        "estado": {
+          "atrPontos.int": -1,
+          "periciasInt": []
+        },
+        "tela": {}
+      },
+      "semMudanca": {
+        "mudancas": [
+          [
+            "nome",
+            "Pip"
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      }
+    }
+  },
+  "Golem inventor (sem origem, Protótipo)": {
+    "passos": [
+      "raca",
+      "atributos",
+      "classe",
+      "pericias",
+      "devocao",
+      "equipamento",
+      "dinheiro",
+      "revisao"
+    ],
+    "pendencias": {
+      "raca": null,
+      "atributos": null,
+      "classe": null,
+      "pericias": null,
+      "devocao": null,
+      "equipamento": null,
+      "dinheiro": null,
+      "revisao": null
+    },
+    "telas": {
+      "raca": "ok",
+      "atributos": "ok",
+      "classe": "ok",
+      "pericias": "ok",
+      "devocao": "ok",
+      "equipamento": "ok",
+      "dinheiro": "ok",
+      "revisao": "ok"
+    },
+    "plano": {
+      "nome": "Engrenagem",
+      "raca": "Golem",
+      "classe": "Inventor",
+      "atributos": {
+        "for": {
+          "base": 2,
+          "racial": 2
+        },
+        "des": {
+          "base": 0,
+          "racial": 0
+        },
+        "con": {
+          "base": 1,
+          "racial": 1
+        },
+        "int": {
+          "base": 3,
+          "racial": 0
+        },
+        "sab": {
+          "base": 0,
+          "racial": 0
+        },
+        "car": {
+          "base": -1,
+          "racial": -1
+        }
+      },
+      "pericias": [
+        "acro",
+        "ades",
+        "conh",
+        "cura",
+        "dipl",
+        "fort",
+        "oficio",
+        "alfa",
+        "vont"
+      ],
+      "poderes": [
+        {
+          "grupo": "R",
+          "poderes": [
+            "Chassi",
+            "Criatura Artificial",
+            "Fonte Elemental",
+            "Propósito de Criação",
+            "Lobo Solitário"
+          ]
+        },
+        {
+          "grupo": "1",
+          "poderes": [
+            "Engenhosidade (Inventor)",
+            "Protótipo"
+          ]
+        }
+      ],
+      "magias": [],
+      "magiasRaciais": [],
+      "magiasPoderesClasse": [],
+      "itens": [
+        "Mochila",
+        "Saco de Dormir",
+        "Traje de viajante",
+        "Instrumentos de Ofício",
+        "Adaga",
+        "Adaga (Banhado a Ouro)"
+      ],
+      "conjuracao": null,
+      "escolasMagia": null,
+      "origem": "",
+      "divindade": "",
+      "idade": null,
+      "niveisExtras": 0,
+      "dinheiro": 11,
+      "escolhasRaciais": [
+        "Fonte Elemental: Fogo (fogo)",
+        "Propósito de Criação: Lobo Solitário"
+      ],
+      "escolhasClasse": [
+        "Protótipo: Adaga (Banhado a Ouro)"
+      ]
+    },
+    "cascata": {
+      "raca": {
+        "mudancas": [
+          [
+            "raca",
+            "Compendium.tormenta20.racas.Item.guBAxwQ5PEo5GRZv"
+          ]
+        ],
+        "estado": {
+          "raca": "Compendium.tormenta20.racas.Item.guBAxwQ5PEo5GRZv",
+          "racaEscolhas.fonteElemental": "(removido)",
+          "racaEscolhas.propositoCriacao": "(removido)"
+        },
+        "tela": {}
+      },
+      "racaEscolhas": {
+        "mudancas": [
+          [
+            "racaEscolhas.versatil.pericias",
+            [
+              "acro",
+              "atle"
+            ]
+          ]
+        ],
+        "estado": {
+          "racaEscolhas.versatil": {
+            "pericias": [
+              "acro",
+              "atle"
+            ]
+          }
+        },
+        "tela": {}
+      },
+      "classe": {
+        "mudancas": [
+          [
+            "classe",
+            "Compendium.tormenta20.classes.Item.TH7OIKaDqtLLQUrs"
+          ]
+        ],
+        "estado": {
+          "classePoderEscolhas.prototipo": "(removido)",
+          "classe": "Compendium.tormenta20.classes.Item.TH7OIKaDqtLLQUrs",
+          "periciasOu": [],
+          "periciasClasse": [],
+          "devoto": null,
+          "equip.arma": ""
+        },
+        "tela": {}
+      },
+      "escolhaClasse": null,
+      "escolhaClasseInvalida": {
+        "mudancas": [
+          [
+            "escolhasClasse.inexistente",
+            "x"
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "magiasEscolas": {
+        "mudancas": [
+          [
+            "magiasEscolas",
+            [
+              "ench"
+            ]
+          ]
+        ],
+        "estado": {
+          "magiasEscolas": [
+            "ench"
+          ]
+        },
+        "tela": {}
+      },
+      "periciasFixasManuais": {
+        "mudancas": [
+          [
+            "periciasFixasManuais",
+            [
+              "conh"
+            ]
+          ]
+        ],
+        "estado": {
+          "periciasFixasManuais": [
+            "conh"
+          ],
+          "periciasClasse": [
+            "cura",
+            "dipl",
+            "fort"
+          ]
+        },
+        "tela": {}
+      },
+      "periciasOu": {
+        "mudancas": [
+          [
+            "periciasOu.0",
+            "pont"
+          ]
+        ],
+        "estado": {
+          "periciasOu": [
+            "pont"
+          ]
+        },
+        "tela": {}
+      },
+      "origem": {
+        "mudancas": [
+          [
+            "origens.principal.nome",
+            "Artista"
+          ]
+        ],
+        "estado": {
+          "origens.principal.nome": "Artista"
+        },
+        "tela": {}
+      },
+      "divindade": {
+        "mudancas": [
+          [
+            "divindade",
+            "Azgher"
+          ]
+        ],
+        "estado": {
+          "divindade": "Azgher"
+        },
+        "tela": {
+          "focoDivindade": ""
+        }
+      },
+      "complicacoes": {
+        "mudancas": [
+          [
+            "complicacoes",
+            []
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "faixa": {
+        "mudancas": [
+          [
+            "idade.faixa",
+            "velho"
+          ]
+        ],
+        "estado": {
+          "idade.faixa": "velho"
+        },
+        "tela": {}
+      },
+      "poderGeralIdade": {
+        "mudancas": [
+          [
+            "idade.poderGeral",
+            "Atlético"
+          ],
+          [
+            "idade.poderGeral",
+            ""
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "itemSuperior": {
+        "mudancas": [
+          [
+            "classePoderEscolhas.prototipo.melhoria",
+            "m"
+          ],
+          [
+            "classePoderEscolhas.prototipo.item",
+            "Outro item"
+          ]
+        ],
+        "estado": {
+          "classePoderEscolhas.prototipo.item": "Outro item",
+          "classePoderEscolhas.prototipo.melhoria": ""
+        },
+        "tela": {}
+      },
+      "devoto": {
+        "mudancas": [
+          [
+            "devoto",
+            false
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "fundamentalista": {
+        "mudancas": [
+          [
+            "fundamentalista",
+            true
+          ],
+          [
+            "poderesConcedidos",
+            [
+              "Coragem Total",
+              "Dom da Verdade"
+            ]
+          ],
+          [
+            "fundamentalista",
+            false
+          ]
+        ],
+        "estado": {
+          "poderesConcedidos": [
+            "Coragem Total"
+          ]
+        },
+        "tela": {}
+      },
+      "vendas": {
+        "mudancas": [
+          [
+            "vendas",
+            [
+              "Adaga"
+            ]
+          ],
+          [
+            "equip.arma",
+            "Arco curto"
+          ]
+        ],
+        "estado": {
+          "equip.arma": "Arco curto",
+          "vendas": [
+            "Adaga"
+          ]
+        },
+        "tela": {}
+      },
+      "atrModo": {
+        "mudancas": [
+          [
+            "atrModo",
+            "rolagem"
+          ]
+        ],
+        "estado": {
+          "atrModo": "rolagem",
+          "periciasInt": []
+        },
+        "tela": {
+          "dadoSelecionado": null
+        }
+      },
+      "arranjo": {
+        "mudancas": [
+          [
+            "atrFixo.arranjo",
+            1
+          ]
+        ],
+        "estado": {
+          "atrFixo.arranjo": 1
+        },
+        "tela": {
+          "dadoSelecionado": null
+        }
+      },
+      "inteligencia": {
+        "mudancas": [
+          [
+            "atrPontos.int",
+            -1
+          ]
+        ],
+        "estado": {
+          "atrPontos.int": -1,
+          "periciasInt": []
+        },
+        "tela": {}
+      },
+      "semMudanca": {
+        "mudancas": [
+          [
+            "nome",
+            "Engrenagem"
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      }
+    }
+  },
+  "Humano cruzado (Dragão Brasil: Presente dos Deuses, devoção restrita)": {
+    "passos": [
+      "raca",
+      "atributos",
+      "classe",
+      "magias",
+      "pericias",
+      "origem:principal",
+      "devocao",
+      "equipamento",
+      "dinheiro",
+      "revisao"
+    ],
+    "pendencias": {
+      "raca": null,
+      "atributos": null,
+      "classe": null,
+      "magias": null,
+      "pericias": null,
+      "origem:principal": null,
+      "devocao": null,
+      "equipamento": null,
+      "dinheiro": null,
+      "revisao": null
+    },
+    "telas": {
+      "raca": "ok",
+      "atributos": "ok",
+      "classe": "ok",
+      "magias": "ok",
+      "pericias": "ok",
+      "origem:principal": "ok",
+      "devocao": "ok",
+      "equipamento": "ok",
+      "dinheiro": "ok",
+      "revisao": "ok"
+    },
+    "plano": {
+      "nome": "Aldric",
+      "raca": "Humano",
+      "classe": "Cruzado",
+      "atributos": {
+        "for": {
+          "base": 3,
+          "racial": 1
+        },
+        "des": {
+          "base": 0,
+          "racial": 0
+        },
+        "con": {
+          "base": 2,
+          "racial": 1
+        },
+        "int": {
+          "base": 0,
+          "racial": 0
+        },
+        "sab": {
+          "base": 2,
+          "racial": 1
+        },
+        "car": {
+          "base": 0,
+          "racial": 0
+        }
+      },
+      "pericias": [
+        "atle",
+        "conh",
+        "cura",
+        "dipl",
+        "inti",
+        "luta",
+        "reli",
+        "vont"
+      ],
+      "poderes": [
+        {
+          "grupo": "R",
+          "poderes": [
+            "Versátil"
+          ]
+        },
+        {
+          "grupo": "D",
+          "poderes": [
+            "Coragem Total",
+            "Dom da Verdade"
+          ]
+        },
+        {
+          "grupo": "1",
+          "poderes": [
+            "Devoto Fiel (Clérigo)",
+            "Magias (Clérigo)",
+            "Presente dos Deuses (Cruzado)"
+          ]
+        }
+      ],
+      "magias": [
+        "Abençoar Alimentos",
+        "Acalmar Animal",
+        "Arma Espiritual"
+      ],
+      "magiasRaciais": [],
+      "magiasPoderesClasse": [],
+      "itens": [
+        "Mochila",
+        "Saco de Dormir",
+        "Traje de viajante",
+        "Símbolo Sagrado",
+        "Símbolo Sagrado",
+        "Traje de sacerdote",
+        "Adaga",
+        "Alabarda",
+        "Escudo leve",
+        "Alabarda (Banhado a Ouro)"
+      ],
+      "conjuracao": "sab",
+      "escolasMagia": null,
+      "origem": "Acólito",
+      "divindade": "Khalmyr",
+      "idade": null,
+      "niveisExtras": 0,
+      "dinheiro": 10,
+      "escolhasRaciais": [
+        "Versátil: Atletismo, Intimidação"
+      ],
+      "escolhasClasse": [
+        "Presente dos Deuses (Cruzado): Alabarda (Banhado a Ouro)"
+      ]
+    },
+    "cascata": {
+      "raca": {
+        "mudancas": [
+          [
+            "raca",
+            "Compendium.tormenta20.racas.Item.guBAxwQ5PEo5GRZv"
+          ]
+        ],
+        "estado": {
+          "raca": "Compendium.tormenta20.racas.Item.guBAxwQ5PEo5GRZv",
+          "racaAtributos": [],
+          "racaEscolhas.versatil": "(removido)"
+        },
+        "tela": {}
+      },
+      "racaEscolhas": {
+        "mudancas": [
+          [
+            "racaEscolhas.versatil.pericias",
+            [
+              "acro",
+              "atle"
+            ]
+          ]
+        ],
+        "estado": {
+          "racaEscolhas.versatil.pericias": [
+            "acro",
+            "atle"
+          ]
+        },
+        "tela": {}
+      },
+      "classe": {
+        "mudancas": [
+          [
+            "classe",
+            "Compendium.tormenta20.classes.Item.TH7OIKaDqtLLQUrs"
+          ]
+        ],
+        "estado": {
+          "classePoderEscolhas.presenteDeuses": "(removido)",
+          "classe": "Compendium.tormenta20.classes.Item.TH7OIKaDqtLLQUrs",
+          "magias": [],
+          "periciasOu": [],
+          "periciasClasse": [],
+          "devoto": null,
+          "divindade": "",
+          "poderesConcedidos": [],
+          "equip.arma": "",
+          "equip.armaMarcial": ""
+        },
+        "tela": {}
+      },
+      "escolhaClasse": null,
+      "escolhaClasseInvalida": {
+        "mudancas": [
+          [
+            "escolhasClasse.inexistente",
+            "x"
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "magiasEscolas": {
+        "mudancas": [
+          [
+            "magiasEscolas",
+            [
+              "ench"
+            ]
+          ]
+        ],
+        "estado": {
+          "magiasEscolas": [
+            "ench"
+          ]
+        },
+        "tela": {}
+      },
+      "periciasFixasManuais": {
+        "mudancas": [
+          [
+            "periciasFixasManuais",
+            [
+              "conh"
+            ]
+          ]
+        ],
+        "estado": {
+          "periciasFixasManuais": [
+            "conh"
+          ],
+          "periciasClasse": [
+            "dipl"
+          ]
+        },
+        "tela": {}
+      },
+      "periciasOu": {
+        "mudancas": [
+          [
+            "periciasOu.0",
+            "pont"
+          ]
+        ],
+        "estado": {
+          "periciasOu": [
+            "pont"
+          ]
+        },
+        "tela": {}
+      },
+      "origem": {
+        "mudancas": [
+          [
+            "origens.principal.nome",
+            "Artista"
+          ]
+        ],
+        "estado": {
+          "origens.principal.nome": "Artista",
+          "origens.principal.beneficios": []
+        },
+        "tela": {}
+      },
+      "divindade": {
+        "mudancas": [
+          [
+            "divindade",
+            "Azgher"
+          ]
+        ],
+        "estado": {
+          "divindade": "Azgher",
+          "poderesConcedidos": []
+        },
+        "tela": {
+          "focoDivindade": ""
+        }
+      },
+      "complicacoes": {
+        "mudancas": [
+          [
+            "complicacoes",
+            []
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "faixa": {
+        "mudancas": [
+          [
+            "idade.faixa",
+            "velho"
+          ]
+        ],
+        "estado": {
+          "idade.faixa": "velho"
+        },
+        "tela": {}
+      },
+      "poderGeralIdade": {
+        "mudancas": [
+          [
+            "idade.poderGeral",
+            "Atlético"
+          ],
+          [
+            "idade.poderGeral",
+            ""
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "itemSuperior": {
+        "mudancas": [
+          [
+            "classePoderEscolhas.presenteDeuses.melhoria",
+            "m"
+          ],
+          [
+            "classePoderEscolhas.presenteDeuses.item",
+            "Outro item"
+          ]
+        ],
+        "estado": {
+          "classePoderEscolhas.presenteDeuses.item": "Outro item",
+          "classePoderEscolhas.presenteDeuses.melhoria": ""
+        },
+        "tela": {}
+      },
+      "devoto": {
+        "mudancas": [
+          [
+            "devoto",
+            false
+          ]
+        ],
+        "estado": {
+          "devoto": false,
+          "divindade": "",
+          "poderesConcedidos": []
+        },
+        "tela": {}
+      },
+      "fundamentalista": {
+        "mudancas": [
+          [
+            "fundamentalista",
+            true
+          ],
+          [
+            "poderesConcedidos",
+            [
+              "Coragem Total",
+              "Dom da Verdade",
+              "Espada Justiceira"
+            ]
+          ],
+          [
+            "fundamentalista",
+            false
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "vendas": {
+        "mudancas": [
+          [
+            "vendas",
+            [
+              "Adaga"
+            ]
+          ],
+          [
+            "equip.arma",
+            "Arco curto"
+          ]
+        ],
+        "estado": {
+          "equip.arma": "Arco curto"
+        },
+        "tela": {}
+      },
+      "atrModo": {
+        "mudancas": [
+          [
+            "atrModo",
+            "rolagem"
+          ]
+        ],
+        "estado": {
+          "atrModo": "rolagem"
+        },
+        "tela": {
+          "dadoSelecionado": null
+        }
+      },
+      "arranjo": {
+        "mudancas": [
+          [
+            "atrFixo.arranjo",
+            1
+          ]
+        ],
+        "estado": {
+          "atrFixo.arranjo": 1
+        },
+        "tela": {
+          "dadoSelecionado": null
+        }
+      },
+      "inteligencia": {
+        "mudancas": [
+          [
+            "atrPontos.int",
+            -1
+          ]
+        ],
+        "estado": {
+          "atrPontos.int": -1
+        },
+        "tela": {}
+      },
+      "semMudanca": {
+        "mudancas": [
+          [
+            "nome",
+            "Aldric"
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      }
+    }
+  },
+  "Humano ladino velho com complicação (suplemento, Idades Variadas)": {
+    "passos": [
+      "raca",
+      "atributos",
+      "classe",
+      "pericias",
+      "origem:principal",
+      "devocao",
+      "complicacoes",
+      "idade",
+      "equipamento",
+      "dinheiro",
+      "revisao"
+    ],
+    "pendencias": {
+      "raca": null,
+      "atributos": null,
+      "classe": null,
+      "pericias": null,
+      "origem:principal": null,
+      "devocao": null,
+      "complicacoes": null,
+      "idade": null,
+      "equipamento": null,
+      "dinheiro": null,
+      "revisao": null
+    },
+    "telas": {
+      "raca": "ok",
+      "atributos": "ok",
+      "classe": "ok",
+      "pericias": "ok",
+      "origem:principal": "ok",
+      "devocao": "ok",
+      "complicacoes": "ok",
+      "idade": "ok",
+      "equipamento": "ok",
+      "dinheiro": "ok",
+      "revisao": "ok"
+    },
+    "plano": {
+      "nome": "Velho Corvo",
+      "raca": "Humano",
+      "classe": "Ladino",
+      "atributos": {
+        "for": {
+          "base": -1,
+          "racial": 0
+        },
+        "des": {
+          "base": 2,
+          "racial": 1
+        },
+        "con": {
+          "base": 0,
+          "racial": 0
+        },
+        "int": {
+          "base": 2,
+          "racial": 1
+        },
+        "sab": {
+          "base": 1,
+          "racial": 0
+        },
+        "car": {
+          "base": 0,
+          "racial": 1
+        }
+      },
+      "pericias": [
+        "acro",
+        "ades",
+        "atle",
+        "atua",
+        "cava",
+        "conh",
+        "cura",
+        "dipl",
+        "enga",
+        "furt",
+        "inic",
+        "inti",
+        "ladi",
+        "alfa",
+        "alqu",
+        "refl",
+        "reli"
+      ],
+      "poderes": [
+        {
+          "grupo": "R",
+          "poderes": [
+            "Versátil"
+          ]
+        },
+        {
+          "grupo": "C",
+          "poderes": [
+            "Amaldiçoado",
+            "Alma Livre",
+            "Abatido",
+            "Catarata",
+            "Dedos Trêmulos"
+          ]
+        },
+        {
+          "grupo": "I",
+          "poderes": [
+            "Ai Minhas Costas"
+          ]
+        },
+        {
+          "grupo": "1",
+          "poderes": [
+            "Ataque Furtivo",
+            "Especialista"
+          ]
+        }
+      ],
+      "magias": [],
+      "magiasRaciais": [],
+      "magiasPoderesClasse": [],
+      "itens": [
+        "Mochila",
+        "Saco de Dormir",
+        "Traje de viajante",
+        "Gazua",
+        "Símbolo Sagrado",
+        "Traje de sacerdote",
+        "Adaga"
+      ],
+      "conjuracao": null,
+      "escolasMagia": null,
+      "origem": "Acólito",
+      "divindade": "",
+      "idade": "Idade: Velho, 70 anos — começa 2 níveis acima do grupo",
+      "niveisExtras": 2,
+      "dinheiro": 8,
+      "escolhasRaciais": [
+        "Versátil: Atletismo, Intimidação"
+      ],
+      "escolhasClasse": [
+        "Especialista: Acrobacia, Adestramento, Ofício: Alfaiate"
+      ]
+    },
+    "cascata": {
+      "raca": {
+        "mudancas": [
+          [
+            "raca",
+            "Compendium.tormenta20.racas.Item.guBAxwQ5PEo5GRZv"
+          ]
+        ],
+        "estado": {
+          "raca": "Compendium.tormenta20.racas.Item.guBAxwQ5PEo5GRZv",
+          "racaAtributos": [],
+          "racaEscolhas.versatil": "(removido)",
+          "racaEscolhas.suraggelVariante": {
+            "pericias": [],
+            "poderes": []
+          },
+          "classePoderEscolhas.especialista": [
+            "acro",
+            "ades"
+          ],
+          "periciasInt": [
+            "ades",
+            "alfa"
+          ]
+        },
+        "tela": {}
+      },
+      "racaEscolhas": {
+        "mudancas": [
+          [
+            "racaEscolhas.versatil.pericias",
+            [
+              "acro",
+              "atle"
+            ]
+          ]
+        ],
+        "estado": {
+          "racaEscolhas.versatil.pericias": [
+            "acro",
+            "atle"
+          ],
+          "periciasClasse": [
+            "atua",
+            "cava",
+            "conh",
+            "dipl",
+            "enga",
+            "furt",
+            "inic"
+          ]
+        },
+        "tela": {}
+      },
+      "classe": {
+        "mudancas": [
+          [
+            "classe",
+            "Compendium.tormenta20.classes.Item.TH7OIKaDqtLLQUrs"
+          ]
+        ],
+        "estado": {
+          "classePoderEscolhas.especialista": "(removido)",
+          "classe": "Compendium.tormenta20.classes.Item.TH7OIKaDqtLLQUrs",
+          "periciasClasse": [],
+          "devoto": null,
+          "equip.arma": ""
+        },
+        "tela": {}
+      },
+      "escolhaClasse": null,
+      "escolhaClasseInvalida": {
+        "mudancas": [
+          [
+            "escolhasClasse.inexistente",
+            "x"
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "magiasEscolas": {
+        "mudancas": [
+          [
+            "magiasEscolas",
+            [
+              "ench"
+            ]
+          ]
+        ],
+        "estado": {
+          "magiasEscolas": [
+            "ench"
+          ]
+        },
+        "tela": {}
+      },
+      "periciasFixasManuais": {
+        "mudancas": [
+          [
+            "periciasFixasManuais",
+            [
+              "acro"
+            ]
+          ]
+        ],
+        "estado": {
+          "classePoderEscolhas.especialista": [
+            "ades",
+            "alfa"
+          ],
+          "periciasFixasManuais": [
+            "acro"
+          ],
+          "periciasClasse": [
+            "atua",
+            "cava",
+            "conh",
+            "dipl",
+            "enga",
+            "furt",
+            "inic"
+          ]
+        },
+        "tela": {}
+      },
+      "periciasOu": {
+        "mudancas": [
+          [
+            "periciasOu.0",
+            "pont"
+          ]
+        ],
+        "estado": {
+          "periciasOu": [
+            "pont"
+          ]
+        },
+        "tela": {}
+      },
+      "origem": {
+        "mudancas": [
+          [
+            "origens.principal.nome",
+            "Artista"
+          ]
+        ],
+        "estado": {
+          "origens.principal.nome": "Artista",
+          "origens.principal.beneficios": []
+        },
+        "tela": {}
+      },
+      "divindade": {
+        "mudancas": [
+          [
+            "divindade",
+            "Azgher"
+          ]
+        ],
+        "estado": {
+          "divindade": "Azgher"
+        },
+        "tela": {
+          "focoDivindade": ""
+        }
+      },
+      "complicacoes": {
+        "mudancas": [
+          [
+            "complicacoes",
+            []
+          ]
+        ],
+        "estado": {
+          "complicacoes": [],
+          "complicacaoPoder": ""
+        },
+        "tela": {}
+      },
+      "faixa": {
+        "mudancas": [
+          [
+            "idade.faixa",
+            "crianca"
+          ]
+        ],
+        "estado": {
+          "origens.principal.beneficios": [],
+          "idade.faixa": "crianca",
+          "idade.complicacoes": []
+        },
+        "tela": {}
+      },
+      "poderGeralIdade": {
+        "mudancas": [
+          [
+            "idade.poderGeral",
+            "Atlético"
+          ],
+          [
+            "idade.poderGeral",
+            ""
+          ]
+        ],
+        "estado": {
+          "idade.complicacoes": []
+        },
+        "tela": {}
+      },
+      "itemSuperior": {
+        "mudancas": [
+          [
+            "classePoderEscolhas.teste.melhoria",
+            "m"
+          ],
+          [
+            "classePoderEscolhas.teste.item",
+            "Outro item"
+          ]
+        ],
+        "estado": {
+          "classePoderEscolhas.teste": {
+            "melhoria": "",
+            "item": "Outro item"
+          }
+        },
+        "tela": {}
+      },
+      "devoto": {
+        "mudancas": [
+          [
+            "devoto",
+            false
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      },
+      "fundamentalista": {
+        "mudancas": [
+          [
+            "fundamentalista",
+            true
+          ],
+          [
+            "poderesConcedidos",
+            [
+              "Coragem Total",
+              "Dom da Verdade"
+            ]
+          ],
+          [
+            "fundamentalista",
+            false
+          ]
+        ],
+        "estado": {
+          "poderesConcedidos": [
+            "Coragem Total"
+          ]
+        },
+        "tela": {}
+      },
+      "vendas": {
+        "mudancas": [
+          [
+            "vendas",
+            [
+              "Adaga"
+            ]
+          ],
+          [
+            "equip.arma",
+            "Arco curto"
+          ]
+        ],
+        "estado": {
+          "equip.arma": "Arco curto"
+        },
+        "tela": {}
+      },
+      "atrModo": {
+        "mudancas": [
+          [
+            "atrModo",
+            "rolagem"
+          ]
+        ],
+        "estado": {
+          "classePoderEscolhas.especialista": [
+            "acro"
+          ],
+          "atrModo": "rolagem",
+          "periciasInt": [
+            "ades"
+          ]
+        },
+        "tela": {
+          "dadoSelecionado": null
+        }
+      },
+      "arranjo": {
+        "mudancas": [
+          [
+            "atrFixo.arranjo",
+            1
+          ]
+        ],
+        "estado": {
+          "atrFixo.arranjo": 1
+        },
+        "tela": {
+          "dadoSelecionado": null
+        }
+      },
+      "inteligencia": {
+        "mudancas": [
+          [
+            "atrPontos.int",
+            -1
+          ]
+        ],
+        "estado": {
+          "classePoderEscolhas.especialista": [
+            "acro"
+          ],
+          "atrPontos.int": -1,
+          "periciasInt": []
+        },
+        "tela": {}
+      },
+      "semMudanca": {
+        "mudancas": [
+          [
+            "nome",
+            "Velho Corvo"
+          ]
+        ],
+        "estado": {},
+        "tela": {}
+      }
+    }
+  }
+}

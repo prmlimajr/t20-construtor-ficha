@@ -820,7 +820,13 @@
         }
       },
       "20": {
-        "habilidades": ["Guerreiro Santificado"]
+        "habilidades": [
+          "Guerreiro Santificado",
+          {
+            "nome": "Ataque Especial",
+            "classe": "Guerreiro"
+          }
+        ]
       }
     },
     "valoresNaFicha": {
