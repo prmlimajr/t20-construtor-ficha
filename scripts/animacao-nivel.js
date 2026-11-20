@@ -20,9 +20,10 @@ function el(tag, classe, texto) {
  * @param {number} p.nivel           nível de personagem alcançado
  * @param {string} [p.detalhe]       texto menor (ex.: "Guerreiro 5 · +7 PV · +3 PM")
  * @param {string} [p.img]           ícone da classe
+ * @returns {Promise<void>} resolvida quando a animação some
  */
 export function animarSubidaDeNivel({ container, nivel, detalhe = "", img = "" } = {}) {
-	if (!container) return;
+	if (!container) return Promise.resolve();
 	container.querySelector(":scope > .t20cf-levelup")?.remove();
 	const raiz = el("div", "t20cf-levelup");
 	raiz.setAttribute("role", "status");
@@ -54,5 +55,8 @@ export function animarSubidaDeNivel({ container, nivel, detalhe = "", img = "" }
 	raiz.append(texto);
 
 	container.append(raiz);
-	setTimeout(() => raiz.remove(), DURACAO_MS);
+	return new Promise((resolve) => setTimeout(() => {
+		raiz.remove();
+		resolve();
+	}, DURACAO_MS));
 }

@@ -644,6 +644,7 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 		if (pendencia) return ui.notifications.warn(pendencia);
 		this.ocupado = true;
 		this.render();
+		let animacao = null;
 		try {
 			const plano = montarPlano(nivel, {
 				classeId: classe.id, poder, anotacao: this.anotacao, selecoes: this.selecoes,
@@ -652,7 +653,7 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			const r = await aplicarNivel(this.actor, plano);
 			ui.notifications.info(`${this.actor.name} subiu para o ${nivel.nivelPersonagem}º nível (${classe.nome} ${nivel.nivelClasse}): +${r.pv} PV, +${r.pm} PM.`);
 			// só dentro da janela (no elemento raiz, que não é redesenhado pelo render do conteúdo)
-			animarSubidaDeNivel({
+			animacao = animarSubidaDeNivel({
 				container: this.element,
 				nivel: nivel.nivelPersonagem,
 				detalhe: `${classe.nome} ${nivel.nivelClasse} · +${r.pv} PV · +${r.pm} PM`,
@@ -666,6 +667,25 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			this.ocupado = false;
 			this.render();
 		}
+		if (animacao) await this.#perguntarOutroNivel(animacao);
+	}
+
+	/**
+	 * Depois da animação: pergunta se quer subir mais um nível; "Não" fecha o assistente.
+	 * No 20º nível não há o que perguntar (a janela mostra o aviso). Fechar a pergunta no X mantém a janela.
+	 */
+	async #perguntarOutroNivel(animacao) {
+		await animacao;
+		if (!this.rendered) return;
+		const { ficha, bloqueio } = this.#calcular();
+		if (bloqueio) return;
+		const continuar = await foundry.applications.api.DialogV2.confirm({
+			window: { title: "Subir de nível" },
+			content: `<p>${foundry.utils.escapeHTML?.(this.actor.name) ?? this.actor.name} está no ${ficha.nivel}º nível. Deseja subir mais um nível?</p>`,
+			yes: { label: "Sim, subir mais um" },
+			no: { label: "Não, fechar", default: true }
+		});
+		if (continuar === false) this.close();
 	}
 
 	/** Comportamento original do "+" da ficha: compêndio de classes (para multiclasse, arrastando a classe). */

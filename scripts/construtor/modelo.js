@@ -7,9 +7,9 @@
  * dadosNivel e lerPreRequisito (pré-requisitos dos poderes gerais, ver dados-nivel.js).
  */
 import {
-	MODULE_ID, ATRIBUTOS, PONTOS_TOTAIS, ARRANJOS_FIXOS, MODOS_VARIADOS, VALKARIA_INICIAL, converterRolagem
+	MODULE_ID, ATRIBUTOS, PONTOS_TOTAIS, ARRANJOS_FIXOS, MODOS_VARIADOS, VALKARIA_INICIAL, converterRolagem, normalizar
 } from "../regras.js";
-import { poder, equipamento, magiaPorNome, fonteDe } from "../dados.js";
+import { poder, equipamento, magiaPorNome, fonteDe, poderSelecionavel } from "../dados.js";
 import { poderRacialPermitido } from "../poderes-raciais.js";
 import { lerFicha } from "../ficha-atual.js";
 import { avaliarPreRequisito } from "../pre-requisitos.js";
@@ -18,6 +18,7 @@ import { poderDistincaoPermitido } from "../distincoes.js";
 import { atributosDinamicosRaca } from "../suplementos.js";
 import { circuloMagia, rotuloPericia, ordenarPericias } from "./comum.js";
 import { PASSOS, PASSO_POR_ID } from "./passos/index.js";
+import { escolhaDoPoder } from "./passos/origem.js";
 import { INVALIDACOES, AJUSTES, casa } from "./cascata.js";
 
 /** Categorias de tamanho, da menor para a maior (system.tracos.tamanho). */
@@ -384,9 +385,10 @@ export class ModeloConstrutor {
 		for (const [sub, lista] of [["principal", d.origens], ["regional", d.origensRegionais]]) {
 			const o = e.origens[sub];
 			if (o.nome && !lista.some((x) => x.nome === o.nome)) {
-				Object.assign(o, { nome: "", beneficios: [], grupos: {}, itens: {}, amnPericia: "", amnPoder: "" });
+				Object.assign(o, { nome: "", beneficios: [], grupos: {}, escolhasPoder: {}, itens: {}, amnPericia: "", amnPoder: "" });
 			}
 			for (const [g, n] of Object.entries(o.grupos ?? {})) if (!poder(d, n)) delete o.grupos[g];
+			for (const [k, n] of Object.entries(o.escolhasPoder ?? {})) if (!poder(d, n)) delete o.escolhasPoder[k];
 		}
 		const limparEscolhas = (mapa) => {
 			for (const [id, v] of Object.entries(mapa ?? {})) {
@@ -751,9 +753,13 @@ export class ModeloConstrutor {
 		return lerFicha(ator, { regrasClasses: this.dados.regrasClasses, variantes: variantesDe(this.dadosNivel?.progressao, this.dados.variantes) });
 	}
 
-	/** Pré-requisito de um poder geral contra a ficha: {texto, ok, falhas} (null se não tem). */
-	preRequisito(p, ficha) {
-		if (!this.lerPreRequisito || p?.system?.tipo !== "geral") return null;
+	/**
+	 * Pré-requisito de um poder geral contra a ficha: {texto, ok, falhas} (null se não tem).
+	 * @param {boolean} [opcoes.classe]  confere também poderes de classe (lista da Futura Lenda)
+	 */
+	preRequisito(p, ficha, { classe = false } = {}) {
+		const tipo = p?.system?.tipo;
+		if (!this.lerPreRequisito || !(tipo === "geral" || (classe && tipo === "classe"))) return null;
 		const req = this.lerPreRequisito(p);
 		if (!req) return null;
 		const r = avaliarPreRequisito(req, ficha);
@@ -770,6 +776,36 @@ export class ModeloConstrutor {
 				if (r && !r.ok) return `Pré-requisito não atendido: ${p.name} (${r.falhas.join(", ")}). Troque o poder ou ajuste a ficha.`;
 			}
 		}
+		return null;
+	}
+
+	/**
+	 * Poderes da classe escolhida (e da classe básica, se for variante) que um benefício como a Futura Lenda
+	 * pode conceder. Fora os que o personagem já recebe por outra fonte (`atual` continua na lista).
+	 */
+	poderesDeClasseEscolhiveis(atual = "") {
+		const c = this.classe;
+		if (!c) return [];
+		const base = variantesDe(this.dadosNivel?.progressao, this.dados.variantes)[c.name];
+		const listas = new Set([c.name, base].filter(Boolean).map(normalizar));
+		const ja = new Set(this.plano().gruposPoderes.flatMap((g) => g.poderes.map((p) => p.name)));
+		return this.dados.poderes
+			.filter((p) => p.system?.tipo === "classe" && listas.has(normalizar(p.system?.subtipo)))
+			.filter((p) => poderSelecionavel(this.dados, p) && this.poderListavel(p))
+			.filter((p) => !ja.has(p.name) || p.name === atual)
+			.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+	}
+
+	/** Pendência de um benefício de origem que manda escolher outro poder (Futura Lenda), ou null. */
+	pendenciaEscolhaPoder(nome, o) {
+		const esc = escolhaDoPoder(nome);
+		if (!esc) return null;
+		const escolhido = o.escolhasPoder?.[nome];
+		if (!escolhido) return `${nome}: escolha ${esc.rotulo}.`;
+		const p = poder(this.dados, escolhido);
+		if (!p) return `${nome}: escolha ${esc.rotulo}.`;
+		const r = this.preRequisito(p, this.fichaProvisoria(), { classe: true });
+		if (r && !r.ok) return `${nome}: ${p.name} não atende o pré-requisito (${r.falhas.join(", ")}). Troque o poder.`;
 		return null;
 	}
 
@@ -883,6 +919,8 @@ export class ModeloConstrutor {
 			for (const b of o.estado.beneficios) {
 				if (b.startsWith("poder:")) addOrigem(b.slice(6));
 				if (b.startsWith("grupo:") && o.estado.grupos[b.slice(6)]) addOrigem(o.estado.grupos[b.slice(6)]);
+				// Futura Lenda e afins: o poder escolhido pelo benefício
+				if (b.startsWith("poder:") && o.estado.escolhasPoder?.[b.slice(6)]) addOrigem(o.estado.escolhasPoder[b.slice(6)]);
 			}
 			if (o.def.especial === "amnesico") {
 				(o.def.poderes ?? []).forEach(addOrigem);

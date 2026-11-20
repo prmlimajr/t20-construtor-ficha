@@ -48,6 +48,8 @@ export const INVALIDACOES = [
 				e.complicacoes = [];
 				e.complicacaoPoder = "";
 			}
+			// Futura Lenda: o poder escolhido era da classe anterior
+			for (const o of Object.values(e.origens ?? {})) if (o) o.escolhasPoder = {};
 		}
 	},
 	{
@@ -99,7 +101,7 @@ export const INVALIDACOES = [
 		porque: "trocar de origem zera os benefícios escolhidos",
 		aplicar(e, campo) {
 			const sub = campo.split(".")[1];
-			Object.assign(e.origens[sub], { beneficios: [], grupos: {}, itens: {}, amnPericia: "", amnPoder: "" });
+			Object.assign(e.origens[sub], { beneficios: [], grupos: {}, escolhasPoder: {}, itens: {}, amnPericia: "", amnPoder: "" });
 		}
 	},
 	{

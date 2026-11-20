@@ -32,7 +32,7 @@ export const TEMPLATES_PASSOS = [
 function estadoInicial(actor) {
 	const zeros = Object.fromEntries(ATRIBUTOS.map((k) => [k, 0]));
 	const vazio = Object.fromEntries(ATRIBUTOS.map((k) => [k, ""]));
-	const origem = () => ({ nome: "", beneficios: [], grupos: {}, itens: {}, amnPericia: "", amnPoder: "" });
+	const origem = () => ({ nome: "", beneficios: [], grupos: {}, escolhasPoder: {}, itens: {}, amnPericia: "", amnPoder: "" });
 	return {
 		versao: 1,
 		alcancado: 0,
@@ -458,10 +458,14 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 			}
 			lista.push(valor);
 		}
-		// desmarcar um benefício de grupo limpa o poder escolhido nele
+		// desmarcar um benefício de grupo (ou a Futura Lenda) limpa o poder escolhido nele
 		if (campo.endsWith(".beneficios") && i >= 0 && valor.startsWith("grupo:")) {
 			const sub = campo.split(".")[1];
 			delete this.estado.origens[sub].grupos[valor.slice(6)];
+		}
+		if (campo.endsWith(".beneficios") && i >= 0 && valor.startsWith("poder:")) {
+			const sub = campo.split(".")[1];
+			delete this.estado.origens[sub].escolhasPoder?.[valor.slice(6)];
 		}
 		this.definirCampo(campo, lista);
 	}
