@@ -4,6 +4,8 @@ Wizard passo a passo para criar personagens de **Tormenta20** no Foundry VTT e a
 
 Requer Foundry **v14** e o sistema **Tormenta20 ≥ 1.6.7**.
 
+> **Direitos autorais.** Tormenta20 e os textos dos livros reproduzidos neste módulo (descrições de origens, divindades, escolas de magia, idades, raças, classes e poderes definidos pelo construtor, incluindo conteúdo do *Bestiário de Arton*, do *Heróis de Arton* e da *Dragão Brasil*) são protegidos por direitos autorais da **Jambô Editora**. Este módulo é para uso pessoal: **não compartilhe nem redistribua esse conteúdo**. As descrições que o construtor grava na ficha levam o mesmo aviso.
+
 ## Como usar
 
 - **Diretório de Atores → "Criar personagem (wizard)"**: cria um personagem e abre o construtor.

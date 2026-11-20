@@ -228,16 +228,31 @@ async function carregar() {
 }
 
 /** Efeito "ao usar" (aplicado na rolagem, como a Marca da Presa do caçador). */
-function efeitoAoUsar(nome, img, changes, { tipos = ["attack"], custo = null, aumenta = false, nomes = [], automatico = false } = {}) {
+function efeitoAoUsar(nome, img, changes, { tipos = ["attack"], custo = null, aumenta = false, nomes = [], automatico = false, descricao = "" } = {}) {
 	return {
 		name: nome, img, type: "base", transfer: false, disabled: true,
 		system: {
 			changes: changes.map(([key, value, type = "add"]) => ({ key, value, type, phase: "initial", priority: null })),
 			onuse: true,
-			abilityUse: { description: "", automatic: automatico, aumenta, custo, names: nomes, types: tipos }
+			abilityUse: { description: descricao, automatic: automatico, aumenta, custo, names: nomes, types: tipos }
 		}
 	};
 }
+
+/**
+ * Efeito aplicável de uma habilidade ativada (como o da Fúria): não vale sozinho na ficha; ao usar a
+ * habilidade, o card do chat oferece aplicá-lo (no personagem ou nos alvos) com a duração da habilidade.
+ */
+function efeitoAplicavel(nome, img, changes) {
+	return {
+		name: nome, img, type: "base", transfer: false, disabled: false,
+		system: { changes: changes.map(([key, value, type = "add"]) => ({ key, value, type, phase: "initial", priority: null })), onuse: false }
+	};
+}
+
+/** Ativação no formato do sistema: execucao (action, move, full, reaction, free, hour, day, special) e custo em PM. */
+const ativacao = (execucao, custo, { condicao = "", special = "" } = {}) => ({ execucao, custo, qtd: "", condicao, special });
+const NA_CENA = { value: 0, units: "scene", special: "" };
 
 /** Efeito "somar" no formato dos efeitos de poder do sistema (Foundry v14). */
 function efeitoSomar(nome, img, changes) {
@@ -246,6 +261,14 @@ function efeitoSomar(nome, img, changes) {
 		system: { changes: changes.map(([key, value]) => ({ key, value, type: "add", phase: "initial", priority: null })), onuse: false }
 	};
 }
+
+/**
+ * Aviso de direitos autorais acrescentado às descrições que o construtor define (textos tirados dos
+ * livros de Tormenta20): elas vão para a ficha, então o aviso vai junto.
+ */
+export const AVISO_DIREITOS = "Conteúdo de Tormenta20 protegido por direitos autorais da Jambô Editora. Uso pessoal: não compartilhe nem redistribua.";
+const comAvisoDireitos = (html) => (String(html ?? "").includes("t20cf-direitos") ? html
+	: `${html ?? ""}<p class="t20cf-direitos"><em>${AVISO_DIREITOS}</em></p>`);
 
 /** Pasta dos ícones de habilidades de classe do sistema (usada pelas classes do construtor). */
 const ICONES_CLASSE = "systems/tormenta20/icons/poderes/classes";
@@ -880,6 +903,11 @@ const PODERES_DO_CONSTRUTOR = [
 		nome: "Debulhar Inimigos",
 		tipo: "ability", subtipo: "Capanga", exclusivo: true,
 		img: `${ICONES_CLASSE}/combatentes/campeao.webp`,
+		ativacao: ativacao("free", 5, { condicao: "ao fazer um ataque" }),
+		// opção na janela de ataque: gasta 5 PM para o ataque furtivo valer sem desprevenido nem flanco
+		efeitos: (img) => [efeitoAoUsar("Debulhar Inimigos", img, [], {
+			custo: 5, descricao: "Ataque furtivo mesmo sem o alvo desprevenido ou flanqueado (marque também Ataque Furtivo Brutal)."
+		})],
 		descricao: "<p>No 20º nível, você já perdeu a paciência com inimigos cheios de truques ou que são resistentes às suas habilidades. Seus ataques furtivos ignoram imunidades de criaturas a acertos críticos. Além disso, você pode gastar 5 PM quando faz um ataque para usar seu ataque furtivo mesmo que o alvo não esteja desprevenido ou que você não o esteja flanqueando.</p>"
 	},
 	// Cruzado (clérigo)
@@ -887,6 +915,9 @@ const PODERES_DO_CONSTRUTOR = [
 		nome: "Presente dos Deuses (Cruzado)",
 		tipo: "ability", subtipo: "Cruzado", exclusivo: true,
 		img: `${ICONES_CLASSE}/conjuradores/mao-divindade.webp`,
+		// invocar o presente: ação de movimento e 2 PM, até o fim da cena
+		ativacao: ativacao("move", 2, { condicao: "invocar o presente" }),
+		duracao: NA_CENA,
 		descricao: "<p>Você começa o jogo com uma arma superior com uma melhoria (exceto material especial) com preço total de até T$ 500. Preferencialmente, este item deve ser a arma preferida do seu deus, mas pode ser outra, de acordo com o mestre. Nos níveis 5, 8 e 11, esse item recebe, respectivamente, uma segunda, terceira e quarta melhorias à sua escolha. Nos níveis 9, 14 e 18, esse item recebe, respectivamente, um, dois e três encantos à sua escolha.</p><p>Seu presente dos deuses funciona como a versão mundana da arma, mas ele não ocupa espaços no inventário, pois você deve gastar uma ação de movimento e 2 PM para invocá-lo com um brilho de luz dourada — efeito que dura até o fim da cena, quando o item desaparece e volta para o mundo divino de onde veio.</p>"
 	},
 	{
@@ -905,6 +936,8 @@ const PODERES_DO_CONSTRUTOR = [
 		nome: "Oração Marcial",
 		tipo: "ability", subtipo: "Cruzado", exclusivo: true,
 		img: `${ICONES_CLASSE}/conjuradores/devoto-c.webp`,
+		ativacao: ativacao("hour", 5, { condicao: "1/dia" }),
+		duracao: { value: 1, units: "day", special: "" },
 		descricao: "<p>No 10º nível, você pode, uma vez por dia, gastar uma hora e 5 PM para rezar ao seu deus e pedir orientação em combate; então escolha um poder de clérigo, de guerreiro ou de combate cujos pré-requisitos cumpra. Você recebe os benefícios desse poder até o próximo dia.</p>"
 	},
 	{
@@ -918,6 +951,10 @@ const PODERES_DO_CONSTRUTOR = [
 		nome: "Coordenar",
 		tipo: "ability", subtipo: "Comandante", exclusivo: true,
 		img: `${ICONES_CLASSE}/especialistas/gritar-ordens.webp`,
+		ativacao: ativacao("reaction", 1, { condicao: "1/rodada: substituir o teste de um aliado" }),
+		alcance: "short",
+		// no início do combate: 1d20 por patamar (iniciante 1d20, veterano 2d20…)
+		rolls: [{ name: "Resultados do combate (1d20 por patamar)", key: "formula0", type: "formula", parts: [["(@patamar)d20", "", ""]], versatil: "", adaptavel: "" }],
 		descricao: "<p>No início de um combate, role 1d20 por patamar (1d20 para iniciante, 2d20 para veterano e assim por diante) e anote os resultados. Uma vez por rodada, você pode gastar 1 PM para substituir a rolagem do teste de um aliado em alcance curto por um desses seus resultados. Após substituir uma rolagem, o resultado é perdido.</p><p>Além disso, você aprende e pode lançar <em>Comando</em> (atributo-chave Carisma). Esta não é uma habilidade mágica e provém de sua capacidade de impor suas vontades em outras criaturas.</p>",
 		magias: ["Comando"],
 		atributoMagias: "car"
@@ -926,12 +963,16 @@ const PODERES_DO_CONSTRUTOR = [
 		nome: "Direcionar (Comandante)",
 		tipo: "ability", subtipo: "Comandante", exclusivo: true,
 		img: `${ICONES_CLASSE}/especialistas/realeza.webp`,
+		ativacao: ativacao("special", 1, { special: "ação do direcionamento; teste de Guerra (CD 15)" }),
+		alcance: "short",
 		descricao: "<p>Você pode gastar a ação do direcionamento e 1 PM para fazer um teste de Guerra (CD 15). Se passar, você usa um direcionamento em um aliado em alcance curto. Para cada 10 pontos acima da CD, você afeta um alvo adicional. Você começa com 2 direcionamentos. A cada quatro níveis, aprende um direcionamento adicional à sua escolha.</p><ul><li><strong>Aguenta Firme!</strong> (padrão). Os alvos recebem pontos de vida temporários iguais ao seu nível + seu Carisma.</li><li><strong>Carga!</strong> (completa). Faça uma investida. Se acertar e causar dano, os alvos podem usar uma reação para se movimentar o equivalente a uma ação de movimento, terminando mais próximos da criatura atingida.</li><li><strong>Em Frente!</strong> (reação). Após os testes de Iniciativa, mas antes do primeiro turno do combate, você desloca os alvos em até 6m.</li><li><strong>Encontrem Eles!</strong> (movimento). Até o fim do seu próximo turno, os alvos recebem +2 em testes de Percepção e Intuição.</li><li><strong>Lutem!</strong> (padrão). Os alvos podem usar uma reação para fazer um ataque contra um inimigo dentro do alcance deles.</li><li><strong>Parede de Escudos!</strong> (reação). Quando um aliado adjacente sofre um ataque, os alvos o protegem: ele recebe um bônus na Defesa igual a 1 + a quantidade de alvos.</li><li><strong>Peguem-no Vivo!</strong> (movimento). Até o fim do seu próximo turno, você e os alvos não sofrem a penalidade de –5 em testes de ataque para causar dano não letal.</li><li><strong>Para o Chão!</strong> (reação). Até o início do seu próximo turno, os alvos recebem um bônus em testes de resistência igual ao seu Carisma.</li><li><strong>Saiam Dessa!</strong> (movimento). Remove uma condição mental que estava afetando os alvos; para cada 10 pontos acima da CD, pode remover uma condição adicional em vez de afetar um alvo adicional.</li><li><strong>Vão, vão, vão!</strong> (padrão). Escolha um inimigo em alcance curto. Até o fim do seu próximo turno, você e os alvos recebem +2 em testes de ataque e rolagens de dano contra ele.</li></ul>"
 	},
 	{
 		nome: "Replanejar",
 		tipo: "ability", subtipo: "Comandante", exclusivo: true,
 		img: `${ICONES_CLASSE}/especialistas/autoconfianca.webp`,
+		ativacao: ativacao("reaction", 2, { condicao: "1/cena" }),
+		alcance: "short",
 		descricao: "<p>No 3º nível, uma vez por cena, quando um oponente em alcance curto acerta um ataque em um de seus aliados, ou quando um de seus aliados falha em um teste de resistência, você pode gastar 2 PM para fazer o oponente repetir o teste de ataque (escolhendo o pior entre os dois resultados) ou para fazer o aliado repetir o teste de resistência (escolhendo o melhor entre os dois resultados).</p>"
 	},
 	{
@@ -939,7 +980,15 @@ const PODERES_DO_CONSTRUTOR = [
 		tipo: "ability", subtipo: "Comandante", exclusivo: true,
 		img: `${ICONES_CLASSE}/especialistas/orgulho.webp`,
 		descricao: "<p>A partir do 5º nível, você pode gastar 1 PM para seus aliados em alcance curto receberem +2 em testes de perícias baseadas em Carisma até o fim da cena. Além disso, você recebe +2 em testes de Intimidação.</p>",
-		efeitos: (img) => [efeitoSomar("Presença de Liderança", img, [["system.pericias.inti.bonus", 2]])]
+		ativacao: ativacao("", 1),
+		duracao: NA_CENA,
+		alcance: "short",
+		efeitos: (img) => [
+			// sempre: +2 em Intimidação
+			efeitoSomar("Presença de Liderança", img, [["system.pericias.inti.bonus", 2]]),
+			// ao usar (1 PM): os aliados em alcance curto recebem +2 nas perícias de Carisma até o fim da cena
+			efeitoAplicavel("Presença de Liderança (aliados)", img, ["ades", "atua", "dipl", "enga", "inti", "joga"].map((k) => [`system.pericias.${k}.bonus`, 2]))
+		]
 	},
 	{
 		nome: "Líder Nato",
@@ -959,12 +1008,22 @@ const PODERES_DO_CONSTRUTOR = [
 		nome: "Gladiomancia",
 		tipo: "ability", subtipo: "Sentinela", exclusivo: true,
 		img: `${ICONES_CLASSE}/combatentes/ataque-especial.webp`,
+		ativacao: ativacao("move", 2, { condicao: "arma corpo a corpo leve ou ágil empunhada" }),
+		duracao: NA_CENA,
+		// ao usar: Int no lugar de Des na Defesa e de For em Luta, e Int no dano corpo a corpo (limitado pelo nível)
+		efeitos: (img) => [efeitoAplicavel("Gladiomancia", img, [
+			["system.attributes.defesa.atributo", "int", "override"],
+			["system.pericias.luta.atributo", "int", "override"],
+			["system.modificadores.dano.cac", "min(@int, @nivel)"]
+		])],
 		descricao: "<p>Você pode gastar uma ação de movimento e 2 PM para evocar palavras de poder mágico e imbuir essência arcana em uma arma corpo a corpo leve ou ágil que esteja empunhando. Enquanto empunhar esta arma ou até o fim da cena (o que acontecer primeiro), você pode somar sua Inteligência em vez de Destreza na Defesa. Além disso, você usa Inteligência em testes de Luta, em vez de Força, e pode somar sua Inteligência em rolagens de dano usando esta arma (limitado pelo seu nível).</p>"
 	},
 	{
 		nome: "Mago de Combate",
 		tipo: "ability", subtipo: "Sentinela", exclusivo: true,
 		img: `${ICONES_CLASSE}/conjuradores/alta-arcana.webp`,
+		// opção na janela de ataque (com a arma sob Gladiomancia): + círculo máximo de magias no dano
+		efeitos: (img) => [efeitoAoUsar("Mago de Combate", img, [["dano", "@circulo"]], { descricao: "Arma sob efeito de Gladiomancia: soma o círculo máximo de magias ao dano." })],
 		descricao: "<p>Quando faz um ataque usando uma arma sob efeito de Gladiomancia, você soma o círculo máximo de magias que pode lançar à rolagem de dano. Além disso, a mão da arma é considerada livre para lançar magias.</p>"
 	},
 	{
@@ -999,8 +1058,10 @@ export function poderesSubstitutos(sup) {
 			atributoMagias: x.atributoMagias ?? null,
 			effects: x.efeitos ? x.efeitos(x.img) : [],
 			system: {
-				tipo: x.tipo, subtipo: x.subtipo, description: { value: x.descricao },
+				tipo: x.tipo, subtipo: x.subtipo, description: { value: comAvisoDireitos(x.descricao) },
 				...(x.ativacao ? { ativacao: x.ativacao } : {}),
+				...(x.duracao ? { duracao: x.duracao } : {}),
+				...(x.alcance ? { alcance: x.alcance } : {}),
 				...(x.rolls ? { rolls: x.rolls } : {})
 			}
 		}));
@@ -1079,7 +1140,7 @@ function racasDoConstrutor(racas, poderes) {
 			sistema.atributos = { ...def.atributos };
 			sistema.atributosDinamicos = { value: [], description: "+1 em Três Atributos Diferentes" };
 			sistema.grants = [{ title: "", desc: "", type: "multi", choices: def.habilidades.map(uuidDe).filter(Boolean).map((uuid) => ({ uuid })) }];
-			sistema.description = { ...(sistema.description ?? {}), value: def.descricao };
+			sistema.description = { ...(sistema.description ?? {}), value: comAvisoDireitos(def.descricao) };
 			out.push({
 				name: def.nome, type: "race", img: def.img ?? base.img,
 				uuid: `${MODULE_ID}.raca.${def.nome}`, _id: null,
@@ -1096,7 +1157,7 @@ function racasDoConstrutor(racas, poderes) {
 				return novo ? { ...c, uuid: novo } : c;
 			})
 		}));
-		sistema.description = { ...(sistema.description ?? {}), value: def.descricao };
+		sistema.description = { ...(sistema.description ?? {}), value: comAvisoDireitos(def.descricao) };
 		out.push({
 			name: def.nome, type: "race", img: base.img,
 			uuid: `${MODULE_ID}.raca.${def.nome}`, _id: null,
@@ -1130,7 +1191,7 @@ export function classesDoConstrutor(classes) {
 		const sistema = typeof base.system?.toObject === "function" ? base.system.toObject() : structuredClone(base.system);
 		if (def.pvPorNivel) sistema.pvPorNivel = def.pvPorNivel;
 		if (def.pmPorNivel) sistema.pmPorNivel = def.pmPorNivel;
-		sistema.description = { ...(sistema.description ?? {}), value: def.descricao };
+		sistema.description = { ...(sistema.description ?? {}), value: comAvisoDireitos(def.descricao) };
 		out.push({
 			name: def.nome, type: "classe", img: base.img,
 			uuid: `${MODULE_ID}.classe.${def.nome}`, _id: null,

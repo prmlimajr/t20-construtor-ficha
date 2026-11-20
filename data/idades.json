@@ -1,5 +1,5 @@
 {
-  "_comentario": "Idades Variadas (regra opcional, Tormenta20 cap. 4, p. 288-291). 'faixas': faixas etárias com idade inicial humana, modificadores de atributo, poderes da faixa (definidos em scripts/dados.js), benefícios de origem permitidos, níveis extras e complicações de idade obrigatórias. 'longevidade': multiplicador das idades por raça ('aPartirDe' = primeira faixa afetada). 'complicacoes': as complicações de idade (poderes em scripts/dados.js).",
+  "_comentario": "Idades Variadas (regra opcional, Tormenta20 cap. 4, p. 288-291). 'faixas': faixas etárias com idade inicial humana, modificadores de atributo, poderes da faixa (definidos em scripts/dados.js), benefícios de origem permitidos, níveis extras e complicações de idade obrigatórias. 'longevidade': multiplicador das idades por raça ('aPartirDe' = primeira faixa afetada). 'complicacoes': as complicações de idade (poderes em scripts/dados.js). Conteúdo de Tormenta20 protegido por direitos autorais da Jambô Editora. Uso pessoal: não compartilhe nem redistribua.",
   "faixas": [
     {
       "id": "crianca", "nome": "Criança", "inicio": 9,
