@@ -601,5 +601,180 @@ for (const c of classes) {
 	}
 }
 
+/* ---------- 5. A janela de subir de nível, nível a nível ---------- */
+/**
+ * O ator simulado sobe de nível pela própria janela (SubirNivel), acionando as ações dos botões com as
+ * mesmas escolhas do teste 2. O contexto de cada passo de cada nível vira um resumo (sha1) guardado em
+ * ferramentas/retratos/subir-nivel.json: uma refatoração da janela não pode mudar nenhum.
+ * --atualizar grava o retrato; --telas=arquivo.json grava os contextos completos (para comparar à mão).
+ */
+{
+	console.log("\nJanela de subir de nível:");
+	const { createHash } = await import("node:crypto");
+	const ATUALIZAR = args.includes("--atualizar");
+	const ARQ_TELAS = args.find((a) => a.startsWith("--telas="))?.slice(8) ?? null;
+	// T20.js mexe no CONFIG ao ser importado: um CONFIG que aceita qualquer caminho (como no testar-construtor)
+	const automatico = () => new Proxy(function () {}, {
+		get(t, k) {
+			if (k === Symbol.toPrimitive) return () => "";
+			if (!(k in t)) t[k] = automatico();
+			return t[k];
+		},
+		apply() { return automatico(); }
+	});
+	globalThis.CONFIG = automatico();
+	const { T20 } = await import(path.join(raizSistema, "module/config/T20.js"));
+	globalThis.CONFIG = { T20 };
+	const avisos = [];
+	globalThis.ui = { notifications: { info() {}, warn: (m) => avisos.push(m), error: (m) => avisos.push(m) } };
+	Object.assign(globalThis.game, { i18n: { localize: (k) => k }, packs: { get: () => null } });
+	class ApplicationV2 {
+		constructor(options = {}) { this.options = options; this.rendered = false; }
+		render() { return this; }
+		close() { return this; }
+	}
+	Object.assign(globalThis.foundry, {
+		applications: {
+			api: { ApplicationV2, HandlebarsApplicationMixin: (B) => B, DialogV2: { confirm: async () => true } },
+			ux: { TextEditor: { implementation: { enrichHTML: async (h) => h } } },
+			instances: new Map()
+		}
+	});
+	const { SubirNivel } = await import("../scripts/subir-nivel.js");
+	const acoes = SubirNivel.DEFAULT_OPTIONS.actions;
+	const acionar = (win, acao, dataset = {}) => acoes[acao].call(win, null, { dataset });
+
+	// textos longos (descrições) entram só pelo tamanho e um pedaço do hash: o retrato fica pequeno e estável
+	const compactar = (x) => {
+		if (typeof x === "string") return x.length > 160 ? `#${createHash("sha1").update(x).digest("hex").slice(0, 10)}:${x.length}` : x;
+		if (Array.isArray(x)) return x.map(compactar);
+		if (x && typeof x === "object") return Object.fromEntries(Object.entries(x).map(([k, v]) => [k, compactar(v)]));
+		return x;
+	};
+	const contextos = {};
+	const retrato = {};
+	const guardar = async (win, chave) => {
+		const ctx = compactar(await win._prepareContext());
+		const texto = JSON.stringify(ctx);
+		retrato[chave] = createHash("sha1").update(texto).digest("hex").slice(0, 16);
+		if (ARQ_TELAS) contextos[chave] = ctx;
+		return ctx;
+	};
+
+	const CENARIOS_TELA = [
+		{ classe: "Guerreiro", ate: 20 },
+		{ classe: "Cavaleiro", ate: 8 },
+		{ classe: "Caçador", ate: 8 },
+		{ classe: "Arcanista", nivel1: ["Caminho do Arcanista: Mago"], ate: 10 },
+		{ classe: "Bardo", escolher: ["evo", "con", "nec"], ate: 6 },
+		{ classe: "Clérigo", preferir: ["Conhecimento Mágico (Clérigo)"], ate: 6 },
+		{ classe: "Guerreiro", rotulo: "multiclasse Arcanista no 4º", multiclasse: { nivel: 4, classe: "Arcanista" }, ate: 6 }
+	];
+	for (const c of CENARIOS_TELA) {
+		const titulo = `${c.classe}${c.rotulo ? ` (${c.rotulo})` : c.nivel1 ? ` (${c.nivel1.join(", ")})` : ""}`;
+		const prog = progressaoDe(progressao, c.classe);
+		const docs1 = [...(prog.niveis?.["1"]?.habilidades ?? []), ...(c.nivel1 ?? [])].map((n) => dados.poderesPorNome.get(normalizar(n))).filter(Boolean);
+		const ator = Object.assign(novoAtor(c.classe, docs1), { id: `tela${normalizar(titulo).replace(/\W/g, "")}`, name: titulo, type: "character" });
+		const win = new SubirNivel(ator);
+		Object.assign(win, {
+			dados: { ...dados, regrasClasses, regrasPoderesClasse, variantes: {}, escolas: {} },
+			progressao, lerPreRequisito
+		});
+		let escolas = null;
+		const inicio = avisos.length;
+		for (let n = 2; n <= c.ate; n++) {
+			const k = (passo) => `${titulo} | ${n} | ${passo}`;
+			await guardar(win, k("classe"));
+			// a mesma conta da janela, de fora, para decidir as escolhas como no teste 2
+			const ficha = lerFicha(ator, { regrasClasses, variantes: variantesDe(progressao) });
+			let classe = ficha.classes[0];
+			if (c.multiclasse?.nivel === n) {
+				acionar(win, "escolherClasse", { valor: `nova:${c.multiclasse.classe}` });
+				await guardar(win, k("classe nova"));
+				classe = { nome: c.multiclasse.classe, niveis: 0, nova: true, doc: dados.classes.find((x) => x.name === c.multiclasse.classe) };
+			}
+			const r = montarNivel({ dados, progressao, ficha, classe, lerPreRequisito, regrasPoderesClasse, regrasClasses });
+			if (!conferir(!r.erro, `janela ${titulo} ${n}: ${r.erro}`)) break;
+
+			acionar(win, "avancar");
+			let ctx = await guardar(win, k("nivel"));
+			conferir(ctx.passo === "nivel", `janela ${titulo} ${n}: avançar deveria ir para Nível (foi ${ctx.passo})`);
+			const selecoes = {};
+			for (const e of r.escolhas) {
+				selecoes[e.id] = e.opcoes[0].doc.uuid;
+				acionar(win, "selecionar", { id: e.id, valor: selecoes[e.id] });
+			}
+			for (const a of r.anotadas) {
+				selecoes[a.id] = a.opcoes[(n * 3) % a.opcoes.length];
+				acionar(win, "selecionar", { id: a.id, valor: selecoes[a.id] });
+			}
+			if (r.escolhas.length || r.anotadas.length) await guardar(win, k("nivel escolhido"));
+
+			let poder = null;
+			if (r.ganhaPoder) {
+				acionar(win, "avancar");
+				ctx = await guardar(win, k("poder"));
+				acionar(win, "aba", { aba: "geral" });
+				await guardar(win, k("poder geral"));
+				acionar(win, "indisponiveis");
+				await guardar(win, k("poder geral indisponíveis"));
+				acionar(win, "indisponiveis");
+				acionar(win, "aba", { aba: "classe" });
+				const disponiveis = r.poderesClasse.filter((o) => o.disponivel);
+				const preferido = (c.preferir ?? []).map((nome) => disponiveis.find((o) => o.nome === nome)).find(Boolean);
+				poder = preferido ?? disponiveis.find((o) => o.preRequisito) ?? disponiveis[0] ?? r.poderesGerais.find((o) => o.disponivel && !o.repetivel) ?? null;
+				if (poder && !disponiveis.includes(poder)) acionar(win, "aba", { aba: "geral" });
+				if (poder) acionar(win, "escolher", { uuid: poder.doc.uuid });
+				await guardar(win, k("poder escolhido"));
+			}
+
+			const vagas = r.magias ? vagasEfetivas(r.magias, selecoes, poder) : [];
+			if (r.magias && (vagas.length || (r.magias.escolas && !r.magias.escolasFicha.length))) {
+				acionar(win, "avancar");
+				ctx = await guardar(win, k("magias"));
+				conferir(ctx.passo === "magias", `janela ${titulo} ${n}: avançar deveria ir para Magias (foi ${ctx.passo})`);
+				if (r.magias.escolas && !r.magias.escolasFicha.length) {
+					escolas = c.escolher;
+					for (const e of escolas) acionar(win, "escola", { escola: e });
+					await guardar(win, k("magias escolas"));
+				}
+				const lista = magiasDisponiveis(dados, { ...r.magias, tipos: tiposDasVagas(r.magias, vagas) }, ficha, escolas);
+				const escolhidas = [];
+				const restricao = (v) => (v.circulo ? 0 : 10) + (v.tipos?.length ?? 9);
+				for (const vaga of [...vagas].sort((a, b) => restricao(a) - restricao(b))) {
+					const livres = lista.filter((x) => !escolhidas.includes(x) && (vaga.circulo ? circuloDe(x) === vaga.circulo : circuloDe(x) <= vaga.ate) && (!vaga.tipos || vaga.tipos.includes(x.system.tipo)))
+						.sort((a, b) => circuloDe(b) - circuloDe(a));
+					const m = livres.find((x) => !r.magias.tipos.includes(x.system.tipo) && circuloDe(x) === (vaga.circulo ?? vaga.ate)) ?? livres[0];
+					if (m) escolhidas.push(m);
+				}
+				for (const m of escolhidas) acionar(win, "magia", { uuid: m.uuid });
+				if (escolhidas[0]) acionar(win, "focarMagia", { uuid: escolhidas[0].uuid });
+				await guardar(win, k("magias escolhidas"));
+			}
+
+			acionar(win, "avancar");
+			ctx = await guardar(win, k("revisao"));
+			conferir(ctx.passo === "revisao" && !ctx.pendencia, `janela ${titulo} ${n}: revisão com pendência: ${ctx.pendencia ?? `(passo ${ctx.passo})`}`);
+			await acionar(win, "aplicar");
+			if (!conferir(ator.nivel === n, `janela ${titulo} ${n}: aplicar deixou o personagem no nível ${ator.nivel}`)) break;
+		}
+		await guardar(win, `${titulo} | fim`);
+		conferir(avisos.length === inicio, `janela ${titulo}: avisos durante a subida: ${avisos.slice(inicio).join(" | ")}`);
+		console.log(`  ✓ ${titulo}: ${ator.nivel}º nível pela janela`);
+	}
+
+	const caminhoRetrato = path.join(aqui, "retratos/subir-nivel.json");
+	const salvo = fs.existsSync(caminhoRetrato) ? JSON.parse(fs.readFileSync(caminhoRetrato, "utf8")) : null;
+	if (ATUALIZAR || !salvo) {
+		fs.writeFileSync(caminhoRetrato, JSON.stringify(retrato, null, 1) + "\n");
+		console.log(`  retrato gravado: ${Object.keys(retrato).length} telas`);
+	} else {
+		const diferentes = [...new Set([...Object.keys(salvo), ...Object.keys(retrato)])].filter((k) => salvo[k] !== retrato[k]);
+		conferir(!diferentes.length, `telas diferentes do retrato (${diferentes.length}): ${diferentes.slice(0, 8).join("; ")}${diferentes.length > 8 ? "…" : ""} — compare com --telas=arquivo.json`);
+		if (!diferentes.length) console.log(`  ✓ ${Object.keys(retrato).length} telas iguais ao retrato`);
+	}
+	if (ARQ_TELAS) fs.writeFileSync(ARQ_TELAS, JSON.stringify(contextos, null, 1));
+}
+
 console.log(falhas ? `\n${falhas} falha(s).` : "\nTudo certo.");
 process.exit(falhas ? 1 : 0);
