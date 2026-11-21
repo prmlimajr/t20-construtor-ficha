@@ -1132,3 +1132,89 @@
 /* Aviso de direitos autorais dos textos dos livros (painéis do construtor e descrições na ficha) */
 .t20-construtor .cf-direitos { font-size: 11px; opacity: 0.8; margin-top: 2px; }
 .t20cf-direitos { font-size: 0.85em; opacity: 0.75; }
+
+/* ---------- Cadastro de builds (planejador) ---------- */
+.t20cf-builds .cf-builds-layout { grid-template-columns: 1fr; }
+.t20cf-builds .cf-builds-colunas {
+	display: flex;
+	gap: 12px;
+	overflow-x: auto;
+	align-items: flex-start;
+	padding-bottom: 8px;
+}
+.t20cf-builds .cf-builds-coluna {
+	flex: 0 0 240px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 8px;
+	background: var(--cf-painel);
+	border: 1px solid var(--cf-borda);
+	border-radius: 6px;
+}
+.t20cf-builds .cf-builds-coluna h3 { margin: 0; font-size: 18px; }
+.t20cf-builds .cf-builds-coluna.bloqueada { opacity: 0.6; }
+.t20cf-builds .cf-build {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 6px;
+	background: var(--cf-fundo-card);
+	border: 1px solid var(--cf-borda);
+	border-radius: 4px;
+}
+.t20cf-builds .cf-build.escolhida { border-color: var(--cf-ouro); box-shadow: 0 0 0 1px var(--cf-ouro) inset; }
+.t20cf-builds .cf-build.divergente { border-style: dashed; }
+.t20cf-builds .cf-build.foco { outline: 1px dashed var(--cf-ouro); }
+.t20cf-builds .cf-build-escolher {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	text-align: left;
+	background: none;
+	border: none;
+	padding: 2px;
+	color: inherit;
+	cursor: pointer;
+}
+.t20cf-builds .cf-build-escolher > i { margin-top: 3px; color: var(--cf-ouro); }
+.t20cf-builds .cf-build-texto { display: flex; flex-direction: column; min-width: 0; }
+.t20cf-builds .cf-build-nome { font-weight: bold; }
+.t20cf-builds .cf-build-sub { font-size: 11px; color: var(--cf-texto-suave); }
+.t20cf-builds .cf-build-aviso { margin: 0; font-size: 11px; color: var(--cf-ouro); }
+.t20cf-builds .cf-build-acoes { display: flex; gap: 4px; justify-content: flex-end; }
+.t20cf-builds .cf-build-acoes button { flex: none; width: 28px; height: 26px; padding: 0; line-height: 1; }
+.t20cf-builds .cf-build-nova { margin-top: 0; }
+.t20cf-builds .cf-builds-outras { margin-top: 12px; }
+.t20cf-builds .cf-builds-outra { display: flex; align-items: center; gap: 8px; justify-content: space-between; font-size: 12px; padding: 2px 0; }
+.t20cf-builds .cf-builds-outra button { flex: none; width: 28px; height: 26px; padding: 0; }
+.t20cf-builds .cf-builds-outra.naoseguida { opacity: 0.7; }
+
+/* Prévia da ficha (slide) */
+.t20cf-builds .cf-previa { flex: 1; min-height: 0; overflow: auto; }
+.t20cf-builds .cf-previa-ficha { position: static; width: auto; height: auto; min-height: 0; box-shadow: none; border: none; }
+.t20cf-builds .cf-previa-ficha .window-content { overflow: visible; }
+.t20cf-builds .cf-previa-ficha button,
+.t20cf-builds .cf-previa-ficha a:not([data-tab]),
+.t20cf-builds .cf-previa-ficha .rollable,
+.t20cf-builds .cf-previa-ficha .item-control,
+.t20cf-builds .cf-previa-ficha [data-action],
+.t20cf-builds .cf-previa-ficha input,
+.t20cf-builds .cf-previa-ficha select,
+.t20cf-builds .cf-previa-ficha textarea { pointer-events: none !important; }
+.t20cf-builds .cf-previa-ficha .sheet-tabs [data-tab] { pointer-events: auto !important; cursor: pointer; }
+.t20cf-builds .cf-previa-resumo { display: flex; flex-direction: column; gap: 10px; }
+.t20cf-builds .cf-previa-topo h3 { margin: 0; }
+.t20cf-builds .cf-previa-topo p { margin: 0; color: var(--cf-texto-suave); }
+.t20cf-builds .cf-previa-numeros,
+.t20cf-builds .cf-previa-atributos { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 6px; }
+.t20cf-builds .cf-previa-numeros div,
+.t20cf-builds .cf-previa-atributos div {
+	display: flex; flex-direction: column; align-items: center; padding: 6px;
+	background: var(--cf-fundo-card); border: 1px solid var(--cf-borda); border-radius: 4px;
+}
+.t20cf-builds .cf-previa-numeros span,
+.t20cf-builds .cf-previa-atributos span { font-size: 11px; color: var(--cf-texto-suave); }
+.t20cf-builds .cf-previa-numeros strong { font-size: 20px; }
+.t20cf-builds .cf-previa-resumo h4 { margin: 0 0 4px; }
+.t20cf-builds .cf-previa-lista { margin: 0; padding-left: 18px; columns: 2; font-size: 12px; }

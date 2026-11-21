@@ -1,0 +1,116 @@
+{{#if carregando}}
+<div class="cf-carregando" role="status" aria-live="polite">
+	{{#if erro}}
+	<i class="fa-solid fa-triangle-exclamation"></i>
+	<p>Não foi possível carregar os dados.</p>
+	<p class="cf-nota">{{erro}}</p>
+	{{else}}
+	<i class="fa-solid fa-route cf-carregando-icone"></i>
+	<p>Carregando classes, poderes e magias…</p>
+	<div class="cf-carregando-barra"><span></span></div>
+	{{/if}}
+</div>
+{{else}}
+<div class="cf-layout cf-builds-layout">
+	<section class="cf-principal">
+		<header class="cf-cabecalho cf-nivel-cabecalho">
+			{{#if img}}<img src="{{img}}" alt="">{{/if}}
+			<div class="cf-cabecalho-texto">
+				<h2>Cadastro de builds · {{ator}}</h2>
+				<p>A ficha está no {{nivelFicha}}º nível. Planeje os próximos níveis: cada coluna mostra as builds do nível, a partir da build escolhida no anterior.{{#if caminho}} <strong>Caminho:</strong> {{caminho}}.{{/if}}</p>
+			</div>
+		</header>
+
+		<div class="cf-conteudo">
+			{{#if erroValidacao}}
+			<p class="cf-aviso"><i class="fa-solid fa-triangle-exclamation"></i> Não foi possível conferir as builds na ficha simulada: {{erroValidacao}}</p>
+			{{/if}}
+			{{#if maximo}}
+			<p class="cf-aviso"><i class="fa-solid fa-circle-info"></i> O personagem já está no 20º nível: não há o que planejar.</p>
+			{{/if}}
+
+			<div class="cf-builds-colunas">
+				{{#each colunas}}
+				<section class="cf-builds-coluna {{#if bloqueada}}bloqueada{{/if}}">
+					<h3>{{nivel}}º nível</h3>
+					{{#if bloqueada}}
+					<p class="cf-nota"><i class="fa-solid fa-lock"></i> {{motivo}}</p>
+					{{else}}
+					{{#each builds}}
+					<article class="cf-build {{#if escolhida}}escolhida{{/if}} {{#if divergente}}divergente{{/if}} {{#if previa}}foco{{/if}}">
+						<button type="button" class="cf-build-escolher" data-action="escolherBuild" data-id="{{id}}"
+							title="{{#if escolhida}}Build escolhida neste nível{{else}}Escolher esta build (os níveis seguintes passam a partir dela){{/if}}">
+							<i class="fa-{{#if escolhida}}solid fa-circle-dot{{else}}regular fa-circle{{/if}}"></i>
+							<span class="cf-build-texto">
+								<span class="cf-build-nome">{{#if divergente}}<i class="fa-solid fa-triangle-exclamation"></i> {{/if}}{{nome}}</span>
+								{{#if sub}}<span class="cf-build-sub">{{sub}}</span>{{/if}}
+								{{#if filhos}}<span class="cf-build-sub">{{filhos}} build(s) no nível seguinte</span>{{/if}}
+							</span>
+						</button>
+						{{#if divergente}}<p class="cf-build-aviso">{{divergente}}</p>{{/if}}
+						<div class="cf-build-acoes">
+							<button type="button" data-action="previaBuild" data-id="{{id}}" title="Prévia da ficha neste nível" {{#if divergente}}disabled{{/if}}><i class="fa-solid fa-eye"></i></button>
+							<button type="button" data-action="editarBuild" data-id="{{id}}" title="Editar as escolhas"><i class="fa-solid fa-pen"></i></button>
+							<button type="button" data-action="variacaoBuild" data-id="{{id}}" title="Nova variação a partir desta (mesmo nível, outras escolhas)"><i class="fa-solid fa-code-branch"></i></button>
+							<button type="button" data-action="renomearBuild" data-id="{{id}}" title="Renomear"><i class="fa-solid fa-i-cursor"></i></button>
+							<button type="button" data-action="apagarBuild" data-id="{{id}}" title="Apagar (com as builds que dependem dela)"><i class="fa-solid fa-trash"></i></button>
+						</div>
+					</article>
+					{{/each}}
+					<button type="button" class="cf-recomecar cf-build-nova" data-action="novaBuild" data-nivel="{{nivel}}" data-pai="{{pai}}">
+						<i class="fa-solid fa-plus"></i> Nova build do {{nivel}}º nível
+					</button>
+					{{/if}}
+				</section>
+				{{/each}}
+			</div>
+
+			{{#if foraDeAlcance.length}}
+			<section class="cf-bloco cf-builds-outras">
+				<h4>Builds de outro nível</h4>
+				{{#each foraDeAlcance}}
+				<div class="cf-builds-outra">
+					<span><strong>{{nome}}</strong> · {{aviso}}</span>
+					<button type="button" data-action="apagarBuild" data-id="{{id}}" title="Apagar"><i class="fa-solid fa-trash"></i></button>
+				</div>
+				{{/each}}
+			</section>
+			{{/if}}
+
+			{{#if naoSeguidas.length}}
+			<section class="cf-bloco cf-builds-outras">
+				<h4>Builds não seguidas</h4>
+				{{#each naoSeguidas}}
+				<div class="cf-builds-outra naoseguida">
+					<span><strong>{{nome}}</strong> ({{nivel}}º nível{{#if ramo}}, com mais {{ramo}} build(s) depois{{/if}}) · {{aviso}}</span>
+					<button type="button" data-action="apagarBuild" data-id="{{id}}" title="Apagar"><i class="fa-solid fa-trash"></i></button>
+				</div>
+				{{/each}}
+			</section>
+			{{/if}}
+		</div>
+
+		{{#if previa}}
+		<div class="cf-slideout-fundo" data-action="fecharPrevia"></div>
+		<div class="cf-slideout cf-previa-slide {{#if previa.animar}}animar{{/if}}" tabindex="-1">
+			<header class="cf-slideout-cabecalho">
+				<button type="button" class="cf-slideout-fechar" data-action="fecharPrevia" title="Fechar">
+					<i class="fa-solid fa-arrow-right"></i>
+				</button>
+				<h3>Prévia: {{previa.titulo}}</h3>
+				<span class="cf-nota">Somente leitura{{#unless previa.sistema}} · ficha resumida{{/unless}}</span>
+			</header>
+			<div class="cf-previa">
+				{{#if previa.sistema}}
+				<div class="app window-app {{previa.classes}} cf-previa-ficha">
+					<section class="window-content">{{{previa.html}}}</section>
+				</div>
+				{{else}}
+				{{{previa.html}}}
+				{{/if}}
+			</div>
+		</div>
+		{{/if}}
+	</section>
+</div>
+{{/if}}

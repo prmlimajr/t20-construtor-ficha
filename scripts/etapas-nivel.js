@@ -452,6 +452,14 @@ export class EtapasNivel {
 		return { revisao: itens, valoresInformativos: nivel.valores.filter((v) => !v.modo), bonusPericia: nivel.bonusPericia };
 	}
 
+	/** As escolhas atuais (uuids), no formato de aplicarEscolhas. */
+	escolhasAtuais() {
+		return {
+			classeAlvo: this.classeAlvo, escolha: this.escolha, anotacao: this.anotacao,
+			selecoes: { ...this.selecoes }, magias: [...this.magias], escolas: [...this.escolas]
+		};
+	}
+
 	/* ---------- Operações (as ações dos botões, sem desenhar) ---------- */
 
 	irPara(id) {

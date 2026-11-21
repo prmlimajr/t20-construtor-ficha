@@ -887,5 +887,309 @@ for (const c of classes) {
 	}
 }
 
+/* ---------- 7. Plano de builds: árvore, validação e a janela preenchida pelo plano ---------- */
+{
+	console.log("\nPlano de builds:");
+	const A = await import("../scripts/builds/arvore.js");
+	const { validarArvore } = await import("../scripts/builds/validar.js");
+	const { EtapasNivel } = await import("../scripts/etapas-nivel.js");
+	const { SubirNivel } = await import("../scripts/subir-nivel.js");
+	const fontes = { dados: { ...dados, regrasClasses, regrasPoderesClasse, variantes: {}, escolas: {} }, progressao, lerPreRequisito };
+	const ok = (cond, msg) => { if (conferir(cond, msg)) console.log(`  ✓ ${msg}`); };
+	const atorDe = (classe, extras = [], niveis = 1) => {
+		const prog = progressaoDe(progressao, classe);
+		const docs = [...(prog.niveis?.["1"]?.habilidades ?? []), ...extras].map((n) => dados.poderesPorNome.get(normalizar(n))).filter(Boolean);
+		const a = novoAtor(classe, docs);
+		a.items.find((i) => i.type === "classe").system.niveis = niveis;
+		a.reset();
+		a.toObject = () => fonteDoAtor(a);
+		return Object.assign(a, { id: `plano${classe}`, name: `Plano ${classe}`, type: "character" });
+	};
+	/** Escolhas completas (uuids) do próximo nível, como o teste 2 decide. */
+	const escolherTudo = (etapas, preferir = null) => {
+		const calculo = etapas.calcular();
+		const r = calculo.nivel;
+		for (const e of r.escolhas) etapas.selecoes[e.id] = e.opcoes[0].doc.uuid;
+		for (const a of r.anotadas) etapas.selecoes[a.id] = a.opcoes[0];
+		const disp = r.poderesClasse.filter((o) => o.disponivel);
+		const poder = (preferir && [...disp, ...r.poderesGerais].find((o) => o.nome === preferir && o.disponivel)) ?? disp.find((o) => o.preRequisito) ?? disp[0] ?? r.poderesGerais.find((o) => o.disponivel && !o.repetivel);
+		etapas.escolha = poder?.doc.uuid ?? null;
+		const ficha = lerFicha(etapas.actor, { regrasClasses, variantes: variantesDe(progressao) });
+		if (r.magias) {
+			if (r.magias.escolas && !r.magias.escolasFicha.length) etapas.escolas = ["evo", "con", "nec"];
+			const vagas = vagasEfetivas(r.magias, etapas.selecoes, poder);
+			etapas.magias = escolherMagias(r, ficha, vagas, etapas.escolas.length ? etapas.escolas : null).map((m) => m.uuid);
+		}
+		return etapas.calcular();
+	};
+
+	// 1. nomes ↔ etapas: ida e volta, em níveis com escolha de Caminho, anotação, magias e multiclasse
+	for (const [classe, extras, niveis, alvo] of [["Cavaleiro", [], 4, null], ["Caçador", [], 2, null], ["Arcanista", ["Caminho do Arcanista: Mago"], 4, null], ["Guerreiro", [], 2, "nova:Arcanista"]]) {
+		const a = atorDe(classe, extras, niveis);
+		const et = new EtapasNivel(a, fontes);
+		if (alvo) et.classeAlvo = alvo;
+		const calculo = escolherTudo(et);
+		const nomes = A.paraNomes(et, calculo);
+		const antes = JSON.stringify(et.escolhasAtuais());
+		const et2 = new EtapasNivel(a, fontes);
+		const { problemas } = A.paraEtapas(et2, nomes);
+		ok(!problemas.length && JSON.stringify(et2.escolhasAtuais()) === antes && !et2.pendencia(et2.calcular().nivel),
+			`${classe} ${niveis + 1}${alvo ? ` (${alvo})` : ""}: escolhas por nome voltam iguais (${[nomes.poder, ...Object.values(nomes.selecoes).map((v) => v.nome ?? v.texto), ...nomes.magias].filter(Boolean).join(", ") || "—"})`);
+	}
+	{
+		const a = atorDe("Guerreiro");
+		const et = new EtapasNivel(a, fontes);
+		const { problemas } = A.paraEtapas(et, { classe: "Guerreiro", poder: "Poder Que Não Existe", magias: ["Magia Sumida"], selecoes: {} });
+		ok(problemas.some((p) => /Poder Que Não Existe/.test(p)) && problemas.some((p) => /Magia Sumida/.test(p)), "nomes que não existem mais viram problemas (poder e magia)");
+		const golpe = A.paraEtapas(new EtapasNivel(a, fontes), { classe: "Guerreiro", poder: "Golpe Pessoal", selecoes: {} }).problemas;
+		ok(golpe.some((p) => /Golpe Pessoal: Pré-requisito/.test(p)), "poder sem o pré-requisito vira problema com o motivo");
+	}
+
+	// 2. operações da árvore
+	{
+		const arv = A.arvoreVazia(1);
+		const e = (poder) => ({ classe: "Guerreiro", poder, anotacao: "", selecoes: {}, magias: [], escolas: [] });
+		const a2 = A.adicionarNo(arv, { nivel: 2, escolhas: e("Bater e Correr") });
+		const b2 = A.adicionarNo(arv, { nivel: 2, escolhas: e("Golpe Demolidor") });
+		const a3 = A.adicionarNo(arv, { nivel: 3, pai: a2.id, escolhas: e("Ataque Reflexo") });
+		const a4 = A.adicionarNo(arv, { nivel: 4, pai: a3.id, escolhas: e("Valentão (Guerreiro)") });
+		const repetido = A.adicionarNo(arv, { nivel: 2, escolhas: e("bater e correr") });
+		ok(repetido === a2 && arv.nos.length === 4 && a2.nome === "Bater e Correr", "nó com as mesmas escolhas não duplica; nome automático é o poder");
+		A.escolherNo(arv, a4.id);
+		ok(JSON.stringify(arv.caminho) === JSON.stringify([a2.id, a3.id, a4.id]), "escolher um nó põe os ancestrais no caminho");
+		A.escolherNo(arv, a2.id);
+		ok(arv.caminho.length === 3, "escolher um ancestral mantém o caminho abaixo dele");
+		A.escolherNo(arv, b2.id);
+		ok(JSON.stringify(arv.caminho) === JSON.stringify([b2.id]), "escolher um irmão troca o caminho");
+		A.escolherNo(arv, a4.id);
+		ok(A.apagarNo(arv, a3.id) === 2 && arv.nos.length === 2 && JSON.stringify(arv.caminho) === JSON.stringify([a2.id]), "apagar um nó apaga os descendentes e corta o caminho");
+		ok(A.mesmasEscolhas({ classe: "Bardo", magias: ["B", "A"], escolas: ["evo", "con"] }, { classe: "bardo", magias: ["A", "B"], escolas: ["con", "evo"], anotacao: " " }), "mesmas escolhas ignoram ordem, acentos e espaços");
+
+		// subir seguindo o plano: o nó sai, os filhos viram raízes, o irmão fica não seguido
+		const arv2 = A.arvoreVazia(1);
+		const x2 = A.adicionarNo(arv2, { nivel: 2, escolhas: e("Bater e Correr") });
+		const y2 = A.adicionarNo(arv2, { nivel: 2, escolhas: e("Golpe Demolidor") });
+		const x3 = A.adicionarNo(arv2, { nivel: 3, pai: x2.id, escolhas: e("Ataque Reflexo") });
+		const y3 = A.adicionarNo(arv2, { nivel: 3, pai: y2.id, escolhas: e("Valentão (Guerreiro)") });
+		A.escolherNo(arv2, x3.id);
+		const seguido = A.registrarSubida(arv2, 2, e("Bater e Correr"));
+		ok(seguido?.id === x2.id && !A.noPorId(arv2, x2.id) && x3.pai === null && JSON.stringify(arv2.caminho) === JSON.stringify([x3.id]) && arv2.base === 2,
+			"subir com as escolhas do plano: o nó sai, o filho vira raiz e continua no caminho");
+		ok(y2.naoSeguido?.escolhido === "Bater e Correr" && y3.naoSeguido && /no 2º nível o personagem escolheu Bater e Correr/.test(A.textoNaoSeguido(y2)),
+			"o irmão e o ramo dele ficam como não seguidos, com o aviso");
+		A.registrarSubida(arv2, 3, e("Golpe Demolidor"));
+		ok(x3.naoSeguido && !arv2.caminho.length, "subir com outra escolha: os nós do nível ficam não seguidos e o caminho esvazia");
+		const arv3 = A.arvoreVazia(1);
+		const z2 = A.adicionarNo(arv3, { nivel: 2, escolhas: e("Bater e Correr") });
+		ok(A.sincronizar(arv3, 3) && z2.naoSeguido?.fora && /fora do planejador/.test(A.textoNaoSeguido(z2)), "ficha que passou do nível fora do planejador: os nós ficam não seguidos");
+	}
+
+	// 3. validação na ficha virtual: caminho válido, poder que perde o pré-requisito, nó fora de alcance
+	{
+		const a = atorDe("Guerreiro");
+		const arv = A.arvoreVazia(1);
+		const v = virtualDe(a, "validação");
+		let pai = null;
+		const ids = [];
+		for (let n = 2; n <= 5; n++) {
+			const et = new EtapasNivel(v, fontes);
+			const calculo = escolherTudo(et);
+			const no = A.adicionarNo(arv, { nivel: n, pai, escolhas: A.paraNomes(et, calculo) });
+			await aplicarEscolhas(v, et.escolhasAtuais(), fontes);
+			ids.push(no.id);
+			pai = no.id;
+		}
+		// um ramo no 3º com um poder de 5º nível (sem pré-requisito) e um filho dele
+		const ruim = A.adicionarNo(arv, { nivel: 3, pai: ids[0], escolhas: { ...A.noPorId(arv, ids[1]).escolhas, poder: "Golpe Pessoal" } });
+		const filhoRuim = A.adicionarNo(arv, { nivel: 4, pai: ruim.id, escolhas: A.noPorId(arv, ids[2]).escolhas });
+		const longe = A.adicionarNo(arv, { nivel: 7, escolhas: { classe: "Guerreiro", poder: "Bater e Correr", selecoes: {}, magias: [], escolas: [], anotacao: "" } });
+		const foto = fotografia(a);
+		const cont = await validarArvore(virtualDe(a, "v"), arv, fontes, { criarDocumento: documentoSimulado });
+		ok(cont.validos === 4 && ids.every((id) => !A.noPorId(arv, id).divergente), `caminho de 4 níveis válido na ficha virtual (${ids.map((id) => A.noPorId(arv, id).nome).join(" → ")})`);
+		ok(/Golpe Pessoal: Pré-requisito/.test(ruim.divergente?.motivo ?? "") && filhoRuim.divergente?.herdado, "poder sem pré-requisito no 3º: o nó fica divergente com o motivo, e o filho herda");
+		ok(/7º nível/.test(longe.divergente?.motivo ?? ""), "nó de um nível que a ficha não alcança fica divergente");
+		ok(fotografia(a) === foto, "validar não mexe no ator real");
+	}
+
+	// 4. a janela: preenche pelo plano, vai para a revisão, sobe e marca o nó; salvar como plano cria o nó
+	{
+		const a = atorDe("Guerreiro");
+		const abrir = () => Object.assign(new SubirNivel(a), { dados: fontes.dados, progressao, lerPreRequisito });
+		const acionar = (win, acao, dataset = {}) => SubirNivel.DEFAULT_OPTIONS.actions[acao].call(win, null, { dataset });
+		let win = abrir();
+		let ctx = await win._prepareContext();
+		ok(ctx.plano === null && ctx.salvarPlano === false, "sem plano: nada preenchido, salvar desabilitado até completar o nível");
+		escolherTudo(win.etapas);
+		ctx = await win._prepareContext();
+		const poder = ctx.resumo.find((x) => x.rotulo === "Poder")?.valor;
+		await acionar(win, "salvarPlano");
+		const arv = A.lerArvore(a);
+		ok(arv.nos.length === 1 && arv.nos[0].nivel === 2 && arv.nos[0].escolhas.poder === poder && arv.caminho[0] === arv.nos[0].id, `salvar como plano grava o nó do 2º nível (${poder}) e o põe no caminho`);
+		// um irmão (outra build para o 2º) e um filho (3º) do nó salvo
+		const arv2 = A.lerArvore(a);
+		const irmao = A.adicionarNo(arv2, { nivel: 2, escolhas: { ...arv2.nos[0].escolhas, poder: "Golpe Demolidor" } });
+		const filho = A.adicionarNo(arv2, { nivel: 3, pai: arv2.nos[0].id, escolhas: { classe: "Guerreiro", poder: "Ataque Reflexo", selecoes: {}, magias: [], escolas: [], anotacao: "" } });
+		A.escolherNo(arv2, filho.id);
+		await A.gravarArvore(a, arv2);
+
+		win = abrir();
+		ctx = await win._prepareContext();
+		ok(ctx.plano?.nome === poder && !ctx.plano.invalido && ctx.passo === "revisao" && !ctx.pendencia, "ao abrir, as escolhas vêm do plano e a janela vai direto para a revisão");
+		await acionar(win, "aplicar");
+		const depois = A.lerArvore(a);
+		ok(a.nivel === 2 && depois.base === 2 && A.noPorId(depois, filho.id)?.pai === null && JSON.stringify(depois.caminho) === JSON.stringify([filho.id]), "subir pelo plano: o nó do 2º sai e o do 3º vira o próximo");
+		ok(A.noPorId(depois, irmao.id)?.naoSeguido?.escolhido === poder, "a outra build do 2º fica como não seguida");
+		ctx = await win._prepareContext();
+		ok(ctx.plano?.nome === "Ataque Reflexo" && ctx.passo === "revisao", "depois de subir, o próximo nível já vem preenchido pelo plano");
+		acionar(win, "limparPlano");
+		ctx = await win._prepareContext();
+		ok(ctx.plano === null && ctx.passo === "classe" && A.lerArvore(a).nos.length === 2, "limpar descarta o preenchimento, sem apagar o plano");
+
+		// plano que não vale mais: aviso, sem preencher
+		const arv3 = A.lerArvore(a);
+		A.noPorId(arv3, filho.id).escolhas.poder = "Poder Que Não Existe";
+		await A.gravarArvore(a, arv3);
+		win = abrir();
+		ctx = await win._prepareContext();
+		ok(/Poder Que Não Existe/.test(ctx.plano?.invalido ?? "") && ctx.passo === "classe", "plano que não vale mais: aviso com o motivo, e nada preenchido");
+	}
+}
+
+/* ---------- 8. Cadastro de builds (planejador): colunas, editor, prévia ---------- */
+{
+	console.log("\nCadastro de builds (planejador):");
+	const A = await import("../scripts/builds/arvore.js");
+	const { PlanejadorBuilds, EditorBuild } = await import("../scripts/builds/planejador.js");
+	const { SubirNivel } = await import("../scripts/subir-nivel.js");
+	const fontes = { dados: { ...dados, regrasClasses, regrasPoderesClasse, variantes: {}, escolas: {} }, progressao, lerPreRequisito };
+	const ok = (cond, msg) => { if (conferir(cond, msg)) console.log(`  ✓ ${msg}`); };
+	let respostaConfirmar = true;
+	Object.assign(foundry.applications.api.DialogV2, { confirm: async () => respostaConfirmar, prompt: async () => "Minha build" });
+
+	// todo data-action dos templates tem ação (planejador; subir de nível, que agora também é o editor)
+	for (const [arquivo, Classe] of [["planejador.hbs", PlanejadorBuilds], ["subir-nivel.hbs", SubirNivel]]) {
+		const tpl = fs.readFileSync(path.join(raizModulo, "templates", arquivo), "utf8");
+		const usadas = new Set([...tpl.matchAll(/data-action="([^"]+)"/g)].map((m) => m[1]));
+		const acoes = Classe.DEFAULT_OPTIONS.actions;
+		const faltam = [...usadas].filter((a) => typeof acoes[a] !== "function");
+		// focarMagia: ação antiga da janela de subir de nível, sem botão no template (o clique na magia já foca)
+		const sobram = Object.keys(acoes).filter((a) => !usadas.has(a) && a !== "focarMagia");
+		ok(!faltam.length && !sobram.length, `${arquivo}: ações dos botões registradas${faltam.length ? ` (faltam ${faltam})` : ""}${sobram.length ? ` (sem uso: ${sobram})` : ""}`);
+	}
+
+	const prog = progressaoDe(progressao, "Guerreiro");
+	const docs1 = (prog.niveis?.["1"]?.habilidades ?? []).map((n) => dados.poderesPorNome.get(normalizar(n))).filter(Boolean);
+	const real = Object.assign(novoAtor("Guerreiro", docs1), { id: "planejador", name: "Tarik", type: "character", img: "x.webp" });
+	real.toObject = () => fonteDoAtor(real, "Tarik");
+	const foto = () => JSON.stringify(real.items.map((i) => i.toObject()));
+	const fotoInicial = foto();
+	const plan = new PlanejadorBuilds(real, { ...fontes, opcoesFicha: { criarDocumento: documentoSimulado } });
+	const acao = (nome, dataset = {}) => PlanejadorBuilds.DEFAULT_OPTIONS.actions[nome].call(plan, null, { dataset });
+	/** Completa as escolhas do editor (1º poder de classe com pré-requisito, ou o preferido) e salva no plano. */
+	const salvarEditor = async (editor, preferir = null) => {
+		const et = editor.etapas;
+		const r = et.calcular().nivel;
+		for (const e of r.escolhas) et.selecoes[e.id] = e.opcoes[0].doc.uuid;
+		const disp = r.poderesClasse.filter((o) => o.disponivel);
+		const poder = (preferir && disp.find((o) => o.nome === preferir)) ?? disp.find((o) => o.preRequisito) ?? disp[0];
+		et.escolha = poder.doc.uuid;
+		await EditorBuild.DEFAULT_OPTIONS.actions.aplicar.call(editor);
+		return poder.nome;
+	};
+
+	let ctx = await plan._prepareContext();
+	ok(ctx.colunas.length === 2 && ctx.colunas[0].nivel === 2 && !ctx.colunas[0].builds.length && ctx.colunas[1].bloqueada, "sem builds: a coluna do 2º nível aberta e a do 3º bloqueada");
+
+	await acao("novaBuild", { nivel: "2", pai: "" });
+	ok(plan.editor instanceof EditorBuild && plan.editor.actor.virtual && plan.editor.actor.nivel === 1, "nova build do 2º: o editor abre sobre a ficha virtual do 1º nível");
+	const ctxEditor = await plan.editor._prepareContext();
+	ok(ctxEditor.modoPlano && ctxEditor.podeDesfazer === false && ctxEditor.nivelPersonagem === 2, "o editor é a tela de subir de nível em modo plano (sem desfazer, botão Salvar no plano)");
+	const p2 = await salvarEditor(plan.editor);
+	let arv = A.lerArvore(real);
+	const b2 = arv.nos[0];
+	ctx = await plan._prepareContext();
+	ok(arv.nos.length === 1 && b2.escolhas.poder === p2 && arv.caminho[0] === b2.id && ctx.colunas[0].builds[0]?.escolhida && !ctx.colunas[1].bloqueada,
+		`salvar no plano: a build ${p2} entra no 2º nível, escolhida, e o 3º abre`);
+	ok(foto() === fotoInicial && real.nivel === 1, "o ator real não muda ao planejar");
+
+	// variação no 2º com outro poder: vira a escolhida; o 3º passa a partir dela
+	await acao("variacaoBuild", { id: b2.id });
+	ok(plan.editor.modo === "variacao" && plan.editor.etapas.passo === "revisao", "variação: o editor abre com as escolhas da build, na revisão");
+	const p2b = await salvarEditor(plan.editor, "Bater e Correr");
+	arv = A.lerArvore(real);
+	const b2b = arv.nos.find((n) => n.escolhas.poder === p2b);
+	ctx = await plan._prepareContext();
+	ok(arv.nos.length === 2 && arv.caminho[0] === b2b.id && ctx.colunas[0].builds.length === 2 && ctx.colunas[1].builds.length === 0, `a variação ${p2b} é outra build do 2º e passa a ser a escolhida`);
+
+	// 3º e 4º a partir da variação
+	await acao("novaBuild", { nivel: "3", pai: b2b.id });
+	ok(plan.editor.actor.nivel === 2 && plan.editor.actor.items.some((i) => i.name === `2 - ${p2b}`), "nova build do 3º: a ficha virtual já tem o poder da build do 2º");
+	const p3 = await salvarEditor(plan.editor);
+	arv = A.lerArvore(real);
+	const b3 = arv.nos.find((n) => n.nivel === 3);
+	await acao("novaBuild", { nivel: "4", pai: b3.id });
+	await salvarEditor(plan.editor);
+	arv = A.lerArvore(real);
+	ctx = await plan._prepareContext();
+	ok(ctx.colunas.map((c) => c.nivel).join(",") === "2,3,4,5,6" && ctx.colunas[3].builds.length === 0 && ctx.colunas[4].bloqueada && ctx.caminho.startsWith(`2º ${p2b} → 3º ${p3}`),
+		`caminho de 3 níveis (${ctx.caminho}): a coluna do 5º aberta e a do 6º bloqueada`);
+
+	// trocar a escolha no 2º: o 3º passa a mostrar os filhos da outra build (nenhum)
+	await acao("escolherBuild", { id: b2.id });
+	ctx = await plan._prepareContext();
+	ok(ctx.colunas[1].builds.length === 0 && ctx.colunas.length === 3 && ctx.colunas[2].bloqueada, "escolher a outra build do 2º: o 3º mostra os filhos dela, e o 4º bloqueia");
+	await acao("escolherBuild", { id: b2b.id });
+
+	// prévia: em Node não há ficha do sistema, então sai a ficha resumida, com o 3º nível e o poder
+	await acao("previaBuild", { id: b3.id });
+	ctx = await plan._prepareContext();
+	ok(ctx.previa?.tipo === "resumo" && ctx.previa.animar && ctx.previa.html.includes(`3 - ${p3}`) && ctx.previa.html.includes("3º nível") && ctx.previa.html.includes("PV"),
+		"prévia da build do 3º: ficha resumida (sem a ficha do sistema em Node) com o poder e o nível");
+	ctx = await plan._prepareContext();
+	ok(!ctx.previa.animar, "a animação do slide só na primeira vez");
+	acao("fecharPrevia");
+
+	// editar a build do 3º: troca o poder, mantém o nó (e o filho)
+	await acao("editarBuild", { id: b3.id });
+	const p3b = await salvarEditor(plan.editor, "Golpe Demolidor");
+	arv = A.lerArvore(real);
+	ok(A.noPorId(arv, b3.id)?.escolhas.poder === p3b && A.noPorId(arv, b3.id).nome === p3b && arv.nos.length === 4, `editar: a build do 3º vira ${p3b}, no mesmo lugar da árvore (nome automático acompanha)`);
+
+	await acao("renomearBuild", { id: b3.id });
+	ok(A.noPorId(A.lerArvore(real), b3.id)?.nome === "Minha build", "renomear");
+
+	// build com problema: poder que não existe mais no 3º → divergente, e o 4º herda
+	arv = A.lerArvore(real);
+	A.noPorId(arv, b3.id).escolhas.poder = "Poder Que Não Existe";
+	await A.gravarArvore(real, arv);
+	ctx = await plan._prepareContext();
+	const c3 = ctx.colunas[1].builds.find((b) => b.id === b3.id);
+	ok(/Poder Que Não Existe/.test(c3?.divergente ?? "") && ctx.colunas[2]?.bloqueada, "build que não vale mais: aviso com o motivo, e o nível seguinte bloqueia");
+	await acao("previaBuild", { id: b3.id });
+	ok(!plan.previa, "sem prévia de build que não vale mais");
+
+	// apagar com os descendentes (confirmando) e recusar
+	respostaConfirmar = false;
+	await acao("apagarBuild", { id: b3.id });
+	ok(A.lerArvore(real).nos.length === 4, "apagar cancelado não apaga");
+	respostaConfirmar = true;
+	await acao("apagarBuild", { id: b3.id });
+	arv = A.lerArvore(real);
+	ok(arv.nos.length === 2 && JSON.stringify(arv.caminho) === JSON.stringify([b2b.id]), "apagar a build do 3º apaga a do 4º junto e corta o caminho");
+
+	// a janela de subir de nível: preenche com a build escolhida do 2º, sobe, e o planejador mostra a outra como não seguida
+	let mudou = 0;
+	plan.aoMudar = () => mudou++;
+	await acao("escolherBuild", { id: b2b.id });
+	ok(mudou === 1, "mudanças na árvore avisam a janela de subir de nível");
+	const sub = Object.assign(new SubirNivel(real), { dados: fontes.dados, progressao, lerPreRequisito });
+	ctx = await sub._prepareContext();
+	ok(ctx.plano?.nome === p2b && ctx.passo === "revisao", "a janela de subir de nível vem preenchida com a build escolhida");
+	await SubirNivel.DEFAULT_OPTIONS.actions.aplicar.call(sub);
+	ctx = await plan._prepareContext();
+	ok(real.nivel === 2 && ctx.nivelFicha === 2 && ctx.colunas[0].nivel === 3 && ctx.naoSeguidas.length === 1 && /escolheu Bater e Correr/.test(ctx.naoSeguidas[0].aviso),
+		"depois de subir: o planejador começa no 3º e a outra build do 2º aparece como não seguida");
+}
+
 console.log(falhas ? `\n${falhas} falha(s).` : "\nTudo certo.");
 process.exit(falhas ? 1 : 0);

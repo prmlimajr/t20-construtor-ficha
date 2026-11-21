@@ -34,14 +34,25 @@
 			{{/each}}
 		</div>
 		<div class="cf-nivel-lateral-acoes">
+			{{#unless modoPlano}}
 			{{#if podeDesfazer}}
 			<button type="button" class="cf-recomecar" data-action="desfazer" {{#if ocupado}}disabled{{/if}} title="Desfaz {{ultimo}}">
 				<i class="fa-solid fa-rotate-left"></i> Desfazer último nível
 			</button>
 			{{/if}}
+			{{#unless bloqueio}}
+			<button type="button" class="cf-recomecar" data-action="salvarPlano" {{#unless salvarPlano}}disabled{{/unless}}
+				title="{{#if salvarPlano}}Guarda as escolhas deste nível como o plano: na próxima vez, o assistente já abre com elas{{else}}Complete as escolhas do nível para salvar como plano{{/if}}">
+				<i class="fa-solid fa-route"></i> Salvar como plano
+			</button>
+			<button type="button" class="cf-recomecar" data-action="abrirBuilds" title="Árvore de builds: planeje os próximos níveis, com variações e a prévia da ficha">
+				<i class="fa-solid fa-sitemap"></i> Cadastro de builds
+			</button>
+			{{/unless}}
 			<button type="button" class="cf-recomecar" data-action="compendioClasses" title="Abre o compêndio de classes do sistema: arraste uma classe para a ficha para multiclasse (sem o assistente)">
 				<i class="fa-solid fa-book"></i> Outra classe (compêndio)
 			</button>
+			{{/unless}}
 		</div>
 	</nav>
 
@@ -67,6 +78,15 @@
 			<p class="cf-aviso"><i class="fa-solid fa-triangle-exclamation"></i> A ficha está com PV/PM em modo manual (configuração de nível do sistema): os máximos não serão recalculados.</p>
 			{{/if}}
 			{{#each avisos}}<p class="cf-aviso"><i class="fa-solid fa-triangle-exclamation"></i> {{this}}</p>{{/each}}
+			{{#if avisoEditor}}<p class="cf-aviso"><i class="fa-solid fa-route"></i> {{avisoEditor}}</p>{{/if}}
+			{{#if plano}}
+			{{#if plano.invalido}}
+			<p class="cf-aviso"><i class="fa-solid fa-route"></i> O plano para o {{plano.nivel}}º nível (<strong>{{plano.nome}}</strong>) não vale mais: {{plano.invalido}} Faça as escolhas deste nível.</p>
+			{{else}}
+			<p class="cf-aviso cf-plano"><i class="fa-solid fa-route"></i> Escolhas preenchidas pelo plano: <strong>{{plano.nome}}</strong>.{{#if plano.pendencia}} Falta: {{plano.pendencia}}{{/if}}
+				<button type="button" class="cf-link" data-action="limparPlano" title="Descarta o preenchimento neste nível (o plano continua salvo)">Limpar</button></p>
+			{{/if}}
+			{{/if}}
 
 			{{!-- ============ Classe: continuar ou multiclasse ============ --}}
 			{{#if (eq passo "classe")}}
@@ -351,7 +371,8 @@
 			</button>
 			{{#if ultimoPasso}}
 			<button type="button" class="cf-primario" data-action="aplicar" {{#if pendencia}}disabled{{/if}} {{#if ocupado}}disabled{{/if}}>
-				<i class="fa-solid fa-angles-up"></i> Subir para o {{nivelPersonagem}}º nível
+				{{#if modoPlano}}<i class="fa-solid fa-route"></i> Salvar no plano
+				{{else}}<i class="fa-solid fa-angles-up"></i> Subir para o {{nivelPersonagem}}º nível{{/if}}
 			</button>
 			{{else}}
 			<button type="button" class="cf-primario" data-action="avancar" {{#if pendencia}}disabled{{/if}}>
