@@ -40,7 +40,57 @@ async function fichaDoSistema(virtual, real) {
 	const $html = await sheet._renderInner(dados);
 	const html = ($html?.get?.() ?? [$html]).map((el) => el?.outerHTML ?? "").join("");
 	if (html.length < 500) return null;
-	return { html, classes: (sheet.options?.classes ?? []).join(" ") };
+	// as classes da janela da ficha (com as de tema, se a ficha do ator estiver aberta)
+	const abertas = String(real.sheet?.element?.[0]?.className ?? real.sheet?.element?.className ?? "").split(/\s+/);
+	const classes = [...new Set([...(sheet.options?.classes ?? []), ...abertas].filter((c) => c && !["minimized", "t20cf-previa-janela"].includes(c)))];
+	return { html, classes: classes.join(" ") };
+}
+
+/**
+ * Documento (srcdoc) do iframe da prévia: a ficha do sistema com os estilos da página (Foundry, sistema e
+ * módulos), mas fora da janela do construtor, para que o CSS dele não mude as cores da ficha. Campos e botões
+ * ficam sem ação; as abas são trocadas pela janela do planejador.
+ */
+export function documentoDaPrevia({ html, classes = "" }) {
+	const estilos = [...document.querySelectorAll('link[rel="stylesheet"], style')].map((el) => el.outerHTML).join("\n");
+	const raiz = document.documentElement;
+	const atr = (t) => esc(t ?? "");
+	return `<!doctype html>
+<html class="${atr(raiz.className)}" lang="${atr(raiz.lang)}">
+<head>
+<meta charset="utf-8">
+<base href="${atr(document.baseURI)}">
+${estilos}
+<style>
+html, body { height: auto !important; min-height: 0 !important; overflow: auto !important; background: transparent !important; margin: 0 !important; padding: 0 !important; }
+.t20cf-previa-janela { position: static !important; inset: auto !important; width: auto !important; height: auto !important; max-height: none !important; min-height: 0 !important; margin: 0 !important; transform: none !important; box-shadow: none !important; }
+.t20cf-previa-janela > .window-content { overflow: visible !important; height: auto !important; }
+.t20cf-previa-janela button, .t20cf-previa-janela a:not([data-tab]), .t20cf-previa-janela .rollable, .t20cf-previa-janela .item-control,
+.t20cf-previa-janela [data-action], .t20cf-previa-janela input, .t20cf-previa-janela select, .t20cf-previa-janela textarea { pointer-events: none !important; }
+.t20cf-previa-janela .sheet-tabs [data-tab] { pointer-events: auto !important; cursor: pointer; }
+</style>
+</head>
+<body class="${atr(document.body?.className)}">
+<div class="${atr(`app window-app ${classes} t20cf-previa-janela`)}"><section class="window-content">${html}</section></div>
+</body>
+</html>`;
+}
+
+/** Deixa a ficha do iframe só leitura e liga as abas (sem os eventos da ficha). */
+export function prepararIframeDaPrevia(iframe) {
+	const doc = iframe?.contentDocument;
+	const raiz = doc?.querySelector(".t20cf-previa-janela");
+	if (!raiz) return;
+	raiz.querySelectorAll("input, select, textarea").forEach((el) => { el.disabled = true; });
+	raiz.addEventListener("click", (ev) => {
+		const aba = ev.target.closest(".sheet-tabs [data-tab]");
+		if (!aba) return;
+		ev.preventDefault();
+		const nome = aba.dataset.tab;
+		aba.closest(".sheet-tabs").querySelectorAll("[data-tab]").forEach((x) => x.classList.toggle("active", x.dataset.tab === nome));
+		raiz.querySelectorAll(".sheet-body .tab[data-tab]").forEach((x) => x.classList.toggle("active", x.dataset.tab === nome));
+	});
+	if (!raiz.querySelector(".sheet-body .tab.active")) raiz.querySelector(".sheet-tabs [data-tab]")?.click();
 }
 
 /** Ficha resumida própria (plano B). */

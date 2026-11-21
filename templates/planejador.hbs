@@ -33,6 +33,7 @@
 				{{#each colunas}}
 				<section class="cf-builds-coluna {{#if bloqueada}}bloqueada{{/if}}">
 					<h3>{{nivel}}º nível</h3>
+					{{#if de}}<p class="cf-builds-de">a partir de <strong>{{de}}</strong> ({{anterior}}º nível)</p>{{/if}}
 					{{#if bloqueada}}
 					<p class="cf-nota"><i class="fa-solid fa-lock"></i> {{motivo}}</p>
 					{{else}}
@@ -49,6 +50,7 @@
 						</button>
 						{{#if divergente}}<p class="cf-build-aviso">{{divergente}}</p>{{/if}}
 						<div class="cf-build-acoes">
+							{{#if proximo}}<button type="button" class="cf-build-proximo" data-action="proximoNivel" data-id="{{id}}" title="Planejar o {{proximo}}º nível a partir desta build"><i class="fa-solid fa-plus"></i> {{proximo}}º</button>{{/if}}
 							<button type="button" data-action="previaBuild" data-id="{{id}}" title="Prévia da ficha neste nível" {{#if divergente}}disabled{{/if}}><i class="fa-solid fa-eye"></i></button>
 							<button type="button" data-action="editarBuild" data-id="{{id}}" title="Editar as escolhas"><i class="fa-solid fa-pen"></i></button>
 							<button type="button" data-action="variacaoBuild" data-id="{{id}}" title="Nova variação a partir desta (mesmo nível, outras escolhas)"><i class="fa-solid fa-code-branch"></i></button>
@@ -57,9 +59,13 @@
 						</div>
 					</article>
 					{{/each}}
-					<button type="button" class="cf-recomecar cf-build-nova" data-action="novaBuild" data-nivel="{{nivel}}" data-pai="{{pai}}">
+					{{#if primeira}}
+					<button type="button" class="cf-recomecar cf-build-nova" data-action="novaBuild" data-nivel="{{nivel}}" title="Nova build a partir da ficha atual">
 						<i class="fa-solid fa-plus"></i> Nova build do {{nivel}}º nível
 					</button>
+					{{else}}
+					{{#unless builds.length}}<p class="cf-nota">Nenhuma build do {{nivel}}º nível a partir desta. Use o botão <i class="fa-solid fa-plus"></i> {{nivel}}º numa build do {{anterior}}º nível.</p>{{/unless}}
+					{{/if}}
 					{{/if}}
 				</section>
 				{{/each}}
@@ -102,9 +108,7 @@
 			</header>
 			<div class="cf-previa">
 				{{#if previa.sistema}}
-				<div class="app window-app {{previa.classes}} cf-previa-ficha">
-					<section class="window-content">{{{previa.html}}}</section>
-				</div>
+				<iframe class="cf-previa-iframe" title="Prévia da ficha (somente leitura)"></iframe>
 				{{else}}
 				{{{previa.html}}}
 				{{/if}}

@@ -21,7 +21,7 @@ import {
 	apagarNo, renomearNo, paraNomes, paraEtapas, mesmasEscolhas, nomeAutomatico, textoNaoSeguido
 } from "./arvore.js";
 import { validarArvore } from "./validar.js";
-import { previaDaFicha } from "./previa.js";
+import { previaDaFicha, documentoDaPrevia, prepararIframeDaPrevia } from "./previa.js";
 
 const TPL = `modules/${MODULE_ID}/templates`;
 export const TEMPLATES_BUILDS = [`${TPL}/planejador.hbs`];
@@ -58,6 +58,7 @@ export class PlanejadorBuilds extends HandlebarsApplicationMixin(ApplicationV2) 
 			variacaoBuild: PlanejadorBuilds.#variacao,
 			renomearBuild: PlanejadorBuilds.#renomear,
 			apagarBuild: PlanejadorBuilds.#apagar,
+			proximoNivel: PlanejadorBuilds.#proximoNivel,
 			previaBuild: PlanejadorBuilds.#abrirPrevia,
 			fecharPrevia: PlanejadorBuilds.#fecharPrevia
 		}
@@ -164,6 +165,8 @@ export class PlanejadorBuilds extends HandlebarsApplicationMixin(ApplicationV2) 
 				id: no.id, nome: no.nome, nivel: no.nivel, sub: detalhes.join(" · "),
 				escolhida: arvore.caminho.includes(no.id),
 				divergente: motivos.get(no.id) ?? null,
+				// planejar o nível seguinte sempre a partir de uma build (a base dele)
+				proximo: no.nivel < NIVEL_MAXIMO && !motivos.has(no.id) ? no.nivel + 1 : null,
 				filhos: filhos(arvore, no.id).filter((f) => !f.naoSeguido).length,
 				previa: this.previa?.id === no.id
 			};
@@ -179,7 +182,8 @@ export class PlanejadorBuilds extends HandlebarsApplicationMixin(ApplicationV2) 
 					break;
 				}
 				const nos = filhos(arvore, anterior?.id ?? null).filter((n) => n.nivel === nivel && !n.naoSeguido).sort((a, b) => a.criado - b.criado);
-				colunas.push({ nivel, pai: anterior?.id ?? "", builds: nos.map(card) });
+				// só a primeira coluna cria build direto (a partir da ficha atual); as outras, pelo "+" de uma build do nível anterior
+				colunas.push({ nivel, primeira: nivel === primeiro, de: anterior?.nome ?? null, anterior: nivel - 1, builds: nos.map(card) });
 			}
 		}
 
@@ -190,7 +194,7 @@ export class PlanejadorBuilds extends HandlebarsApplicationMixin(ApplicationV2) 
 
 		const caminho = arvore.caminho.map((id) => noPorId(arvore, id)).filter(Boolean);
 		// a animação do slide só na primeira vez que ele aparece
-		const previa = this.previa ? { ...this.previa } : null;
+		const previa = this.previa ? { ...this.previa, html: this.previa.sistema ? null : this.previa.html } : null;
 		if (this.previa) this.previa.animar = false;
 		return {
 			ator: this.actor.name,
@@ -208,19 +212,11 @@ export class PlanejadorBuilds extends HandlebarsApplicationMixin(ApplicationV2) 
 
 	_onRender(context, options) {
 		super._onRender?.(context, options);
-		const raiz = this.element?.querySelector?.(".cf-previa-ficha");
-		if (!raiz) return;
-		// ficha do sistema só leitura: campos desabilitados e abas com controle próprio
-		raiz.querySelectorAll("input, select, textarea").forEach((el) => { el.disabled = true; });
-		raiz.addEventListener("click", (ev) => {
-			const aba = ev.target.closest(".sheet-tabs [data-tab]");
-			if (!aba) return;
-			ev.preventDefault();
-			const nome = aba.dataset.tab;
-			aba.closest(".sheet-tabs").querySelectorAll("[data-tab]").forEach((x) => x.classList.toggle("active", x.dataset.tab === nome));
-			raiz.querySelectorAll(".sheet-body .tab[data-tab]").forEach((x) => x.classList.toggle("active", x.dataset.tab === nome));
-		});
-		if (!raiz.querySelector(".sheet-body .tab.active")) raiz.querySelector(".sheet-tabs [data-tab]")?.click();
+		// prévia com a ficha do sistema: num iframe, com os estilos da página e sem os do construtor
+		const iframe = this.element?.querySelector?.(".cf-previa-iframe");
+		if (!iframe || !this.previa?.sistema) return;
+		iframe.addEventListener("load", () => prepararIframeDaPrevia(iframe), { once: true });
+		iframe.srcdoc = documentoDaPrevia(this.previa);
 	}
 
 	/* ---------- Editor ---------- */
@@ -276,6 +272,13 @@ export class PlanejadorBuilds extends HandlebarsApplicationMixin(ApplicationV2) 
 	static async #nova(event, target) {
 		const nivel = Number(target.dataset.nivel);
 		await this.abrirEditor({ nivel, pai: target.dataset.pai || null, modo: "nova" });
+	}
+
+	/** Nova build do nível seguinte, com esta build como base. */
+	static async #proximoNivel(event, target) {
+		const arvore = await this.#arvore();
+		const no = noPorId(arvore, target.dataset.id);
+		if (no && no.nivel < NIVEL_MAXIMO) await this.abrirEditor({ nivel: no.nivel + 1, pai: no.id, modo: "nova" });
 	}
 
 	static async #editar(event, target) {

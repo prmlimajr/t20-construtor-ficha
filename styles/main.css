@@ -1135,6 +1135,9 @@
 
 /* ---------- Cadastro de builds (planejador) ---------- */
 .t20cf-builds .cf-builds-layout { grid-template-columns: 1fr; }
+.t20cf-builds .cf-principal { height: 100%; }
+.t20cf-builds .cf-nivel-cabecalho { display: flex; align-items: center; gap: 12px; }
+.t20cf-builds .cf-nivel-cabecalho > img { width: 48px; height: 48px; border: none; flex: none; object-fit: cover; }
 .t20cf-builds .cf-builds-colunas {
 	display: flex;
 	gap: 12px;
@@ -1169,7 +1172,12 @@
 .t20cf-builds .cf-build-escolher {
 	display: flex;
 	align-items: flex-start;
+	justify-content: flex-start;
 	gap: 8px;
+	height: auto;
+	min-height: 0;
+	line-height: 1.3;
+	white-space: normal;
 	text-align: left;
 	background: none;
 	border: none;
@@ -1182,7 +1190,9 @@
 .t20cf-builds .cf-build-nome { font-weight: bold; }
 .t20cf-builds .cf-build-sub { font-size: 11px; color: var(--cf-texto-suave); }
 .t20cf-builds .cf-build-aviso { margin: 0; font-size: 11px; color: var(--cf-ouro); }
-.t20cf-builds .cf-build-acoes { display: flex; gap: 4px; justify-content: flex-end; }
+.t20cf-builds .cf-build-acoes { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
+.t20cf-builds .cf-build-acoes button.cf-build-proximo { width: auto; padding: 0 6px; gap: 4px; white-space: nowrap; }
+.t20cf-builds .cf-builds-de { margin: -4px 0 0; font-size: 11px; color: var(--cf-texto-suave); }
 .t20cf-builds .cf-build-acoes button { flex: none; width: 28px; height: 26px; padding: 0; line-height: 1; }
 .t20cf-builds .cf-build-nova { margin-top: 0; }
 .t20cf-builds .cf-builds-outras { margin-top: 12px; }
@@ -1192,17 +1202,9 @@
 
 /* Prévia da ficha (slide) */
 .t20cf-builds .cf-previa { flex: 1; min-height: 0; overflow: auto; }
-.t20cf-builds .cf-previa-ficha { position: static; width: auto; height: auto; min-height: 0; box-shadow: none; border: none; }
-.t20cf-builds .cf-previa-ficha .window-content { overflow: visible; }
-.t20cf-builds .cf-previa-ficha button,
-.t20cf-builds .cf-previa-ficha a:not([data-tab]),
-.t20cf-builds .cf-previa-ficha .rollable,
-.t20cf-builds .cf-previa-ficha .item-control,
-.t20cf-builds .cf-previa-ficha [data-action],
-.t20cf-builds .cf-previa-ficha input,
-.t20cf-builds .cf-previa-ficha select,
-.t20cf-builds .cf-previa-ficha textarea { pointer-events: none !important; }
-.t20cf-builds .cf-previa-ficha .sheet-tabs [data-tab] { pointer-events: auto !important; cursor: pointer; }
+/* a ficha do sistema fica num iframe (só com os estilos do Foundry e do sistema, sem os do construtor) */
+.t20cf-builds .cf-previa-iframe { width: 100%; height: 100%; min-height: 480px; border: none; border-radius: 4px; background: transparent; }
+.t20cf-builds .cf-previa:has(.cf-previa-iframe) { display: flex; overflow: hidden; }
 .t20cf-builds .cf-previa-resumo { display: flex; flex-direction: column; gap: 10px; }
 .t20cf-builds .cf-previa-topo h3 { margin: 0; }
 .t20cf-builds .cf-previa-topo p { margin: 0; color: var(--cf-texto-suave); }

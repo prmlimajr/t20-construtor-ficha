@@ -177,9 +177,7 @@ export class EtapasNivel {
 			};
 		}
 
-		const sysClasse = (classe.item ?? classe.doc)?.system ?? {};
-		const pv = Math.max(1, (Number(sysClasse.pvPorNivel) || 0) + (ficha.atributos.con ?? 0));
-		const pm = Number(sysClasse.pmPorNivel) || 0;
+		const { pv, pm } = this.ganhos(calculo);
 
 		// passos
 		const ids = this.passos(nivel);
@@ -450,6 +448,15 @@ export class EtapasNivel {
 			...(plano.escolasMagia ? [{ tipo: "Escolas", nome: plano.escolasMagia.map(rotuloEscola).join(", ") }] : [])
 		];
 		return { revisao: itens, valoresInformativos: nivel.valores.filter((v) => !v.modo), bonusPericia: nivel.bonusPericia };
+	}
+
+	/** PV e PM que o nível dá (pela classe escolhida e a Constituição). */
+	ganhos({ ficha, classe }) {
+		const sysClasse = (classe.item ?? classe.doc)?.system ?? {};
+		return {
+			pv: Math.max(1, (Number(sysClasse.pvPorNivel) || 0) + (ficha.atributos.con ?? 0)),
+			pm: Number(sysClasse.pmPorNivel) || 0
+		};
 	}
 
 	/** As escolhas atuais (uuids), no formato de aplicarEscolhas. */
