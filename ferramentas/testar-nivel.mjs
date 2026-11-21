@@ -36,6 +36,7 @@ const deepClone = (x) => !ehSimples(x) ? x : Array.isArray(x) ? x.map(deepClone)
 globalThis.foundry = { utils: { getProperty, setProperty, deepClone, escapeHTML: (t) => t } };
 globalThis.game = { items: { fromCompendium: (d) => structuredClone({ name: d.name, type: d.type, img: d.img, system: d.system, effects: d.effects ?? [] }) } };
 const { aplicarNivel, desfazerUltimoNivel, podeDesfazer } = await import("../scripts/aplicar-nivel.js");
+const { AtorVirtual, aplicarEscolhas } = await import("../scripts/ficha-virtual.js");
 
 let proximoId = 1;
 /** Rolagem como modelo de dados (instância de classe), como RollData no sistema. */
@@ -106,6 +107,63 @@ function novoAtor(classe, habilidades1, flags = {}) {
 	ator.system.attributes.pm.value = ator.system.attributes.pm.max;
 	return ator;
 }
+/**
+ * Documento preparado simulado a partir dos dados de origem: o papel de `new Actor.implementation(fonte)`
+ * na ficha virtual, com a mesma regra de PV/PM do ator simulado (novoAtor → reset).
+ */
+function documentoSimulado(fonte) {
+	const nivel = fonte.items.filter((i) => i.type === "classe").reduce((s, c) => s + (Number(c.system?.niveis) || 0), 0);
+	const items = fonte.items.map((f) => ({
+		id: f._id, uuid: `Actor.${fonte._id}.Item.${f._id}`, name: f.name, type: f.type, img: f.img, sort: f.sort,
+		flags: structuredClone(f.flags ?? {}), system: structuredClone(f.system ?? {}),
+		effects: (f.effects ?? []).map((e) => ({ ...structuredClone(e), id: e._id }))
+	}));
+	const system = structuredClone(fonte.system ?? {});
+	system.attributes ??= {};
+	system.attributes.pv = { ...(system.attributes.pv ?? {}), max: 20 + (nivel - 1) * 5 };
+	system.attributes.pm = { ...(system.attributes.pm ?? {}), max: nivel * 3 };
+	return {
+		_id: fonte._id, name: fonte.name, type: fonte.type, uuid: `Actor.${fonte._id}`, flags: structuredClone(fonte.flags ?? {}), system, nivel,
+		items: Object.assign(items, { get: (id) => items.find((i) => i.id === id), has: (id) => items.some((i) => i.id === id) })
+	};
+}
+/** Dados de origem do ator simulado (o que actor.toObject() daria no Foundry). */
+const fonteDoAtor = (ator, nome = "Sombra") => ({
+	_id: "sombra", name: nome, type: "character",
+	system: structuredClone(ator.system), flags: structuredClone(ator.flags),
+	items: ator.items.map((i) => ({ _id: i.id, ...i.toObject() }))
+});
+const virtualDe = (ator, nome) => new AtorVirtual(fonteDoAtor(ator, nome), { criarDocumento: documentoSimulado });
+/** O que a ficha lida (lerFicha) e os valores atuais dizem, sem ids (o ator virtual cria os seus). */
+function leitura(ator) {
+	const f = lerFicha(ator, { regrasClasses, variantes: variantesDe(progressao) });
+	const fora = new Set(["id", "item", "doc", "ator", "dono", "uuid"]);
+	return JSON.stringify({
+		ficha: JSON.parse(JSON.stringify(f, (k, v) => (fora.has(k) ? undefined : v))),
+		itens: ator.items.map((i) => `${i.type}:${i.name}`).sort(),
+		pv: ator.system.attributes.pv.value, pm: ator.system.attributes.pm.value,
+		escolas: ator.flags?.["t20-construtor-ficha"]?.escolasMagia ?? null,
+		historico: (ator.getFlag("t20-construtor-ficha", "niveis") ?? []).map((h) => [h.nivel, h.classe, h.nivelClasse, h.itens.length, h.alteracoes.length, h.pv, h.pm])
+	});
+}
+
+/**
+ * Magias para as vagas do nível, como o teste 2 escolhe: vagas mais restritas primeiro; de preferência do maior
+ * círculo; nas vagas do poder que liberam outro tipo (Aumentar Repertório), uma magia desse outro tipo.
+ */
+function escolherMagias(r, ficha, vagas, escolas) {
+	const lista = magiasDisponiveis(dados, { ...r.magias, tipos: tiposDasVagas(r.magias, vagas) }, ficha, escolas);
+	const escolhidas = [];
+	const restricao = (v) => (v.circulo ? 0 : 10) + (v.tipos?.length ?? 9);
+	for (const vaga of [...vagas].sort((a, b) => restricao(a) - restricao(b))) {
+		const livres = lista.filter((x) => !escolhidas.includes(x) && (vaga.circulo ? circuloDe(x) === vaga.circulo : circuloDe(x) <= vaga.ate) && (!vaga.tipos || vaga.tipos.includes(x.system.tipo)))
+			.sort((a, b) => circuloDe(b) - circuloDe(a));
+		const m = livres.find((x) => !r.magias.tipos.includes(x.system.tipo) && circuloDe(x) === (vaga.circulo ?? vaga.ate)) ?? livres[0];
+		if (m) escolhidas.push(m);
+	}
+	return escolhidas;
+}
+
 const fotografia = (ator) => JSON.stringify({
 	itens: ator.items.map((i) => ({ id: i.id, ...i.toObject() })).sort((a, b) => a.id.localeCompare(b.id)),
 	pv: ator.system.attributes.pv.value, pm: ator.system.attributes.pm.value,
@@ -222,6 +280,9 @@ async function subirClasse(nomeClasse, variacao = {}) {
 	conferir(docsNivel1.length === nomes1.length, `${titulo}: habilidade de 1º nível não encontrada`);
 	conferir(dados.classes.some((c) => c.name === nomeClasse), `${nomeClasse}: classe não existe no compêndio`);
 	const ator = novoAtor(nomeClasse, docsNivel1, variacao.flags ?? {});
+	// a mesma subida numa ficha virtual (ficha-virtual.js): a ficha lida tem de ser igual em todo nível
+	const sombra = virtualDe(ator);
+	let virtualOk = conferir(leitura(sombra) === leitura(ator), `${nomeClasse}: a ficha virtual nasceu diferente do ator`);
 	let escolasEscolhidas = null;
 	let magiasNovas = 0;
 	let magiasDePoderes = 0; // vagas dadas por poderes escolhidos (Conhecimento Mágico, Aumentar Repertório)
@@ -292,15 +353,19 @@ async function subirClasse(nomeClasse, variacao = {}) {
 		const plano = montarPlano(r, { classeId: ficha.classes[0].id, poder, selecoes, magias, escolas: escolasEscolhidas, anotacao: poder?.repetivel ? "teste" : "" });
 		const antes = fotografia(ator);
 		await aplicarNivel(ator, plano);
+		await aplicarNivel(sombra, plano);
 		conferir(ator.nivel === n, `${nomeClasse} ${n}: nível ficou ${ator.nivel}`);
 
 		// desfazer no nível com mais coisas (escolha, anotação ou valor gravado) e reaplicar
 		if (!desfazerTestado && (r.escolhas.length || r.anotadas.some((a) => a.jaTem) || plano.valores.length || plano.escolasMagia || n === 10)) {
 			conferir(podeDesfazer(ator), `${nomeClasse} ${n}: deveria poder desfazer`);
 			await desfazerUltimoNivel(ator);
+			await desfazerUltimoNivel(sombra);
 			conferir(fotografia(ator) === antes, `${nomeClasse} ${n}: desfazer não restaurou a ficha`);
 			conferir(!podeDesfazer(ator), `${nomeClasse} ${n}: não deveria desfazer duas vezes`);
+			if (virtualOk) virtualOk = conferir(leitura(sombra) === leitura(ator), `${titulo} ${n}: depois de desfazer, a ficha virtual ficou diferente do ator`);
 			await aplicarNivel(ator, plano);
+			await aplicarNivel(sombra, plano);
 			desfazerTestado = n;
 		}
 
@@ -312,6 +377,8 @@ async function subirClasse(nomeClasse, variacao = {}) {
 		];
 		if (VERBOSO) console.log(`  ${String(n).padStart(2)}: ${extras.join(", ") || "—"} | poderes ${disponiveis.length}/${r.poderesClasse.length} | ${poder?.nome ?? "—"}`);
 		resumo.push(...extras.filter((e) => !/→/.test(e)));
+		// só a primeira diferença (as seguintes são consequência)
+		if (virtualOk) virtualOk = conferir(leitura(sombra) === leitura(ator), `${titulo} ${n}: a ficha virtual ficou diferente do ator\n      ator:    ${leitura(ator).slice(0, 400)}\n      virtual: ${leitura(sombra).slice(0, 400)}`);
 	}
 
 	// conferências do estado final
@@ -379,7 +446,7 @@ async function subirClasse(nomeClasse, variacao = {}) {
 	const pvOk = ator.system.attributes.pv.value === ator.system.attributes.pv.max;
 	conferir(pvOk, `${nomeClasse}: PV atual ${ator.system.attributes.pv.value} ≠ máximo ${ator.system.attributes.pv.max}`);
 	const qtdMagias = ator.items.filter((i) => i.type === "magia").length;
-	console.log(`${titulo}: 1→20 ok · ${poderesFicha.length} poderes${qtdMagias ? ` · ${qtdMagias} magias novas` : ""} · desfazer testado no nível ${desfazerTestado || "—"}${resumo.length ? `\n    ganhos: ${resumo.join(", ")}` : ""}`);
+	console.log(`${titulo}: 1→20 ok${virtualOk ? " (ficha virtual igual)" : ""} · ${poderesFicha.length} poderes${qtdMagias ? ` · ${qtdMagias} magias novas` : ""} · desfazer testado no nível ${desfazerTestado || "—"}${resumo.length ? `\n    ganhos: ${resumo.join(", ")}` : ""}`);
 }
 
 console.log("");
@@ -610,6 +677,8 @@ for (const c of classes) {
  */
 {
 	console.log("\nJanela de subir de nível:");
+	// ids dos itens simulados a partir de um número fixo: o retrato não depende de quais classes rodaram antes
+	proximoId = 100000;
 	const { createHash } = await import("node:crypto");
 	const ATUALIZAR = args.includes("--atualizar");
 	const ARQ_TELAS = args.find((a) => a.startsWith("--telas="))?.slice(8) ?? null;
@@ -738,15 +807,7 @@ for (const c of classes) {
 					for (const e of escolas) acionar(win, "escola", { escola: e });
 					await guardar(win, k("magias escolas"));
 				}
-				const lista = magiasDisponiveis(dados, { ...r.magias, tipos: tiposDasVagas(r.magias, vagas) }, ficha, escolas);
-				const escolhidas = [];
-				const restricao = (v) => (v.circulo ? 0 : 10) + (v.tipos?.length ?? 9);
-				for (const vaga of [...vagas].sort((a, b) => restricao(a) - restricao(b))) {
-					const livres = lista.filter((x) => !escolhidas.includes(x) && (vaga.circulo ? circuloDe(x) === vaga.circulo : circuloDe(x) <= vaga.ate) && (!vaga.tipos || vaga.tipos.includes(x.system.tipo)))
-						.sort((a, b) => circuloDe(b) - circuloDe(a));
-					const m = livres.find((x) => !r.magias.tipos.includes(x.system.tipo) && circuloDe(x) === (vaga.circulo ?? vaga.ate)) ?? livres[0];
-					if (m) escolhidas.push(m);
-				}
+				const escolhidas = escolherMagias(r, ficha, vagas, escolas);
 				for (const m of escolhidas) acionar(win, "magia", { uuid: m.uuid });
 				if (escolhidas[0]) acionar(win, "focarMagia", { uuid: escolhidas[0].uuid });
 				await guardar(win, k("magias escolhidas"));
@@ -774,6 +835,56 @@ for (const c of classes) {
 		if (!diferentes.length) console.log(`  ✓ ${Object.keys(retrato).length} telas iguais ao retrato`);
 	}
 	if (ARQ_TELAS) fs.writeFileSync(ARQ_TELAS, JSON.stringify(contextos, null, 1));
+}
+
+/* ---------- 6. Ficha virtual: subir só em memória, com as escolhas de um nó ---------- */
+{
+	console.log("\nFicha virtual (aplicarEscolhas):");
+	const fontes = { dados: { ...dados, regrasClasses, regrasPoderesClasse, variantes: {}, escolas: {} }, progressao, lerPreRequisito };
+	const casos = [
+		{ classe: "Guerreiro", ate: 20 },
+		{ classe: "Arcanista", nivel1: ["Caminho do Arcanista: Mago"], ate: 12 },
+		{ classe: "Bardo", escolher: ["evo", "con", "nec"], ate: 6 },
+		{ classe: "Guerreiro", rotulo: "multiclasse Arcanista no 3º", multiclasse: { nivel: 3, classe: "Arcanista" }, ate: 5 }
+	];
+	for (const c of casos) {
+		const titulo = `${c.classe}${c.rotulo ? ` (${c.rotulo})` : ""}`;
+		const prog = progressaoDe(progressao, c.classe);
+		const docs1 = [...(prog.niveis?.["1"]?.habilidades ?? []), ...(c.nivel1 ?? [])].map((n) => dados.poderesPorNome.get(normalizar(n))).filter(Boolean);
+		const real = novoAtor(c.classe, docs1);
+		const foto = fotografia(real);
+		const v = virtualDe(real, titulo);
+		let escolas = null;
+		let ok = true;
+		for (let n = 2; n <= c.ate && ok; n++) {
+			const ficha = lerFicha(v, { regrasClasses, variantes: variantesDe(progressao) });
+			const nova = c.multiclasse?.nivel === n;
+			const classe = nova ? { nome: c.multiclasse.classe, niveis: 0, nova: true, doc: dados.classes.find((x) => x.name === c.multiclasse.classe) } : ficha.classes.find((x) => x.inicial) ?? ficha.classes[0];
+			const r = montarNivel({ dados, progressao, ficha, classe, lerPreRequisito, regrasPoderesClasse, regrasClasses });
+			const selecoes = {};
+			for (const e of r.escolhas) selecoes[e.id] = e.opcoes[0].doc.uuid;
+			for (const a of r.anotadas) selecoes[a.id] = a.opcoes[(n * 3) % a.opcoes.length];
+			const disponiveis = r.poderesClasse.filter((o) => o.disponivel);
+			const poder = disponiveis.find((o) => o.preRequisito) ?? disponiveis[0] ?? r.poderesGerais.find((o) => o.disponivel && !o.repetivel) ?? null;
+			if (r.magias?.escolas && !r.magias.escolasFicha.length) escolas = c.escolher;
+			const vagas = r.magias ? vagasEfetivas(r.magias, selecoes, poder) : [];
+			const magias = vagas.length ? escolherMagias(r, ficha, vagas, escolas).map((m) => m.uuid) : [];
+			const escolhas = { classeAlvo: nova ? `nova:${classe.nome}` : classe.id, escolha: poder?.doc.uuid ?? null, selecoes, magias, escolas: escolas ?? [] };
+			// sem o poder (ou sem as magias), o nível é recusado com o motivo, e nada muda na ficha virtual
+			if (r.ganhaPoder) {
+				const antes = leitura(v);
+				const sem = await aplicarEscolhas(v, { ...escolhas, escolha: null }, fontes);
+				ok = conferir(!sem.ok && /poder/i.test(sem.motivo) && leitura(v) === antes, `${titulo} ${n}: sem poder, deveria recusar sem mudar a ficha (${JSON.stringify(sem)})`);
+			}
+			const res = await aplicarEscolhas(v, escolhas, fontes);
+			ok = conferir(res.ok && res.nivel === n && v.nivel === n && res.classe === classe.nome, `${titulo} ${n}: ${JSON.stringify(res)}`) && ok;
+		}
+		const ficha = lerFicha(v, { regrasClasses, variantes: variantesDe(progressao) });
+		conferir(fotografia(real) === foto, `${titulo}: o ator real mudou`);
+		if (c.multiclasse) conferir(ficha.classes.some((x) => x.nome === c.multiclasse.classe && x.niveis === 1), `${titulo}: a classe nova não entrou na ficha virtual`);
+		conferir(await aplicarEscolhas(v, { classeAlvo: "nova:Classe Inexistente" }, fontes).then((x) => !x.ok), `${titulo}: classe nova inexistente deveria ser recusada`);
+		if (ok) console.log(`  ✓ ${titulo}: ${v.nivel}º nível na ficha virtual (${ficha.classes.map((x) => `${x.nome} ${x.niveis}`).join(", ")}; ${v.items.filter((i) => i.type === "magia").length} magias); o ator real não mudou`);
+	}
 }
 
 console.log(falhas ? `\n${falhas} falha(s).` : "\nTudo certo.");
