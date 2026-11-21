@@ -10,6 +10,7 @@ import { aplicarNivel, desfazerUltimoNivel, podeDesfazer, historico } from "./ap
 import { animarSubidaDeNivel } from "./animacao-nivel.js";
 import { carregarDadosNivel, leitorPreRequisitos as leitorDe } from "./dados-nivel.js";
 import { EtapasNivel } from "./etapas-nivel.js";
+import { lerArvore, gravarArvore, sincronizar, noDoCaminho, adicionarNo, escolherNo, registrarSubida, paraNomes, paraEtapas } from "./builds/arvore.js";
 
 const TPL = `modules/${MODULE_ID}/templates`;
 export const TEMPLATES_NIVEL = [`${TPL}/subir-nivel.hbs`];
@@ -22,6 +23,9 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 		this.actor = actor;
 		this.etapas = new EtapasNivel(actor);
 		this.ocupado = false;
+		// plano (árvore de builds): o nó do próximo nível preenche as escolhas ao abrir e depois de cada nível
+		this.plano = null;
+		this.planoPreparado = false;
 	}
 
 	// dados carregados ficam nas etapas (que fazem as contas)
@@ -51,7 +55,10 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			focarMagia: SubirNivel.#focarMagia,
 			aplicar: SubirNivel.#aplicar,
 			desfazer: SubirNivel.#desfazer,
-			compendioClasses: SubirNivel.#compendioClasses
+			compendioClasses: SubirNivel.#compendioClasses,
+			salvarPlano: SubirNivel.#salvarPlano,
+			abrirBuilds: SubirNivel.#abrirBuilds,
+			limparPlano: SubirNivel.#limparPlano
 		}
 	};
 
@@ -79,6 +86,7 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			});
 			return { carregando: true, erro: this.erro };
 		}
+		if (!this.planoPreparado) await this.#prepararPlano();
 		const calculo = this.etapas.calcular();
 		const { ficha, classe } = calculo;
 		const pdDesfazer = podeDesfazer(this.actor);
@@ -93,7 +101,39 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			manual: !!this.actor.getFlag("tormenta20", "lvlconfig")?.manual,
 			ocupado: this.ocupado
 		};
-		return { ...base, ...(await this.etapas.contexto(calculo)) };
+		return {
+			...base,
+			...(await this.etapas.contexto(calculo)),
+			plano: this.plano,
+			// salvar como plano: só com o nível completo
+			salvarPlano: !!calculo.nivel && !this.etapas.pendencia(calculo.nivel)
+		};
+	}
+
+	/**
+	 * Plano para o próximo nível: acerta a árvore com o nível da ficha e, se o caminho escolhido tem um nó
+	 * para o próximo nível, põe as escolhas dele nas etapas (e vai direto para a revisão, se estiver completo).
+	 * Um nó que não vale mais (poder sem pré-requisito, magia que sumiu) só gera o aviso.
+	 */
+	async #prepararPlano() {
+		this.planoPreparado = true;
+		this.plano = null;
+		const { ficha, bloqueio } = this.etapas.calcular();
+		if (bloqueio) return;
+		const arvore = lerArvore(this.actor);
+		if (!arvore.nos.length) return;
+		if (sincronizar(arvore, ficha.nivel)) await gravarArvore(this.actor, arvore);
+		const no = noDoCaminho(arvore, ficha.nivel + 1);
+		if (!no || no.pai || no.naoSeguido) return;
+		const { problemas, calculo } = paraEtapas(this.etapas, no.escolhas);
+		if (problemas.length) {
+			this.etapas.limparEscolhas();
+			this.plano = { id: no.id, nome: no.nome, nivel: no.nivel, invalido: problemas[0] };
+			return;
+		}
+		const pendencia = calculo.nivel ? this.etapas.pendencia(calculo.nivel) : null;
+		this.plano = { id: no.id, nome: no.nome, nivel: no.nivel, pendencia };
+		if (!pendencia) this.etapas.passo = "revisao";
 	}
 
 	_onRender(context, options) {
@@ -180,6 +220,43 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 		this.render();
 	}
 
+	/** Salva as escolhas deste nível como o plano (nó raiz da árvore) para o próximo nível. */
+	static async #salvarPlano() {
+		const calculo = this.etapas.calcular();
+		if (!calculo.nivel) return;
+		const pendencia = this.etapas.pendencia(calculo.nivel);
+		if (pendencia) return ui.notifications.warn(pendencia);
+		const arvore = lerArvore(this.actor);
+		sincronizar(arvore, calculo.ficha.nivel);
+		const no = adicionarNo(arvore, { nivel: calculo.nivel.nivelPersonagem, escolhas: paraNomes(this.etapas, calculo) });
+		escolherNo(arvore, no.id);
+		await gravarArvore(this.actor, arvore);
+		this.plano = { id: no.id, nome: no.nome, nivel: no.nivel, pendencia: null };
+		ui.notifications.info(`Plano salvo para o ${no.nivel}º nível: ${no.nome}.`);
+		this.render();
+	}
+
+	/** Abre o cadastro de builds (planejador) com os dados já carregados; quando a árvore muda, o plano do próximo nível é refeito. */
+	static async #abrirBuilds() {
+		if (!this.dados) return;
+		const { abrirPlanejador } = await import("./builds/planejador.js");
+		abrirPlanejador(this.actor, {
+			dados: this.dados, progressao: this.progressao, lerPreRequisito: this.lerPreRequisito,
+			aoMudar: () => {
+				this.etapas.limparEscolhas();
+				this.planoPreparado = false;
+				if (this.rendered) this.render();
+			}
+		});
+	}
+
+	/** Descarta o preenchimento do plano neste nível (o plano continua salvo). */
+	static #limparPlano() {
+		this.etapas.limparEscolhas();
+		this.plano = null;
+		this.render();
+	}
+
 	static #focarMagia(event, target) {
 		this.etapas.focarMagia(target.dataset.uuid);
 		this.render();
@@ -191,6 +268,8 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 		if (r0.bloqueio) return;
 		if (r0.pendencia) return ui.notifications.warn(r0.pendencia);
 		const { classe, nivel, plano } = r0;
+		// as escolhas por nome, para marcar na árvore de builds qual nó foi seguido
+		const aplicadas = paraNomes(this.etapas, { classe, nivel });
 		this.ocupado = true;
 		this.render();
 		let animacao = null;
@@ -204,7 +283,13 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 				detalhe: `${classe.nome} ${nivel.nivelClasse} · +${r.pv} PV · +${r.pm} PM`,
 				img: classe.item?.img ?? classe.doc?.img
 			});
+			const arvore = lerArvore(this.actor);
+			if (arvore.nos.length) {
+				registrarSubida(arvore, nivel.nivelPersonagem, aplicadas);
+				await gravarArvore(this.actor, arvore);
+			}
 			this.etapas.limparEscolhas();
+			this.planoPreparado = false;
 		} catch (err) {
 			console.error(err);
 			ui.notifications.error(`Não foi possível subir de nível: ${err.message}`);
@@ -252,6 +337,7 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			await desfazerUltimoNivel(this.actor);
 			ui.notifications.info(`${this.actor.name} voltou para o ${ultimo.nivel - 1}º nível.`);
 			this.etapas.limparEscolhas();
+			this.planoPreparado = false;
 		} catch (err) {
 			console.error(err);
 			ui.notifications.error(`Não foi possível desfazer: ${err.message}`);

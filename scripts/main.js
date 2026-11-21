@@ -14,6 +14,7 @@ import { ConstrutorFicha, TEMPLATES_PASSOS } from "./wizard.js";
 import { invalidarDados, carregarDados } from "./dados.js";
 import { CONTEUDOS_SUPLEMENTO, SUPLEMENTO_ID } from "./suplementos.js";
 import { abrirSubirNivel, TEMPLATES_NIVEL } from "./subir-nivel.js";
+import { TEMPLATES_BUILDS } from "./builds/planejador.js";
 
 const L = (k) => game.i18n.localize(`T20CF.${k}`);
 
@@ -99,7 +100,7 @@ function envolverRacaDoSistema() {
 
 Hooks.once("init", () => {
 	registrarConfiguracoes();
-	foundry.applications.handlebars.loadTemplates([...TEMPLATES_PASSOS, ...TEMPLATES_NIVEL]);
+	foundry.applications.handlebars.loadTemplates([...TEMPLATES_PASSOS, ...TEMPLATES_NIVEL, ...TEMPLATES_BUILDS]);
 });
 
 // Pré-carregamento: alguns segundos depois de o mundo abrir, carrega os compêndios em segundo
