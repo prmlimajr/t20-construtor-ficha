@@ -62,9 +62,11 @@ export function documentoDaPrevia({ html, classes = "" }) {
 <base href="${atr(document.baseURI)}">
 ${estilos}
 <style>
-html, body { height: auto !important; min-height: 0 !important; overflow: auto !important; background: transparent !important; margin: 0 !important; padding: 0 !important; }
-.t20cf-previa-janela { position: static !important; inset: auto !important; width: auto !important; height: auto !important; max-height: none !important; min-height: 0 !important; margin: 0 !important; transform: none !important; box-shadow: none !important; }
-.t20cf-previa-janela > .window-content { overflow: visible !important; height: auto !important; }
+/* a janela da ficha ocupa o quadro inteiro: o corpo da ficha (.sheet-body, com altura relativa) rola por dentro, como na ficha normal */
+html, body { height: 100% !important; min-height: 0 !important; overflow: hidden !important; background: transparent !important; margin: 0 !important; padding: 0 !important; }
+.t20cf-previa-janela { position: relative !important; inset: auto !important; width: 100% !important; height: 100% !important; max-height: none !important; min-height: 0 !important; margin: 0 !important; transform: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; }
+.t20cf-previa-janela > .window-content { flex: 1 !important; height: 100% !important; min-height: 0 !important; overflow: hidden !important; }
+.t20cf-previa-janela > .window-content > form { height: 100% !important; }
 .t20cf-previa-janela button, .t20cf-previa-janela a:not([data-tab]), .t20cf-previa-janela .rollable, .t20cf-previa-janela .item-control,
 .t20cf-previa-janela [data-action], .t20cf-previa-janela input, .t20cf-previa-janela select, .t20cf-previa-janela textarea { pointer-events: none !important; }
 .t20cf-previa-janela .sheet-tabs [data-tab] { pointer-events: auto !important; cursor: pointer; }
@@ -76,12 +78,16 @@ html, body { height: auto !important; min-height: 0 !important; overflow: auto !
 </html>`;
 }
 
-/** Deixa a ficha do iframe só leitura e liga as abas (sem os eventos da ficha). */
+/**
+ * Deixa a ficha do iframe só leitura e só com a aba principal (a da ficha: "attributes"; sem Diário, Modificadores
+ * e Efeitos). Se a ficha tiver outras abas de conteúdo (layouts com abas), elas continuam, trocadas sem os eventos da ficha.
+ */
 export function prepararIframeDaPrevia(iframe) {
 	const doc = iframe?.contentDocument;
 	const raiz = doc?.querySelector(".t20cf-previa-janela");
 	if (!raiz) return;
 	raiz.querySelectorAll("input, select, textarea").forEach((el) => { el.disabled = true; });
+	esconderAbas(raiz);
 	raiz.addEventListener("click", (ev) => {
 		const aba = ev.target.closest(".sheet-tabs [data-tab]");
 		if (!aba) return;
@@ -91,6 +97,21 @@ export function prepararIframeDaPrevia(iframe) {
 		raiz.querySelectorAll(".sheet-body .tab[data-tab]").forEach((x) => x.classList.toggle("active", x.dataset.tab === nome));
 	});
 	if (!raiz.querySelector(".sheet-body .tab.active")) raiz.querySelector(".sheet-tabs [data-tab]")?.click();
+}
+
+/** Abas que não entram na prévia (só a ficha em si). */
+export const ABAS_FORA_DA_PREVIA = ["journal", "modifiers", "effects", "biography", "notes"];
+
+/** Tira da prévia as abas de Diário, Modificadores e Efeitos (o botão e o conteúdo) e deixa a principal ativa. */
+export function esconderAbas(raiz) {
+	for (const nome of ABAS_FORA_DA_PREVIA) {
+		raiz.querySelectorAll(`.sheet-tabs [data-tab="${nome}"], .sheet-body .tab[data-tab="${nome}"]`).forEach((el) => el.remove());
+	}
+	const principal = raiz.querySelector('.sheet-body .tab[data-tab="attributes"]') ?? raiz.querySelector(".sheet-body .tab[data-tab]");
+	if (principal && !raiz.querySelector(".sheet-body .tab.active")) {
+		principal.classList.add("active");
+		raiz.querySelector(`.sheet-tabs [data-tab="${principal.dataset.tab}"]`)?.classList.add("active");
+	}
 }
 
 /** Ficha resumida própria (plano B). */
