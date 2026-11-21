@@ -1121,13 +1121,16 @@ for (const c of classes) {
 	ctx = await plan._prepareContext();
 	ok(arv.nos.length === 2 && arv.caminho[0] === b2b.id && ctx.colunas[0].builds.length === 2 && ctx.colunas[1].builds.length === 0, `a variação ${p2b} é outra build do 2º e passa a ser a escolhida`);
 
-	// 3º e 4º a partir da variação
-	await acao("novaBuild", { nivel: "3", pai: b2b.id });
+	// 3º e 4º a partir da variação: só pelo "+" de uma build do nível anterior (a base do novo nível)
+	ctx = await plan._prepareContext();
+	ok(ctx.colunas[0].primeira && !ctx.colunas[1].primeira && ctx.colunas[1].de === p2b && ctx.colunas[0].builds.every((b) => b.proximo === 3),
+		"só a 1ª coluna cria build direto; a do 3º diz a partir de qual build, e cada build do 2º tem o botão + 3º");
+	await acao("proximoNivel", { id: b2b.id });
 	ok(plan.editor.actor.nivel === 2 && plan.editor.actor.items.some((i) => i.name === `2 - ${p2b}`), "nova build do 3º: a ficha virtual já tem o poder da build do 2º");
 	const p3 = await salvarEditor(plan.editor);
 	arv = A.lerArvore(real);
 	const b3 = arv.nos.find((n) => n.nivel === 3);
-	await acao("novaBuild", { nivel: "4", pai: b3.id });
+	await acao("proximoNivel", { id: b3.id });
 	await salvarEditor(plan.editor);
 	arv = A.lerArvore(real);
 	ctx = await plan._prepareContext();
@@ -1147,6 +1150,20 @@ for (const c of classes) {
 		"prévia da build do 3º: ficha resumida (sem a ficha do sistema em Node) com o poder e o nível");
 	ctx = await plan._prepareContext();
 	ok(!ctx.previa.animar, "a animação do slide só na primeira vez");
+	{
+		// documento do iframe da ficha do sistema: estilos da página, base, classes da janela e o HTML da ficha
+		const { documentoDaPrevia } = await import("../scripts/builds/previa.js");
+		const antes = globalThis.document;
+		globalThis.document = {
+			querySelectorAll: () => [{ outerHTML: '<link rel="stylesheet" href="systems/tormenta20/css/tormenta20.css">' }],
+			documentElement: { className: "", lang: "pt-BR" }, baseURI: "http://localhost:30000/game", body: { className: "vtt game system-tormenta20" }
+		};
+		const doc = documentoDaPrevia({ html: "<form class=\"ficha\">Tarik</form>", classes: "tormenta20 sheet actor character" });
+		globalThis.document = antes;
+		ok(doc.includes("tormenta20.css") && doc.includes('<base href="http://localhost:30000/game">') && doc.includes('class="vtt game system-tormenta20"')
+			&& doc.includes('class="app window-app tormenta20 sheet actor character t20cf-previa-janela"') && doc.includes("<form class=\"ficha\">Tarik</form>") && !doc.includes("t20-construtor"),
+			"prévia da ficha do sistema: iframe com os estilos da página, fora da janela do construtor");
+	}
 	acao("fecharPrevia");
 
 	// editar a build do 3º: troca o poder, mantém o nó (e o filho)
@@ -1185,7 +1202,17 @@ for (const c of classes) {
 	const sub = Object.assign(new SubirNivel(real), { dados: fontes.dados, progressao, lerPreRequisito });
 	ctx = await sub._prepareContext();
 	ok(ctx.plano?.nome === p2b && ctx.passo === "revisao", "a janela de subir de nível vem preenchida com a build escolhida");
+	// antes de subir pela build: confirmação com o nível, a build e o que ela dá; cancelar não sobe
+	let pergunta = null;
+	Object.assign(foundry.applications.api.DialogV2, { confirm: async (o) => { pergunta = o; return respostaConfirmar; } });
+	respostaConfirmar = false;
 	await SubirNivel.DEFAULT_OPTIONS.actions.aplicar.call(sub);
+	ok(real.nivel === 1 && /2º nível/.test(pergunta?.content ?? "") && pergunta.content.includes(p2b) && /\+\d+ PV/.test(pergunta.content) && pergunta.content.includes(`Poder:</strong> ${p2b}`),
+		"subir pela build pede confirmação (nível, build, PV/PM e o poder) e, cancelando, não sobe");
+	respostaConfirmar = true;
+	pergunta = null;
+	await SubirNivel.DEFAULT_OPTIONS.actions.aplicar.call(sub);
+	ok(real.nivel === 2 && pergunta, "confirmando, sobe");
 	ctx = await plan._prepareContext();
 	ok(real.nivel === 2 && ctx.nivelFicha === 2 && ctx.colunas[0].nivel === 3 && ctx.naoSeguidas.length === 1 && /escolheu Bater e Correr/.test(ctx.naoSeguidas[0].aviso),
 		"depois de subir: o planejador começa no 3º e a outra build do 2º aparece como não seguida");

@@ -10,7 +10,9 @@ import { aplicarNivel, desfazerUltimoNivel, podeDesfazer, historico } from "./ap
 import { animarSubidaDeNivel } from "./animacao-nivel.js";
 import { carregarDadosNivel, leitorPreRequisitos as leitorDe } from "./dados-nivel.js";
 import { EtapasNivel } from "./etapas-nivel.js";
-import { lerArvore, gravarArvore, sincronizar, noDoCaminho, adicionarNo, escolherNo, registrarSubida, paraNomes, paraEtapas } from "./builds/arvore.js";
+import {
+	lerArvore, gravarArvore, sincronizar, noDoCaminho, noPorId, adicionarNo, escolherNo, registrarSubida, paraNomes, paraEtapas, mesmasEscolhas
+} from "./builds/arvore.js";
 
 const TPL = `modules/${MODULE_ID}/templates`;
 export const TEMPLATES_NIVEL = [`${TPL}/subir-nivel.hbs`];
@@ -270,6 +272,7 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 		const { classe, nivel, plano } = r0;
 		// as escolhas por nome, para marcar na árvore de builds qual nó foi seguido
 		const aplicadas = paraNomes(this.etapas, { classe, nivel });
+		if (!(await this.#confirmarBuild({ classe, nivel }, aplicadas))) return;
 		this.ocupado = true;
 		this.render();
 		let animacao = null;
@@ -298,6 +301,29 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			this.render();
 		}
 		if (animacao) await this.#perguntarOutroNivel(animacao);
+	}
+
+	/**
+	 * Subindo com as escolhas de uma build do plano: confirma, mostrando o nível, a build e o que ela dá.
+	 * Sem build (ou com as escolhas mudadas na janela), não pergunta. @returns {Promise<boolean>} se pode subir
+	 */
+	async #confirmarBuild(calculo, aplicadas) {
+		if (!this.plano || this.plano.invalido) return true;
+		const no = noPorId(lerArvore(this.actor), this.plano.id);
+		if (!no || !mesmasEscolhas(no.escolhas, aplicadas)) return true;
+		const { classe, nivel } = calculo;
+		const { pv, pm } = this.etapas.ganhos({ ficha: this.etapas.calcular().ficha, classe });
+		const { revisao } = this.etapas.ctxRevisao(nivel, this.etapas.poderEscolhido(nivel), this.etapas.magiasEscolhidas());
+		const e = (t) => foundry.utils.escapeHTML?.(String(t)) ?? String(t);
+		const ok = await foundry.applications.api.DialogV2.confirm({
+			window: { title: "Subir de nível pela build" },
+			content: `<p>${e(this.actor.name)} vai subir para o <strong>${nivel.nivelPersonagem}º nível</strong> (${e(classe.nome)} ${nivel.nivelClasse}${classe.nova ? ", classe nova" : ""}) com a build <strong>${e(no.nome)}</strong>.</p>
+				<p><strong>+${pv} PV</strong> e <strong>+${pm} PM</strong>${nivel.bonusPericia ? `; bônus de perícia +${nivel.bonusPericia}` : ""}.</p>
+				<ul class="t20cf-confirmar-build">${revisao.map((i) => `<li><strong>${e(i.tipo)}:</strong> ${e(i.nome)}</li>`).join("")}</ul>`,
+			yes: { label: "Subir de nível", default: true },
+			no: { label: "Cancelar" }
+		});
+		return ok === true;
 	}
 
 	/**
