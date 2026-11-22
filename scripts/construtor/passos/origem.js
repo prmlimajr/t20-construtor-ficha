@@ -14,6 +14,20 @@ export const PODERES_COM_ESCOLHA = {
 	"futura lenda": { lista: "poderClasse", titulo: "Escolha um poder de sua classe", rotulo: "o poder de classe" }
 };
 
+/**
+ * Poderes de origem que podem ser escolhidos duas vezes, gastando os dois benefícios (o 2º fica em
+ * beneficios como "poder2:<nome>"). Na ficha entra um poder só, com a nota.
+ */
+export const PODERES_DUAS_VEZES = {
+	// Herdeiro: "Você pode escolher este poder duas vezes, para um item de até T$ 2.000."
+	"heranca": { detalhe: "um item de até T$ 2.000 (em vez de T$ 1.000)", nota: "Escolhido duas vezes: um item de preço de até T$ 2.000." }
+};
+
+/** Regra do poder que pode ser escolhido duas vezes (ou null). */
+export function poderDuasVezes(nome) {
+	return PODERES_DUAS_VEZES[normalizar(nome)] ?? null;
+}
+
 /** Regra de escolha do poder (ou null). */
 export function escolhaDoPoder(nome) {
 	return PODERES_COM_ESCOLHA[normalizar(nome)] ?? null;
@@ -53,6 +67,7 @@ export const passo = {
 			if (o.beneficios.length !== n) return `Escolha ${n === 1 ? "1 benefício" : `${n} benefícios`} (${o.beneficios.length} escolhidos).`;
 			for (const b of o.beneficios) {
 				if (b.startsWith("grupo:") && !o.grupos[b.slice(6)]) return `Escolha o poder de ${b.slice(6)}.`;
+				if (b.startsWith("poder2:") && !o.beneficios.includes(`poder:${b.slice(7)}`)) return `Escolha ${b.slice(7)} antes de escolhê-lo pela 2ª vez.`;
 				const pendente = b.startsWith("poder:") && this.pendenciaEscolhaPoder(b.slice(6), o);
 				if (pendente) return pendente;
 			}
@@ -79,6 +94,8 @@ export class Tela {
 		if (!lista.length) return { semOrigens: true };
 		const origens = lista.map((o) => ({
 			nome: o.nome,
+			// a busca acha a origem pelo nome (o local, na regional) e pelos poderes dela (ex.: o poder único)
+			busca: [o.nome, ...(o.poderes ?? []), o.poder, ...(o.poderesExtras ?? []), ...(o.grupos ?? [])].filter(Boolean).join(" "),
 			resumo: this.resumoOrigem(o),
 			fonte: o.fonte ?? "",
 			selecionado: o.nome === est.nome
@@ -131,6 +148,17 @@ export class Tela {
 					} : null,
 					info: await this.infoPoder(p)
 				});
+				// Herança: com o poder escolhido, ele pode ser escolhido de novo (o 2º benefício)
+				const duas = poderDuasVezes(nome);
+				if (duas && sel) {
+					const id2 = `poder2:${nome}`;
+					beneficios.push({
+						id: id2, tipo: "Poder único", nome: `${nome} (2ª vez)`,
+						detalhe: duas.detalhe,
+						selecionado: est.beneficios.includes(id2),
+						info: { descricao: `<p>${duas.nota}</p>` }
+					});
+				}
 			}
 			for (const g of def.grupos ?? []) {
 				const id = `grupo:${g}`;
@@ -215,7 +243,7 @@ export class Tela {
 				fonte: def.fonte ?? ""
 			};
 		}
-		return { origens, grupos, variosGrupos: grupos.length > 1, filtro: this.filtros?.[`origem-${sub}`] ?? "", chaveFiltro: `origem-${sub}`, info, campoNome: `${base}.nome` };
+		return { origens, grupos, variosGrupos: grupos.length > 1, placeholder: sub === "regional" ? "Buscar por local ou poder…" : "Buscar origem ou poder…", filtro: this.filtros?.[`origem-${sub}`] ?? "", chaveFiltro: `origem-${sub}`, info, campoNome: `${base}.nome` };
 	}
 
 	resumoOrigem(o) {

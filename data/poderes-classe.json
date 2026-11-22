@@ -105,6 +105,18 @@
       "maxAlquimicos": 0,
       "semAlquimicos": true,
       "apenasArmas": true
+    },
+    "Centelha Mágica": {
+      "id": "centelhaMagica",
+      "tipo": "magias",
+      "titulo": "Magia arcana ou divina de 1º círculo",
+      "quantidade": 1,
+      "circulo": 1,
+      "tiposMagia": [
+        "arc",
+        "div",
+        "uni"
+      ]
     }
   }
 }

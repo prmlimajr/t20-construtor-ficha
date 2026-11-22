@@ -193,6 +193,20 @@ export const AJUSTES = [
 		}
 	},
 	{
+		porque: "deuses menores não têm devotos fundamentalistas (sai o fundamentalismo e o poder concedido extra)",
+		aplicar(e) {
+			if (!e.fundamentalista || !e.divindade || this.podeSerFundamentalista()) return;
+			e.fundamentalista = false;
+			e.poderesConcedidos = e.poderesConcedidos.slice(0, this.poderesConcedidosPermitidos());
+		}
+	},
+	{
+		porque: "escolhas internas dos poderes concedidos: as dos escolhidos no formato certo; as dos que saíram (ex.: a magia da Centelha Mágica) são descartadas",
+		aplicar() {
+			this.prepararEscolhasDevocao();
+		}
+	},
+	{
 		porque: "Especialista: só perícias treinadas, até o limite pela Inteligência",
 		aplicar(e) {
 			if (!Array.isArray(e.classePoderEscolhas?.especialista)) return;

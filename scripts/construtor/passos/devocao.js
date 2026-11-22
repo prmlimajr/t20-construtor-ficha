@@ -23,7 +23,8 @@ export const passo = {
 		if (!e.divindade) return "Escolha uma divindade.";
 		const n = this.poderesConcedidosPermitidos();
 		if (e.poderesConcedidos.length !== n) return `Escolha ${n} poder(es) concedido(s).`;
-		return null;
+		// escolha interna de um poder concedido (Centelha Mágica: a magia)
+		return this.pendenciaEscolhas(this.poderesDaDevocao());
 	},
 
 	/** Dados do template do passo. this = janela (ConstrutorFicha). */
@@ -55,6 +56,7 @@ export class Tela {
 		const div = this.dados.divindades.find((d) => d.nome === (this.focoDivindade || e.divindade));
 		if (devoto && div) {
 			const poderes = [];
+			const comEscolha = new Map(this.poderesDaDevocao().map((x) => [x.poder.name, x]));
 			for (const nome of div.poderes) {
 				const p = poder(this.dados, nome);
 				if (!p) continue;
@@ -64,7 +66,9 @@ export class Tela {
 					selecionado: e.poderesConcedidos.includes(nome),
 					bloqueado: !!impedido,
 					motivo: impedido ?? "",
-					info: await this.infoPoder(p)
+					info: await this.infoPoder(p),
+					// escolhido e com escolha interna (Centelha Mágica): a magia, logo abaixo do poder
+					escolha: comEscolha.has(p.name) && div.nome === e.divindade ? this.ctxEscolhaRacial(p, comEscolha.get(p.name).regra) : null
 				});
 			}
 			const impedimento = this.impedimentoDivindade(div);
@@ -75,7 +79,10 @@ export class Tela {
 				escolhida: div.nome === e.divindade,
 				impedimento,
 				poderes, qtd: this.poderesConcedidosPermitidos(), escolhidos: e.poderesConcedidos.length,
-				fundamentalista: !!e.fundamentalista
+				fundamentalista: !!e.fundamentalista,
+				podeSerFundamentalista: this.podeSerFundamentalista(div),
+				// o que é ser fundamentalista deste deus (data/divindades.json → "fundamentalismo")
+				fundamentalismo: div.fundamentalismo ?? ""
 			};
 		}
 		const lista = r?.devocao?.divindades ? ` de ${r.devocao.divindades.join(", ")}` : "";

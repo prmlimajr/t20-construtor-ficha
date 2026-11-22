@@ -3,13 +3,13 @@
 {{else}}
 <div class="cf-duas">
 	<div class="cf-lista cf-lista-filtravel">
-		<input type="search" class="cf-filtro cf-filtro-lista" data-filtro="{{chaveFiltro}}" placeholder="Buscar origem…" value="{{filtro}}" aria-label="Buscar origem pelo nome">
+		<input type="search" class="cf-filtro cf-filtro-lista" data-filtro="{{chaveFiltro}}" placeholder="{{placeholder}}" value="{{filtro}}" aria-label="{{placeholder}}">
 		{{#each grupos}}
 		<section class="cf-grupo">
 			{{#if ../variosGrupos}}<h4 class="cf-grupo-titulo">{{titulo}} <small>{{origens.length}}</small></h4>{{/if}}
 			<div class="cf-cards cf-cards-coluna cf-cards-texto">
 				{{#each origens}}
-				<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}}" data-action="definir" data-campo="{{../../campoNome}}" data-valor="{{nome}}" data-busca="{{nome}}">
+				<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}}" data-action="definir" data-campo="{{../../campoNome}}" data-valor="{{nome}}" data-busca="{{busca}}">
 					<span class="cf-card-texto">
 						<span class="cf-card-nome">{{nome}}</span>
 						<span class="cf-card-sub">{{resumo}}</span>

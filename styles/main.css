@@ -499,6 +499,7 @@
 .t20-construtor .cf-slideout-fechar { flex: none; width: 32px; height: 32px; }
 .t20-construtor .cf-filtro { flex: 0 0 220px; }
 .t20-construtor .cf-slideout .cf-duas { min-height: 0; }
+.t20-construtor .cf-slideout-categorias { flex: none; flex-wrap: wrap; gap: 4px; }
 .t20-construtor .cf-slideout .cf-lista { align-content: start; }
 .t20-construtor .cf-card[hidden] { display: none; }
 .t20-construtor .cf-escolher { width: auto; margin: 4px 0 8px; }
@@ -1222,3 +1223,8 @@
 .t20cf-builds .cf-previa-numeros strong { font-size: 20px; }
 .t20cf-builds .cf-previa-resumo h4 { margin: 0 0 4px; }
 .t20cf-builds .cf-previa-lista { margin: 0; padding-left: 18px; columns: 2; font-size: 12px; }
+
+/* Devoção: o que é ser fundamentalista do deus escolhido */
+.t20-construtor .cf-fundamentalismo { margin-top: 8px; padding: 8px 10px; border-left: 3px solid var(--cf-ouro); background: rgba(0, 0, 0, 0.2); }
+.t20-construtor .cf-fundamentalismo h5 { margin: 0 0 4px; font-size: 14px; }
+.t20-construtor .cf-fundamentalismo p { margin: 4px 0; }

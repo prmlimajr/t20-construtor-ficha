@@ -37,45 +37,103 @@ export const passo = {
 
 /** Tela deste passo: os métodos de instância entram na janela (ConstrutorFicha); os estáticos são ações. */
 export class Tela {
+	/**
+	 * Como a tela de magias: em cada seção, as perícias escolhidas viram cards (clique mostra os detalhes, com
+	 * o botão de remover) e cada vaga que falta é um card "Escolher perícia", que abre a lista no slideout.
+	 */
 	async ctxPericias() {
 		const e = this.estado;
 		const r = this.regrasClasse;
 		if (!r) return {};
 		const card = (k, extra) => this.cardPericia(k, extra);
+		const todas = ordenarPericias(Object.keys(CONFIG.T20?.pericias ?? {}));
 
 		const fixas = ordenarPericias([...new Set([...r.fixas, ...this.periciasDePoderesClasse()])]).map((k) => card(k, { fixa: true }));
 		const raciais = this.periciasRaciais();
 		const daRaca = ordenarPericias([...raciais]).map((k) => card(k, { fixa: true }));
 		const repetidas = r.fixas.filter((k) => raciais.has(k)).map(rotuloPericia);
-		const grupos = r.ou.map((g, i) => ({
-			campo: `periciasOu.${i}`,
-			cards: ordenarPericias(expandirPericias(g)).map((k) => card(k, { selecionado: e.periciasOu[i] === k }))
-		}));
 
+		/**
+		 * Seção de escolha: escolhidas (cards com o campo, para remover) + vagas que abrem o slideout.
+		 * @param {string[]} escolhidas  as perícias já escolhidas no campo
+		 * @param {string[]} opcoes      as que ainda podem ser escolhidas (sem as escolhidas)
+		 * @param {number|null} qtd      vagas (null = sem limite: sempre uma vaga a mais)
+		 */
+		const secao = ({ titulo, campo, escolhidas, opcoes: todasOpcoes, qtd, tituloSlideout, nota = null }) => {
+			const opcoes = todasOpcoes.filter((k) => !escolhidas.includes(k));
+			const vagas = qtd === null ? (opcoes.length ? 1 : 0) : Math.max(0, qtd - escolhidas.length);
+			return {
+				titulo, campo, nota,
+				contagem: qtd === null ? `${escolhidas.length}` : `${escolhidas.length}/${qtd}`,
+				escolhidas: ordenarPericias(escolhidas).map((k) => card(k, { selecionado: true, campo })),
+				vagas: Array.from({ length: opcoes.length ? vagas : 0 }, () => ({})),
+				semOpcoes: vagas > 0 && !opcoes.length,
+				lista: `pericias:${opcoes.join("|")}`,
+				limite: qtd === null ? "" : qtd,
+				tituloSlideout
+			};
+		};
+		const secoes = [];
+
+		// classe de suplemento sem as perícias registradas: o jogador indica as que a classe treina
+		if (r.periciasManuais) {
+			secoes.push(secao({
+				titulo: "Perícias treinadas da classe", campo: "periciasFixasManuais", escolhidas: r.fixas,
+				opcoes: todas.filter((k) => !raciais.has(k) && !r.fixas.includes(k)), qtd: null,
+				tituloSlideout: "Perícia treinada pela classe",
+				nota: "Esta classe de suplemento não tem as perícias registradas. Indique as perícias que a classe treina automaticamente, conforme o livro; as escolhas da classe vêm em seguida."
+			}));
+		}
+		r.ou.forEach((g, i) => {
+			const atual = e.periciasOu[i] || "";
+			secoes.push(secao({
+				titulo: "Escolha uma", campo: `periciasOu.${i}`, escolhidas: atual ? [atual] : [],
+				opcoes: ordenarPericias(expandirPericias(g)).filter((k) => k !== atual), qtd: 1,
+				tituloSlideout: "Escolha uma perícia"
+			}));
+		});
 		const jaClasse = this.periciasTreinadas({ ate: "classe" });
-		const opcoesClasse = ordenarPericias(expandirPericias(r.opcoes)).map((k) => card(k, {
-			selecionado: e.periciasClasse.includes(k),
-			bloqueado: jaClasse.has(k) && !e.periciasClasse.includes(k)
+		secoes.push(secao({
+			titulo: `Perícias da classe`, campo: "periciasClasse", escolhidas: e.periciasClasse,
+			opcoes: ordenarPericias(expandirPericias(r.opcoes)).filter((k) => !jaClasse.has(k)), qtd: r.numero,
+			tituloSlideout: "Escolha uma perícia da classe"
 		}));
-
 		const jaInt = this.periciasTreinadas({ ate: "int" });
 		const nInt = Math.max(0, this.atributoFinal("int"));
-		const opcoesInt = ordenarPericias(Object.keys(CONFIG.T20?.pericias ?? {})).map((k) => card(k, {
-			selecionado: e.periciasInt.includes(k),
-			bloqueado: jaInt.has(k) && !e.periciasInt.includes(k)
-		}));
+		const int = secao({
+			titulo: "Perícias por Inteligência", campo: "periciasInt", escolhidas: e.periciasInt,
+			opcoes: todas.filter((k) => !jaInt.has(k)), qtd: nInt,
+			tituloSlideout: "Escolha uma perícia (qualquer uma)",
+			nota: nInt ? `Inteligência ${sinal(this.atributoFinal("int"))}: ${nInt} perícia(s), qualquer uma.` : "Sua Inteligência não concede perícias adicionais."
+		});
+		secoes.push(int);
+		const esp = this.ctxEspecialista();
+		if (esp) {
+			secoes.push(secao({
+				titulo: "Especialista", campo: esp.campo, escolhidas: esp.escolhidas,
+				opcoes: esp.treinadas.filter((k) => !esp.escolhidas.includes(k)), qtd: esp.qtd,
+				tituloSlideout: "Escolha uma perícia treinada (Especialista)",
+				nota: `Escolha ${esp.qtd} perícia(s) treinada(s): ao testá-las, você pode gastar 1 PM para dobrar o bônus de treinamento.`
+			}));
+		}
 
 		let info = null;
 		const k = this.focoPericia;
 		if (k && CONFIG.T20?.pericias?.[k]) {
 			const cfg = CONFIG.T20.pericias[k];
 			const treinadas = this.periciasTreinadas({ ate: "origem" });
+			// escolhida numa seção: o painel tem o botão de remover
+			const campo = this.focoPericiaCampo;
+			const valorCampo = campo ? foundry.utils.getProperty(this.estado, campo) : null;
+			const removivel = campo && (Array.isArray(valorCampo) ? valorCampo.includes(k) : valorCampo === k);
 			info = {
 				nome: rotuloPericia(k),
+				chave: k,
 				atributo: NOMES_ATRIBUTOS[cfg.abl] ?? cfg.abl,
 				somenteTreinado: !!cfg.trainedOnly,
 				penalidade: !!cfg.armorPenalty,
 				treinada: treinadas.has(k),
+				campo: removivel ? campo : null,
 				descricao: await this.descricaoPericia(k)
 			};
 		}
@@ -84,22 +142,8 @@ export class Tela {
 			fixas,
 			daRaca,
 			repetidas: repetidas.join(", "),
-			especialista: this.ctxEspecialista(),
-			manuais: r.periciasManuais ? {
-				cards: ordenarPericias(Object.keys(CONFIG.T20?.pericias ?? {})).map((k) => card(k, {
-					selecionado: r.fixas.includes(k),
-					bloqueado: raciais.has(k) && !r.fixas.includes(k)
-				})),
-				qtd: r.fixas.length
-			} : null,
-			grupos,
-			opcoesClasse,
-			numeroClasse: r.numero,
-			escolhidasClasse: e.periciasClasse.length,
-			nInt,
-			escolhidasInt: e.periciasInt.length,
-			opcoesInt,
-			intTotal: sinal(this.atributoFinal("int")),
+			manuais: !!r.periciasManuais,
+			secoes,
 			info
 		};
 	}
@@ -110,30 +154,24 @@ export class Tela {
 		if (!x) return null;
 		const v = this.escolhaRacial(x.regra);
 		const treinadas = ordenarPericias([...this.periciasTreinadas()]);
-		const qtd = Math.min(this.qtdEspecialista, treinadas.length);
-		return {
-			campo: this.campoEscolha(x.regra),
-			qtd,
-			contagem: `${v.length}/${qtd}`,
-			cards: treinadas.map((k) => ({ chave: k, nome: rotuloPericia(k), selecionado: v.includes(k) }))
-		};
+		return { campo: this.campoEscolha(x.regra), qtd: Math.min(this.qtdEspecialista, treinadas.length), escolhidas: v, treinadas };
 	}
 
 	/* Ações do passo (ApplicationV2 chama com this = janela). */
 
+	/** Mostra os detalhes da perícia (com data-campo: escolhida numa seção, o painel permite remover). */
 	static focarPericia(event, target) {
 		this.focoPericia = target.dataset.valor;
+		this.focoPericiaCampo = target.dataset.campo ?? "";
 		this.render();
 	}
 
-	/** Seleciona/desmarca uma perícia e mostra os detalhes dela. */
-	static escolherPericia(event, target) {
-		const { campo, valor, modo } = target.dataset;
-		this.focoPericia = valor;
-		if (modo === "unica") {
-			const atual = foundry.utils.getProperty(this.estado, campo);
-			return this.definirCampo(campo, atual === valor ? "" : valor);
-		}
-		return this.constructor.alternar.call(this, event, target);
+	/** Botão "Remover perícia" do painel. */
+	static removerPericia(event, target) {
+		const { campo, valor } = target.dataset;
+		const atual = foundry.utils.getProperty(this.estado, campo);
+		this.focoPericiaCampo = "";
+		if (Array.isArray(atual)) return this.definirCampo(campo, atual.filter((x) => x !== valor));
+		return this.definirCampo(campo, "");
 	}
 }

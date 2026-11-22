@@ -15,7 +15,7 @@
 	{{/if}}
 
 	{{#if ehMagias}}
-	<p class="cf-nota">Atributo-chave: {{atributo}}.</p>
+	{{#if atributo}}<p class="cf-nota">Atributo-chave: {{atributo}}.</p>{{/if}}
 	<div class="cf-chips">
 		{{#each escolhidas}}
 		<button type="button" class="cf-chip selecionado cf-chip-remover" data-action="alternar" data-campo="{{../campo}}"

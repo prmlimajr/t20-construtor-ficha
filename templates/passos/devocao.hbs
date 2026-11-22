@@ -70,11 +70,24 @@
 
 		{{#if info.escolhida}}
 		<div class="cf-bloco cf-fundamentalista">
+			{{#if info.podeSerFundamentalista}}
 			<button type="button" class="cf-chip {{#if info.fundamentalista}}selecionado{{/if}}" data-action="definir" data-campo="fundamentalista"
 				data-tipo="bool" data-valor="{{#if info.fundamentalista}}false{{else}}true{{/if}}" aria-pressed="{{#if info.fundamentalista}}true{{else}}false{{/if}}">
 				<i class="fa-{{#if info.fundamentalista}}solid fa-square-check{{else}}regular fa-square{{/if}}"></i> Devoto fundamentalista
 			</button>
+			{{#if info.fundamentalista}}
+			<div class="cf-fundamentalismo">
+				<h5>Fundamentalista de {{info.nome}}</h5>
+				{{#if info.fundamentalismo}}<p>{{info.fundamentalismo}}</p>
+				{{else}}<p class="cf-nota"><i class="fa-solid fa-book"></i> As obrigações do fundamentalismo de {{info.nome}} ainda não foram cadastradas no construtor. Consulte o livro.</p>{{/if}}
+				<p class="cf-nota">Você escolhe um poder concedido extra. A ficha registra a devoção como “{{info.nome}} (fundamentalista)”.</p>
+			</div>
+			{{else}}
 			<p class="cf-nota">Um fundamentalista escolhe um poder concedido extra. A ficha registra a devoção como “{{info.nome}} (fundamentalista)”.</p>
+			{{/if}}
+			{{else}}
+			<p class="cf-nota"><i class="fa-solid fa-circle-info"></i> {{info.nome}} é um deus menor: não há devotos fundamentalistas de deuses menores.</p>
+			{{/if}}
 		</div>
 		<h4>Escolha {{info.qtd}} poder(es) concedido(s) <small>({{info.escolhidos}}/{{info.qtd}})</small></h4>
 		{{else}}
@@ -83,6 +96,7 @@
 		{{#each info.poderes}}
 		{{#if ../info.escolhida}}
 		{{> "modules/t20-construtor-ficha/templates/partes/poder-selecionavel.hbs" nome=nome img=info.img descricao=info.descricao selecionado=selecionado bloqueado=bloqueado motivo=motivo detalhe=motivo campo="poderesConcedidos" valor=nome limite=../info.qtd}}
+		{{#if escolha}}{{> "modules/t20-construtor-ficha/templates/partes/escolha-racial.hbs" escolha}}{{/if}}
 		{{else}}
 		{{> "modules/t20-construtor-ficha/templates/partes/poder-selecionavel.hbs" nome=nome img=info.img descricao=info.descricao}}
 		{{/if}}
