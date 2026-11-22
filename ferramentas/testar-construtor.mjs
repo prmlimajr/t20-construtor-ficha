@@ -745,6 +745,27 @@ if (sup) {
 			A.removerPericia.call(w, null, { dataset: { campo: "periciasOu.0", valor: w.estado.periciasOu[0] } });
 			conferir(w.estado.periciasOu[0] === "" && (await w.ctxPericias()).secoes.find((x) => x.campo === "periciasOu.0").vagas.length === 1, "perícias: remover a do grupo deixa a vaga do grupo");
 		}
+		// a mesma perícia não pode ser da classe e por Inteligência (nem do grupo "escolha uma")
+		{
+			// Inteligência +2: duas perícias por Inteligência (senão o ajuste descarta a escolhida)
+			const w2 = await novo({ ...c.estado(dados), atrPontos: { for: 2, des: 2, con: 1, int: 2, sab: 0, car: -1 } });
+			w2.estado.periciasClasse = [];
+			w2.estado.periciasInt = [];
+			const int = (await w2.ctxPericias()).secoes.find((x) => x.campo === "periciasInt");
+			const daClasse = (await w2.ctxPericias()).secoes.find((x) => x.campo === "periciasClasse").lista.slice(9).split("|");
+			const comum = daClasse.find((k) => int.lista.slice(9).split("|").includes(k));
+			w2.definirCampo("periciasInt", [comum]);
+			let ctx2 = await w2.ctxPericias();
+			conferir(!ctx2.secoes.find((x) => x.campo === "periciasClasse").lista.slice(9).split("|").includes(comum), `perícias: ${comum}, escolhida por Inteligência, não aparece na lista da classe`);
+			w2.definirCampo("periciasInt", []);
+			w2.definirCampo("periciasClasse", [comum]);
+			ctx2 = await w2.ctxPericias();
+			conferir(!ctx2.secoes.find((x) => x.campo === "periciasInt").lista.slice(9).split("|").includes(comum), `perícias: ${comum}, escolhida na classe, não aparece na lista por Inteligência`);
+			// estado antigo com a mesma perícia nas duas: fica na da classe e abre a vaga por Inteligência
+			w2.estado.periciasInt = [comum];
+			w2.definirCampo("nome", "outro");
+			conferir(w2.estado.periciasClasse.includes(comum) && !w2.estado.periciasInt.includes(comum), "perícias: repetida na classe e por Inteligência, sai a de Inteligência");
+		}
 		console.log("  ✓ perícias: cards das escolhidas, vagas com slideout, remover no painel");
 	}
 
@@ -810,6 +831,8 @@ if (sup) {
 		w.definirCampo("fundamentalista", true);
 		ctx = await w.ctxDevocao();
 		conferir(ctx.info.fundamentalista && ctx.info.podeSerFundamentalista && w.poderesConcedidosPermitidos() === 2, "fundamentalista de deus maior: permitido, com o poder extra");
+		conferir(/oferecê-la a qualquer pessoa/.test(ctx.info.fundamentalismo), "fundamentalista de Khalmyr: o texto do fundamentalismo dele aparece");
+		conferir(dados.divindades.filter((d) => !d.menor).every((d) => d.fundamentalismo), "todos os deuses maiores têm o texto do fundamentalismo");
 		console.log("  ✓ devoção: Centelha Mágica com a magia; fundamentalista de deus maior");
 	}
 	if (sup) {

@@ -178,6 +178,15 @@ export const INVALIDACOES = [
 
 export const AJUSTES = [
 	{
+		porque: "a mesma perícia não vale em duas seções: fica na primeira (grupo da classe, depois da classe, depois por Inteligência)",
+		aplicar(e) {
+			const ou = new Set(e.periciasOu.filter(Boolean));
+			if (e.periciasClasse.some((k) => ou.has(k))) e.periciasClasse = e.periciasClasse.filter((k) => !ou.has(k));
+			const antes = new Set([...ou, ...e.periciasClasse]);
+			if (e.periciasInt.some((k) => antes.has(k))) e.periciasInt = e.periciasInt.filter((k) => !antes.has(k));
+		}
+	},
+	{
 		porque: "perícias por Inteligência acima do permitido são descartadas",
 		aplicar(e) {
 			const nInt = Math.max(0, this.atributoFinal("int"));
