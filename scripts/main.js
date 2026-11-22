@@ -38,6 +38,7 @@ function registrarConfiguracoes() {
 	s("idadesVariadas", { type: Boolean, default: false });
 	s("origemDupla", { type: Boolean, default: false });
 	s("subirNivel", { type: Boolean, default: true });
+	s("aumentoAtributoPatamar", { type: Boolean, default: false });
 	s("beneficiosOrigemDupla", {
 		type: Number, default: 1,
 		range: { min: 1, max: 2, step: 1 }

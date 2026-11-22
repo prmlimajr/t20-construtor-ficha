@@ -6,6 +6,7 @@
  * As operações devolvem um aviso (texto) quando não dá para fazer o que foi pedido, ou null.
  */
 import { poderSelecionavel, fonteDe } from "./dados.js";
+import { MODULE_ID } from "./regras.js";
 import { lerFicha } from "./ficha-atual.js";
 import { poderRacialPermitido } from "./poderes-raciais.js";
 import { poderDistincaoPermitido, ehPoderDeDistincao, distincaoDoPoder } from "./distincoes.js";
@@ -36,6 +37,15 @@ async function enriquecer(html) {
 /** { [chave]: lista } só quando a lista tem algo (o contexto das telas sem escolha interna fica como era). */
 const semVazio = (chave, lista) => (lista.length ? { [chave]: lista } : {});
 
+/** Homebrew "Aumento de Atributo por patamar" ligada? (fora do Foundry, desligada) */
+function homebrewAumento() {
+	try {
+		return !!game.settings.get(MODULE_ID, "aumentoAtributoPatamar");
+	} catch {
+		return false;
+	}
+}
+
 const rotuloEscola = (k) => game.i18n.localize(CONFIG.T20?.spellSchools?.[k] ?? k);
 
 export class EtapasNivel {
@@ -43,8 +53,10 @@ export class EtapasNivel {
 	 * @param {Actor} actor  o personagem (real ou virtual)
 	 * @param {object} [fontes]  { dados, progressao, lerPreRequisito } (podem ser definidos depois)
 	 */
-	constructor(actor, { dados = null, progressao = null, lerPreRequisito = null } = {}) {
+	constructor(actor, { dados = null, progressao = null, lerPreRequisito = null, aumentoPorPatamar = null } = {}) {
 		this.actor = actor;
+		// null: segue a configuração do mundo (os testes passam true/false)
+		this.aumentoPorPatamar = aumentoPorPatamar;
 		this.dados = dados;
 		this.progressao = progressao;
 		this.lerPreRequisito = lerPreRequisito;
@@ -101,6 +113,7 @@ export class EtapasNivel {
 			lerPreRequisito: this.lerPreRequisito,
 			regrasPoderesClasse: this.dados.regrasPoderesClasse,
 			regrasClasses: this.dados.regrasClasses,
+			aumentoPorPatamar: this.aumentoPorPatamar ?? homebrewAumento(),
 			// poderes de distinção: só para quem tem a marca, e para quem tem, sempre (mesmo com a chave
 			// "Poderes" do suplemento desligada: a marca foi posta na ficha pelo mestre)
 			selecionavel: (p) => (distincaoDoPoder(this.dados, p) || poderSelecionavel(this.dados, p))
@@ -286,11 +299,16 @@ export class EtapasNivel {
 			: { id: i.id, titulo: i.titulo, poder: i.poder, magia: true });
 		const escolhas = await Promise.all(ativas.map(async (e) => {
 			const marcada = e.opcoes.find((o) => o.doc.uuid === this.selecoes[e.id]);
+			// escolhas que não repetem a opção (Aumentos de Atributo do patamar): a já escolhida na outra fica bloqueada
+			const naOutra = new Set(e.distinto ? ativas.filter((x) => x !== e && x.distinto === e.distinto).map((x) => this.selecoes[x.id]).filter(Boolean) : []);
 			return {
 				id: e.id,
 				titulo: e.titulo,
 				// "Caminho do Cavaleiro: Bastião" → "Bastião" (o título já diz qual é a escolha)
-				opcoes: e.opcoes.map((o) => ({ valor: o.doc.uuid, nome: o.nome.replace(new RegExp(`^${e.titulo}:\\s*`, "i"), ""), selecionado: o === marcada })),
+				opcoes: e.opcoes.map((o) => ({
+					valor: o.doc.uuid, nome: o.nome.replace(new RegExp(`^${e.titulo}:\\s*`, "i"), ""), selecionado: o === marcada,
+					...(naOutra.has(o.doc.uuid) && o !== marcada ? { bloqueado: true } : {})
+				})),
 				info: marcada ? { nome: marcada.nome, img: marcada.doc.img, descricao: await this.descricao(marcada.doc) } : null,
 				...semVazio("internas", internas.filter((i) => i.requer?.id === e.id).map(ctxInterna))
 			};
@@ -395,7 +413,8 @@ export class EtapasNivel {
 			// restam menos magias para aprender do que o poder ensina: as vagas abertas são só as que dá para preencher
 			avisoMagias: escolhida.magias && escolhida.magias.livres != null && vagasEfetivas(nivel.magias, this.selecoes, escolhida).filter((v) => v.motivo === escolhida.nome).length < escolhida.magias.qtd
 				? `Restam poucas magias para aprender: este poder abre só ${vagasEfetivas(nivel.magias, this.selecoes, escolhida).filter((v) => v.motivo === escolhida.nome).length} de ${escolhida.magias.qtd} vagas.` : null,
-			pedeEscolha: !escolhida.magias && (escolhida.repetivel || /\bescolha\b/i.test(escolhida.doc.system?.description?.value ?? "")),
+			// Aumento de Atributo: o atributo já está no próprio poder ("Aumento de Atributo (Força)"), sem anotação
+			pedeEscolha: !escolhida.magias && !/^Aumento de Atributo \(/.test(escolhida.nome) && (escolhida.repetivel || /\bescolha\b/i.test(escolhida.doc.system?.description?.value ?? "")),
 			descricao: await this.descricao(escolhida.doc)
 		};
 	}

@@ -26,6 +26,10 @@
 				"Nome": "Homebrew: origem profissional + regional",
 				"Dica": "O personagem escolhe duas origens: uma profissional (livro básico) e uma regional (Atlas de Arton)."
 			},
+			"aumentoAtributoPatamar": {
+				"Nome": "Homebrew: Aumento de Atributo por patamar",
+				"Dica": "O Aumento de Atributo deixa de ser oferecido como poder de classe. Em compensação, ao entrar num novo patamar (5º, 11º e 17º níveis de personagem), o personagem recebe o poder Aumento de Atributo duas vezes, em atributos diferentes, escolhidos na subida de nível."
+			},
 			"subirNivel": {
 				"Nome": "Subir de nível",
 				"Dica": "Assistente de subir de nível (para o mestre e o dono do personagem): botão no cabeçalho da ficha e no “+” ao lado da classe. Habilidades e escolhas do nível, poder de classe ou geral, magias, multiclasse e desfazer o último nível. Desligado, o “+” volta a abrir o compêndio de classes."

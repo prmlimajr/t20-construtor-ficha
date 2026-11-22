@@ -589,7 +589,7 @@ for (const c of classes) {
 		const cle = a.items.find((i) => i.type === "classe" && i.name === "Clérigo");
 		({ ficha, r } = calcular(a, { nome: "Clérigo", niveis: cle.system.niveis, id: cle.id }));
 		ok(r.nivelClasse === 2 && r.nivelPersonagem === 7 && r.magias.vagas.length === 1 && r.magias.circulo === 1, "Clérigo 2 (personagem 7): 1 magia de 1º círculo (círculo pelo nível de classe)");
-		ok(r.poderesClasse.length > 0 && r.poderesClasse.every((o) => o.doc.system.subtipo === "Clérigo" || o.doc.system.subtipo === "Clerigo"), "poderes de clérigo no 2º nível de clérigo");
+		ok(r.poderesClasse.length > 0 && r.poderesClasse.every((o) => ["Clérigo", "Clerigo", "Geral"].includes(o.doc.system.subtipo)), "poderes de clérigo (e os Aumentos de Atributo, de todas as classes) no 2º nível de clérigo");
 	}
 
 	// C. Guerreiro 2 → Arcanista 1: Caminho, Linhagem só para Feiticeiro, Mago com 4 magias
@@ -1012,6 +1012,73 @@ for (const c of classes) {
 	ctx = await etA.contexto();
 	conferir(!etA.magias.length && ctx.infoMagia?.uuid === card.uuid && !ctx.infoMagia.selecionado, "clicar numa magia só destaca; o botão do painel é que escolhe");
 	console.log("  ✓ conferido");
+}
+
+/* ---------- 6d. Aumento de Atributo: poder de classe (uma vez por patamar) e a homebrew por patamar ---------- */
+{
+	console.log("\nAumento de Atributo:");
+	const { EtapasNivel } = await import("../scripts/etapas-nivel.js");
+	const dadosF = { ...dados, regrasClasses, regrasPoderesClasse, variantes: {}, escolas: {} };
+	const docs1 = (progressaoDe(progressao, "Guerreiro").niveis?.["1"]?.habilidades ?? []).map((n) => dados.poderesPorNome.get(normalizar(typeof n === "string" ? n : n.nome))).filter(Boolean);
+	const aumento = (a) => `Aumento de Atributo (${a})`;
+	/** Sobe um nível com o poder pedido (ou o primeiro disponível que não seja Aumento) e as escolhas do nível. */
+	const subir = async (v, homebrew, poderNome = null, selecoes = null) => {
+		const et = new EtapasNivel(v, { dados: dadosF, progressao, lerPreRequisito, aumentoPorPatamar: homebrew });
+		const { nivel } = et.calcular();
+		for (const e of nivel.escolhas) et.selecoes[e.id] = selecoes?.[e.id] ?? e.opcoes[0].doc.uuid;
+		const op = poderNome ? nivel.poderesClasse.find((o) => o.nome === poderNome) : nivel.poderesClasse.find((o) => o.disponivel && !/^Aumento/.test(o.nome));
+		if (nivel.ganhaPoder) et.escolha = op?.doc.uuid ?? null;
+		return { et, nivel, res: await aplicarEscolhas(v, et.escolhasAtuais(), { dados: dadosF, progressao, lerPreRequisito, aumentoPorPatamar: homebrew }) };
+	};
+	const lista = (v, homebrew) => new EtapasNivel(v, { dados: dadosF, progressao, lerPreRequisito, aumentoPorPatamar: homebrew }).calcular().nivel;
+
+	// sem a homebrew: os seis Aumentos entre os poderes de classe; o mesmo atributo, uma vez por patamar
+	{
+		const v = virtualDe(novoAtor("Guerreiro", docs1), "aumento normal");
+		let n = lista(v, false);
+		const aumentos = n.poderesClasse.filter((o) => /^Aumento de Atributo/.test(o.nome));
+		conferir(aumentos.length === 6 && !aumentos.some((o) => o.nome === "Aumento de Atributo"), `normal: os seis Aumentos de Atributo entre os poderes de classe (${aumentos.map((o) => o.nome).join(", ")})`);
+		const r2 = await subir(v, false, aumento("Força"));
+		conferir(r2.res.ok && v.items.some((i) => i.name === `2 - ${aumento("Força")}`), `normal: Aumento de Atributo (Força) no 2º nível (${JSON.stringify(r2.res)})`);
+		n = lista(v, false);
+		const forca = n.poderesClasse.find((o) => o.nome === aumento("Força"));
+		conferir(forca && !forca.disponivel && /neste patamar/.test(forca.motivo) && n.poderesClasse.find((o) => o.nome === aumento("Destreza"))?.disponivel,
+			`normal: no 3º nível (mesmo patamar), Força bloqueada e Destreza livre (${forca?.motivo})`);
+		await subir(v, false);
+		await subir(v, false);
+		n = lista(v, false);
+		conferir(n.nivelPersonagem === 5 && n.poderesClasse.find((o) => o.nome === aumento("Força"))?.disponivel, "normal: no 5º nível (veterano), Força volta a poder");
+		conferir(!n.escolhas.some((e) => e.distinto), "normal: sem os Aumentos do patamar");
+	}
+
+	// com a homebrew: nenhum Aumento como poder de classe; dois Aumentos (atributos diferentes) ao entrar num patamar
+	{
+		const v = virtualDe(novoAtor("Guerreiro", docs1), "aumento homebrew");
+		let n = lista(v, true);
+		conferir(!n.poderesClasse.some((o) => /^Aumento de Atributo/.test(o.nome)) && !n.escolhas.some((e) => e.distinto), "homebrew: no 2º nível, nenhum Aumento de Atributo (nem como poder de classe)");
+		for (let i = 2; i <= 4; i++) await subir(v, true);
+		const et = new EtapasNivel(v, { dados: dadosF, progressao, lerPreRequisito, aumentoPorPatamar: true });
+		n = et.calcular().nivel;
+		const [e1, e2] = n.escolhas.filter((e) => e.distinto === "aumentoAtributo");
+		conferir(n.nivelPersonagem === 5 && e1 && e2 && e1.opcoes.length === 6, `homebrew: no 5º nível, os dois Aumentos de Atributo do patamar (${n.escolhas.map((e) => e.titulo).join(", ")})`);
+		const uuid = (a) => e1.opcoes.find((o) => o.nome === aumento(a)).doc.uuid;
+		et.selecionar(e1.id, uuid("Força"));
+		et.irPara("nivel");
+		const ctx = await et.contexto();
+		const chip = ctx.escolhas.find((e) => e.id === e2.id).opcoes.find((o) => o.valor === uuid("Força"));
+		conferir(chip?.bloqueado, "homebrew: no 2º Aumento, o atributo do 1º fica bloqueado");
+		et.selecionar(e2.id, uuid("Força"));
+		conferir(/atributos diferentes/.test(et.pendencia(et.calcular().nivel) ?? ""), `homebrew: o mesmo atributo duas vezes é pendência (${et.pendencia(et.calcular().nivel)})`);
+		const r5 = await subir(v, true, null, { [e1.id]: uuid("Força"), [e2.id]: uuid("Constituição") });
+		conferir(r5.res.ok && v.items.some((i) => i.name === `5 - ${aumento("Força")}`) && v.items.some((i) => i.name === `5 - ${aumento("Constituição")}`),
+			`homebrew: os dois Aumentos (Força e Constituição) entram na ficha no 5º nível (${JSON.stringify(r5.res)})`);
+		n = lista(v, true);
+		conferir(n.nivelPersonagem === 6 && !n.escolhas.some((e) => e.distinto), "homebrew: no 6º nível (mesmo patamar), sem Aumentos");
+		for (let i = 6; i <= 10; i++) await subir(v, true);
+		n = lista(v, true);
+		conferir(n.nivelPersonagem === 11 && n.escolhas.filter((e) => e.distinto).length === 2, "homebrew: no 11º nível (campeão), os dois Aumentos de novo");
+	}
+	console.log("  ✓ conferido (poder de classe uma vez por patamar; homebrew: dois Aumentos nos 5º/11º níveis, atributos diferentes)");
 }
 
 /* ---------- 7. Plano de builds: árvore, validação e a janela preenchida pelo plano ---------- */
