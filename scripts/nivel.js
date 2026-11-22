@@ -7,6 +7,12 @@ import { extrairPreRequisito, interpretarPreRequisito, avaliarPreRequisito, pode
 
 export const NIVEL_MAXIMO = 20;
 
+/** Patamar do nível de personagem: 1 iniciante (1º–4º), 2 veterano (5º–10º), 3 campeão (11º–16º), 4 lenda (17º–20º). */
+export const patamarDe = (nivel) => (nivel <= 4 ? 1 : nivel <= 10 ? 2 : nivel <= 16 ? 3 : 4);
+/** Nomes dos poderes de Aumento de Atributo, um por atributo (compêndio do sistema: poder de classe "Geral"). */
+export const AUMENTOS_DE_ATRIBUTO = ["Força", "Destreza", "Constituição", "Inteligência", "Sabedoria", "Carisma"].map((a) => `Aumento de Atributo (${a})`);
+const ehAumentoDeAtributo = (nome) => /^aumento de atributo\b/.test(normalizar(nome));
+
 /** Nomes usados nos pré-requisitos que se referem a outro poder ("Pré-requisito: Bruxo"). */
 const APELIDOS_PODER = {
 	bruxo: "Caminho do Arcanista: Bruxo",
@@ -102,7 +108,9 @@ function fichaProjetada(ficha, nomesClasse, habilidades) {
  */
 export function montarNivel({
 	dados, progressao, ficha, classe, lerPreRequisito, selecionavel = () => true, regrasPoderesClasse = {}, regrasClasses = {},
-	ehGeral = (p) => p.system?.tipo === "geral", grupoGeral = (p) => p.system?.subtipo || "Outros"
+	ehGeral = (p) => p.system?.tipo === "geral", grupoGeral = (p) => p.system?.subtipo || "Outros",
+	// homebrew: o Aumento de Atributo sai dos poderes de classe e vem duas vezes ao entrar num novo patamar
+	aumentoPorPatamar = false
 }) {
 	const prog = progressaoDe(progressao, classe.nome);
 	if (!prog) return { erro: "semProgressao" };
@@ -155,10 +163,19 @@ export function montarNivel({
 	// Na classe nova, também as escolhas de 1º nível de classes.json (ex.: Caminho do Arcanista → Linhagem,
 	// que só aparece para o Feiticeiro: "requer")
 	const defsEscolhas = [...(entrada.escolhas ?? []), ...(nova ? escolhasDeClasse(regra) : [])];
+	// homebrew (Aumento de Atributo por patamar): no 1º nível de um patamar novo, dois Aumentos em atributos diferentes
+	const patamarNovo = nivelPersonagem > 1 && patamarDe(nivelPersonagem) !== patamarDe(nivelPersonagem - 1);
+	if (aumentoPorPatamar && patamarNovo) {
+		for (const n of [1, 2]) {
+			defsEscolhas.push({ id: `aumentoAtributo${n}`, titulo: `Aumento de Atributo do patamar (${n}º)`, opcoes: AUMENTOS_DE_ATRIBUTO, distinto: "aumentoAtributo", repetivel: true });
+		}
+	}
 	const escolhas = defsEscolhas.map((e) => {
 		const opcoes = e.opcoes.map((nome) => ({ nome, doc: buscar(nome) })).filter((o) => o.doc)
 			.map((o) => ({ nome: o.doc.name, doc: o.doc, conjuracao: e.conjuracao?.[o.nome] ?? null, magiasExtra: regrasPoderesClasse[o.nome]?.magiasExtra ?? 0 }));
-		return { id: e.id, titulo: e.titulo, opcoes, requer: e.requer ?? null, jaTem: opcoes.find((o) => ficha.temPoder(o.nome))?.nome ?? null };
+		// repetível (Aumento de Atributo): a escolha aparece mesmo com a ficha já tendo uma das opções
+		const jaTem = e.repetivel ? null : opcoes.find((o) => ficha.temPoder(o.nome))?.nome ?? null;
+		return { id: e.id, titulo: e.titulo, opcoes, requer: e.requer ?? null, jaTem, ...(e.distinto ? { distinto: e.distinto } : {}) };
 	}).filter((e) => !e.jaTem && e.opcoes.length);
 	// "requer" por nome → pelo uuid da opção (é o que a janela guarda nas seleções)
 	for (const e of escolhas) {
@@ -248,7 +265,10 @@ export function montarNivel({
 		const limite = repetivel ? limiteRepeticoes(doc.system?.description?.value) : null;
 		const vezes = jaTem ? ficha.vezesPoder(doc.name) : 0;
 		let motivo = null;
-		if (jaTem && !repetivel) motivo = "Você já tem este poder.";
+		// Aumento de Atributo: "apenas uma vez por patamar para um mesmo atributo"
+		const noPatamar = ehAumentoDeAtributo(doc.name) && (ficha.niveisPoder?.(doc.name) ?? []).some((n) => n && patamarDe(n) === patamarDe(nivelPersonagem));
+		if (noPatamar) motivo = "Você já aumentou este atributo neste patamar.";
+		else if (jaTem && !repetivel) motivo = "Você já tem este poder.";
 		else if (limite && vezes >= limite) motivo = `Você já escolheu este poder ${vezes} vezes (o máximo é ${limite}).`;
 		else if (!r.ok) motivo = `Pré-requisito não atendido: ${r.falhas.join(", ")}.`;
 		return {
@@ -282,9 +302,12 @@ export function montarNivel({
 	}
 
 	// poderes da classe básica, da própria classe (variante) e listas extras (ex.: Melhor Amigo do treinador)
-	const listas = new Set([classeBasica, classe.nome, ...(prog.poder?.listas ?? []), ...(prog.poder?.listasPorNivel?.[nivelClasse] ?? [])].map(normalizar));
+	// "Geral": poderes de classe de todas as classes (Aumento de Atributo, um item por atributo)
+	const listas = new Set([classeBasica, classe.nome, "Geral", ...(prog.poder?.listas ?? []), ...(prog.poder?.listasPorNivel?.[nivelClasse] ?? [])].map(normalizar));
 	const poderesClasse = !ganhaPoder ? [] : dados.poderes
 		.filter((p) => p.system?.tipo === "classe" && listas.has(normalizar(p.system?.subtipo)) && selecionavel(p))
+		// o "Aumento de Atributo" genérico (sem atributo, sem efeito) fica de fora; com a homebrew, todos ficam
+		.filter((p) => !ehAumentoDeAtributo(p.name) || (!aumentoPorPatamar && normalizar(p.name) !== "aumento de atributo"))
 		.map(opcao).sort(ordenar);
 	const poderesGerais = !ganhaPoder ? [] : dados.poderes
 		.filter((p) => ehGeral(p) && selecionavel(p))
@@ -335,6 +358,10 @@ export function pendenciaNivel(nivel, { poder = null, selecoes = {}, magias = []
 	const faltam = [];
 	const m = nivel.magias;
 	for (const e of (nivel.escolhas ?? []).filter((x) => escolhaAtiva(x, selecoes))) if (!e.opcoes.some((o) => o.doc.uuid === selecoes[e.id])) faltam.push(e.titulo);
+	// escolhas que não podem repetir a opção (os dois Aumentos de Atributo do patamar: atributos diferentes)
+	const porGrupo = new Map();
+	for (const e of (nivel.escolhas ?? []).filter((x) => x.distinto && selecoes[x.id])) (porGrupo.get(e.distinto) ?? porGrupo.set(e.distinto, []).get(e.distinto)).push(selecoes[e.id]);
+	for (const valores of porGrupo.values()) if (new Set(valores).size < valores.length) faltam.push("atributos diferentes nos dois Aumentos de Atributo");
 	if (m) {
 		const esc = escolasEfetivas(m, escolas);
 		const vagas = vagasEfetivas(m, selecoes, poder);

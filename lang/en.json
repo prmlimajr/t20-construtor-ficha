@@ -26,6 +26,10 @@
 				"Nome": "Homebrew: professional + regional origin",
 				"Dica": "The character picks two origins: a professional one (core book) and a regional one (Atlas de Arton)."
 			},
+			"aumentoAtributoPatamar": {
+				"Nome": "Homebrew: Attribute Increase per tier",
+				"Dica": "Attribute Increase is no longer offered as a class power. Instead, on reaching a new tier (character levels 5, 11 and 17), the character gains the Attribute Increase power twice, in different attributes, chosen when levelling up."
+			},
 			"subirNivel": {
 				"Nome": "Level up",
 				"Dica": "Level-up assistant (for the GM and the character's owner): button in the sheet header and on the “+” next to the class. Level abilities and choices, class or general power, spells, multiclassing and undoing the last level. When off, the “+” opens the class compendium again."

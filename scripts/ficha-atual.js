@@ -104,6 +104,19 @@ export function lerFicha(actor, { regrasClasses = {}, variantes = {} } = {}) {
 		divindade: String(sys.detalhes?.divindade ?? "").trim(),
 		/** A ficha tem algum poder "Prefixo: …"? (ex.: "armadilha" → "Armadilha: Laço") */
 		temPoderComPrefixo: (prefixo) => prefixos.has(normalizar(prefixo)),
+		/**
+		 * Níveis de personagem em que a ficha recebeu o poder com este nome exato (com o complemento:
+		 * "Aumento de Atributo (Força)"), pela marca do construtor ou pelo prefixo "5 - "; null se não se sabe.
+		 */
+		niveisPoder(nome) {
+			const alvo = normalizar(nome);
+			return poderes.filter((p) => normalizar(nomeBase(p.name)) === alvo).map((p) => {
+				const marca = Number(p.flags?.[MODULE_ID]?.nivel ?? p.getFlag?.(MODULE_ID, "nivel"));
+				if (marca > 0) return marca;
+				const prefixo = /^(\d{1,2})\s+-\s+/.exec(p.name ?? "");
+				return prefixo ? Number(prefixo[1]) : null;
+			});
+		},
 		/** Quantas vezes a ficha tem o poder (pelo nome, com ou sem prefixo e complemento). */
 		vezesPoder: (nome) => Math.max(0, ...chaves(nome).map((k) => contagem.get(k) ?? 0)),
 		temPoder(nome) {

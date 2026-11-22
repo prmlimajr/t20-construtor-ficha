@@ -181,7 +181,7 @@
 				<h4>{{titulo}}</h4>
 				<div class="cf-chips">
 					{{#each opcoes}}
-					<button type="button" class="cf-chip {{#if selecionado}}selecionado{{/if}}" data-action="selecionar" data-id="{{../id}}" data-valor="{{valor}}">{{nome}}</button>
+					<button type="button" class="cf-chip {{#if selecionado}}selecionado{{/if}}" data-action="selecionar" data-id="{{../id}}" data-valor="{{valor}}" {{#if bloqueado}}disabled title="Já escolhido no outro Aumento de Atributo deste patamar"{{/if}}>{{nome}}</button>
 					{{/each}}
 				</div>
 				{{#if info}}
