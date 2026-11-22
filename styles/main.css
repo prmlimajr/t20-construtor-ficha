@@ -1120,6 +1120,8 @@
 }
 
 .t20cf-nivel .cf-nivel-escolha h4 { margin: 4px 0 6px; }
+.t20cf-nivel .cf-nivel-interna { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--cf-borda, rgba(0,0,0,.2)); }
+.t20cf-nivel .cf-nivel-interna h5 { margin: 0 0 6px; font-size: var(--font-size-13, 13px); }
 .t20cf-nivel .cf-nivel-lateral-acoes { margin-top: auto; display: flex; flex-direction: column; gap: 6px; }
 .t20cf-nivel .cf-nivel-lateral-acoes .cf-recomecar { margin-top: 0; }
 .t20cf-nivel .cf-nivel-vagas { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; }

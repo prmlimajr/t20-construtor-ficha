@@ -217,7 +217,8 @@ export function paraNomes(etapas, calculo) {
 		const op = v ? e.opcoes.find((o) => o.doc.uuid === v) : null;
 		if (op) selecoes[e.id] = { nome: op.nome };
 	}
-	for (const a of nivel.anotadas ?? []) {
+	// escolhas anotadas e internas dos poderes (deus da Linhagem Abençoada…): o valor em texto
+	for (const a of [...(nivel.anotadas ?? []), ...(nivel.internas ?? []).filter((i) => i.tipo === "opcao")]) {
 		const v = etapas.selecoes[a.id];
 		if (v) selecoes[a.id] = { texto: v };
 	}

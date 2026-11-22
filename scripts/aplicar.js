@@ -48,7 +48,7 @@ function novoEfeito(data, changes) {
  * imunidade (Fonte Elemental), redução de dano (Resistência Elemental), +2 em perícias
  * (Deformidade) e nomes das magias que recebem o redutor de –1 PM (Magia das Fadas etc.).
  */
-function ajustarPoderRacial(data, ajuste) {
+export function ajustarPoderRacial(data, ajuste) {
 	data.effects ??= [];
 	if (ajuste.imunidade) {
 		data.effects.push(novoEfeito(data, [mudanca(`system.tracos.resistencias.${ajuste.imunidade}.imunidade`, true, "override")]));

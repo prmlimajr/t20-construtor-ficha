@@ -11,7 +11,7 @@ import { poderRacialPermitido } from "./poderes-raciais.js";
 import { poderDistincaoPermitido, ehPoderDeDistincao, distincaoDoPoder } from "./distincoes.js";
 import {
 	montarNivel, pendenciaNivel, montarPlano, variantesDe, classesParaSubir, vagasEfetivas, progressaoDe,
-	magiasDisponiveis, escolasEfetivas, conferirVagas, circuloDe, tiposDasVagas
+	magiasDisponiveis, escolasEfetivas, conferirVagas, circuloDe, tiposDasVagas, internasAtivas, escolhaAtiva
 } from "./nivel.js";
 import { agruparPorLivro } from "./construtor/comum.js";
 import { statsMagia, aprimoramentosMagia } from "./magias-info.js";
@@ -32,6 +32,9 @@ async function enriquecer(html) {
 	if (!limpo) return "";
 	return foundry.applications.ux.TextEditor.implementation.enrichHTML(limpo, { async: true });
 }
+
+/** { [chave]: lista } só quando a lista tem algo (o contexto das telas sem escolha interna fica como era). */
+const semVazio = (chave, lista) => (lista.length ? { [chave]: lista } : {});
 
 const rotuloEscola = (k) => game.i18n.localize(CONFIG.T20?.spellSchools?.[k] ?? k);
 
@@ -138,8 +141,8 @@ export class EtapasNivel {
 		const ctx = { poder: this.poderEscolhido(nivel), selecoes: this.selecoes, magias: this.magiasEscolhidas(), escolas: this.escolas };
 		const so = {
 			nivel: { ...nivel, magias: null, ganhaPoder: false },
-			poder: { ...nivel, escolhas: [], anotadas: [], magias: null },
-			magias: { ...nivel, escolhas: [], anotadas: [], ganhaPoder: false },
+			poder: { ...nivel, escolhas: [], anotadas: [], internas: [], magias: null },
+			magias: { ...nivel, escolhas: [], anotadas: [], internas: [], ganhaPoder: false },
 			revisao: nivel
 		};
 		return pendenciaNivel(passo ? so[passo] : nivel, ctx);
@@ -275,6 +278,11 @@ export class EtapasNivel {
 			semDoc: !h.doc
 		})));
 		const ativas = nivel.escolhas.filter((e) => !e.requer || this.selecoes[e.requer.id] === e.requer.uuid);
+		// escolhas internas dos poderes (deus da Linhagem Abençoada…): chips; as de magia só avisam do passo Magias
+		const internas = internasAtivas(nivel, this.selecoes);
+		const ctxInterna = (i) => (i.tipo === "opcao"
+			? { id: i.id, titulo: i.titulo, poder: i.poder, opcoes: i.opcoes.map((o) => ({ ...o, selecionado: this.selecoes[i.id] === o.valor })) }
+			: { id: i.id, titulo: i.titulo, poder: i.poder, magia: true });
 		const escolhas = await Promise.all(ativas.map(async (e) => {
 			const marcada = e.opcoes.find((o) => o.doc.uuid === this.selecoes[e.id]);
 			return {
@@ -282,7 +290,8 @@ export class EtapasNivel {
 				titulo: e.titulo,
 				// "Caminho do Cavaleiro: Bastião" → "Bastião" (o título já diz qual é a escolha)
 				opcoes: e.opcoes.map((o) => ({ valor: o.doc.uuid, nome: o.nome.replace(new RegExp(`^${e.titulo}:\\s*`, "i"), ""), selecionado: o === marcada })),
-				info: marcada ? { nome: marcada.nome, img: marcada.doc.img, descricao: await this.descricao(marcada.doc) } : null
+				info: marcada ? { nome: marcada.nome, img: marcada.doc.img, descricao: await this.descricao(marcada.doc) } : null,
+				...semVazio("internas", internas.filter((i) => i.requer?.id === e.id).map(ctxInterna))
 			};
 		}));
 		const anotadas = await Promise.all(nivel.anotadas.map(async (a) => ({
@@ -301,6 +310,7 @@ export class EtapasNivel {
 			habilidades,
 			escolhas,
 			anotadas,
+			...semVazio("internas", internas.filter((i) => !i.requer).map(ctxInterna)),
 			circuloNovo: m?.circuloNovo ?? null,
 			tipoMagia: m ? TIPOS_MAGIA[m.tipo]?.toLowerCase() : null,
 			ausentes: nivel.ausentes,
@@ -409,7 +419,7 @@ export class EtapasNivel {
 			escolasEscolhidas: this.escolas.length,
 			escolasFicha: m.escolasFicha.map(rotuloEscola).join(", "),
 			escolasProntas,
-			vagasTexto: vagasM.map((v) => `${v.circulo ? `1 de ${v.circulo}º círculo` : `1 de até ${v.ate}º círculo`}${v.motivo ? ` (${v.motivo})` : ""}`),
+			vagasTexto: vagasM.map((v) => `${v.titulo ? `1 ${v.titulo.charAt(0).toLowerCase()}${v.titulo.slice(1)}` : v.circulo ? `1 de ${v.circulo}º círculo` : `1 de até ${v.ate}º círculo`}${v.motivo ? ` (${v.motivo})` : ""}`),
 			faltam: vagas.faltam,
 			circuloNovo: m.circuloNovo,
 			semMagiaNova: !vagasM.length,
@@ -440,6 +450,8 @@ export class EtapasNivel {
 			...(plano.classeNova ? [{ tipo: "Classe", nome: `${plano.classeNova.name} (nova, 1º nível)` }] : []),
 			...plano.habilidades.map((h) => ({ tipo: "Habilidade", nome: h.doc.name + (h.valor ? ` ${h.valor}` : "") })),
 			...plano.escolhidas.map((d) => ({ tipo: "Escolha", nome: d.name })),
+			...Object.entries(plano.ajustes ?? {}).filter(([, a]) => a.anotacao)
+				.map(([uuid, a]) => ({ tipo: "Escolha interna", nome: `${[...plano.habilidades.map((h) => h.doc), ...plano.escolhidas].find((d) => d.uuid === uuid)?.name ?? "Poder"}: ${a.anotacao}` })),
 			...plano.anotadas.map((a) => ({ tipo: "Anotação", nome: `${a.doc.name}: ${a.texto}` })),
 			...plano.valores.map((v) => ({ tipo: "Valor", nome: `${v.nome}: ${v.para}${v.modo === "rolagem" ? " (rolagem do poder)" : " (anotado na descrição)"}` })),
 			...(plano.poder ? [{ tipo: "Poder", nome: plano.poder.name + (plano.anotacao?.trim() ? ` — ${plano.anotacao.trim()}` : "") }] : []),
@@ -514,6 +526,27 @@ export class EtapasNivel {
 	/** Escolha do nível (Caminho do Cavaleiro, terreno do Explorador…). */
 	selecionar(id, valor) {
 		this.selecoes[id] = valor;
+		// trocar uma opção (ex.: Caminho, Linhagem) tira as escolhas que dependiam da anterior
+		const { nivel } = this.calcular();
+		if (!nivel) return;
+		for (let mudou = true; mudou;) {
+			mudou = false;
+			for (const e of nivel.escolhas) {
+				if (this.selecoes[e.id] !== undefined && !escolhaAtiva(e, this.selecoes)) { delete this.selecoes[e.id]; mudou = true; }
+			}
+		}
+		const ativas = new Set(internasAtivas(nivel, this.selecoes).map((i) => i.id));
+		for (const i of nivel.internas ?? []) if (!ativas.has(i.id)) delete this.selecoes[i.id];
+		// magias que não cabem mais nas vagas (a vaga da Linhagem trocada) saem
+		const vagas = vagasEfetivas(nivel.magias, this.selecoes, this.poderEscolhido(nivel));
+		if (this.magias.length && conferirVagas(vagas, this.magiasEscolhidas()).sobram) {
+			const fica = [];
+			for (const u of this.magias) {
+				const teste = [...fica, u].map((x) => this.dados.magias.find((m) => m.uuid === x)).filter(Boolean);
+				if (!conferirVagas(vagas, teste).sobram) fica.push(u);
+			}
+			this.magias = fica;
+		}
 	}
 
 	trocarAba(aba) {
