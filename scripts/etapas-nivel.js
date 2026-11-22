@@ -21,8 +21,8 @@ export const TITULOS_PASSOS = { classe: "Classe", nivel: "Nível", poder: "Poder
 export const DICAS_PASSOS = {
 	classe: "Continue numa classe que você já tem ou comece uma nova (multiclasse).",
 	nivel: "O que este nível concede e as escolhas das habilidades de classe.",
-	poder: "Um poder de classe ou, no lugar dele, um poder geral.",
-	magias: "Magias novas que você aprende neste nível.",
+	poder: "Um poder de classe ou, no lugar dele, um poder geral. Clique num poder para ver a descrição e use o botão para escolhê-lo.",
+	magias: "Magias novas que você aprende neste nível. Clique numa magia para ver a descrição e use o botão para escolhê-la.",
 	revisao: "Confira tudo o que vai entrar na ficha."
 };
 const TIPOS_MAGIA = { arc: "Arcana", div: "Divina", uni: "Universal" };
@@ -62,6 +62,7 @@ export class EtapasNivel {
 	/** Escolhas que dependem da classe escolhida (trocar de classe descarta). */
 	limparEscolhasDoNivel() {
 		this.escolha = null; // uuid do poder escolhido
+		this.focoPoder = null; // uuid do poder em destaque (o painel mostra; o botão escolhe)
 		this.aba = "classe";
 		this.mostrarIndisponiveis = false;
 		this.anotacao = "";
@@ -321,14 +322,20 @@ export class EtapasNivel {
 	async ctxPoder(nivel, classe) {
 		const lista = this.aba === "geral" ? nivel.poderesGerais : nivel.poderesClasse;
 		const visiveis = lista.filter((o) => o.disponivel || this.mostrarIndisponiveis);
-		const escolhida = [...nivel.poderesClasse, ...nivel.poderesGerais].find((o) => o.doc.uuid === this.escolha) ?? null;
+		const todos = [...nivel.poderesClasse, ...nivel.poderesGerais];
+		const escolhida = todos.find((o) => o.doc.uuid === this.escolha) ?? null;
 		if (escolhida && !escolhida.disponivel) this.escolha = null;
+		// o painel mostra o poder em destaque; sem destaque, o escolhido
+		let focado = todos.find((o) => o.doc.uuid === this.focoPoder && o.disponivel) ?? null;
+		if (!focado) this.focoPoder = null;
+		focado ??= escolhida?.disponivel ? escolhida : null;
 		const card = (o) => ({
 			uuid: o.doc.uuid,
 			nome: o.nome,
 			img: o.doc.img,
 			sub: o.disponivel ? (o.preRequisito ? `Pré-requisito: ${o.preRequisito}` : "Sem pré-requisito") : o.motivo,
 			selecionado: o.doc.uuid === this.escolha,
+			foco: o === focado,
 			bloqueado: !o.disponivel,
 			aviso: o.avisos.length > 0
 		});
@@ -343,21 +350,7 @@ export class EtapasNivel {
 		} else {
 			grupos = [{ titulo: `Poderes de ${classe.nome}`, cards: visiveis.map(card) }];
 		}
-		const info = escolhida && escolhida.disponivel ? {
-			nome: escolhida.nome,
-			img: escolhida.doc.img,
-			fonte: fonteDe(this.dados, escolhida.doc),
-			preRequisito: escolhida.preRequisito,
-			avisos: escolhida.avisos,
-			jaTem: escolhida.jaTem,
-			concede: escolhida.concede?.name ?? null,
-			// poderes que ensinam magias: a escolha são as próprias magias (passo Magias), sem anotação
-			// restam menos magias para aprender do que o poder ensina: as vagas abertas são só as que dá para preencher
-			avisoMagias: escolhida.magias && escolhida.magias.livres != null && vagasEfetivas(nivel.magias, this.selecoes, escolhida).filter((v) => v.motivo === escolhida.nome).length < escolhida.magias.qtd
-				? `Restam poucas magias para aprender: este poder abre só ${vagasEfetivas(nivel.magias, this.selecoes, escolhida).filter((v) => v.motivo === escolhida.nome).length} de ${escolhida.magias.qtd} vagas.` : null,
-			pedeEscolha: !escolhida.magias && (escolhida.repetivel || /\bescolha\b/i.test(escolhida.doc.system?.description?.value ?? "")),
-			descricao: await this.descricao(escolhida.doc)
-		} : null;
+		const info = focado ? await this.#infoPoder(nivel, focado, escolhida) : null;
 		return {
 			aba: this.aba,
 			abaClasse: this.aba === "classe",
@@ -371,6 +364,39 @@ export class EtapasNivel {
 			filtro: this.filtros.poder ?? "",
 			info,
 			anotacao: this.anotacao
+		};
+	}
+
+	/** Painel do poder em destaque: descrição, avisos e o botão de escolher (ou remover, se for o escolhido). */
+	async #infoPoder(nivel, focado, escolhida) {
+		const ehEscolhido = focado === escolhida;
+		const escolhidaValida = escolhida?.disponivel ? escolhida : null;
+		const info = await this.#detalhesPoder(nivel, focado);
+		return {
+			...info,
+			uuid: focado.doc.uuid,
+			escolhido: ehEscolhido,
+			// a anotação é do poder escolhido: só aparece depois de escolher
+			pedeEscolha: ehEscolhido && info.pedeEscolha,
+			substitui: !ehEscolhido && escolhidaValida ? escolhidaValida.nome : null
+		};
+	}
+
+	async #detalhesPoder(nivel, escolhida) {
+		return {
+			nome: escolhida.nome,
+			img: escolhida.doc.img,
+			fonte: fonteDe(this.dados, escolhida.doc),
+			preRequisito: escolhida.preRequisito,
+			avisos: escolhida.avisos,
+			jaTem: escolhida.jaTem,
+			concede: escolhida.concede?.name ?? null,
+			// poderes que ensinam magias: a escolha são as próprias magias (passo Magias), sem anotação
+			// restam menos magias para aprender do que o poder ensina: as vagas abertas são só as que dá para preencher
+			avisoMagias: escolhida.magias && escolhida.magias.livres != null && vagasEfetivas(nivel.magias, this.selecoes, escolhida).filter((v) => v.motivo === escolhida.nome).length < escolhida.magias.qtd
+				? `Restam poucas magias para aprender: este poder abre só ${vagasEfetivas(nivel.magias, this.selecoes, escolhida).filter((v) => v.motivo === escolhida.nome).length} de ${escolhida.magias.qtd} vagas.` : null,
+			pedeEscolha: !escolhida.magias && (escolhida.repetivel || /\bescolha\b/i.test(escolhida.doc.system?.description?.value ?? "")),
+			descricao: await this.descricao(escolhida.doc)
 		};
 	}
 
@@ -511,9 +537,21 @@ export class EtapasNivel {
 		return true;
 	}
 
+	/** Poder em destaque no painel (não escolhe). */
+	focarPoder(uuid) {
+		this.focoPoder = uuid;
+	}
+
+	/** Tira o poder escolhido (o destaque fica nele, para escolher de novo se quiser). */
+	removerPoder() {
+		this.focoPoder ??= this.escolha;
+		this.escolher(null);
+	}
+
 	escolher(uuid) {
 		if (this.escolha !== uuid) this.anotacao = "";
 		this.escolha = uuid;
+		if (uuid) this.focoPoder = uuid;
 		// trocar Conhecimento Mágico (e afins) por outro poder tira as vagas que ele dava: as magias a
 		// mais saem (as escolhidas primeiro ficam), senão o passo de magias some com pendência
 		const { nivel } = this.calcular();
@@ -551,6 +589,8 @@ export class EtapasNivel {
 
 	trocarAba(aba) {
 		this.aba = aba;
+		// o destaque não passa de uma lista para a outra (o painel volta ao poder escolhido)
+		this.focoPoder = null;
 	}
 
 	alternarIndisponiveis() {

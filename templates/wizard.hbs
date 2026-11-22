@@ -99,6 +99,13 @@
 				</button>
 				{{/if}}
 			</header>
+			{{#if slideout.categorias}}
+			<div class="cf-chips cf-slideout-categorias" role="group" aria-label="Filtrar por tipo">
+				{{#each slideout.categorias}}
+				<button type="button" class="cf-chip {{#if selecionado}}selecionado{{/if}}" data-action="filtrarCategoriaSlideout" data-valor="{{valor}}">{{nome}} <small>{{qtd}}</small></button>
+				{{/each}}
+			</div>
+			{{/if}}
 			{{#if slideout.venda}}
 			{{> "modules/t20-construtor-ficha/templates/partes/venda.hbs" slideout}}
 			{{else}}

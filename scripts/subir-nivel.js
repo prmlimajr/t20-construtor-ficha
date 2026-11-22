@@ -49,6 +49,8 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			avancar: SubirNivel.#avancar,
 			voltar: SubirNivel.#voltar,
 			escolher: SubirNivel.#escolher,
+			focarPoder: SubirNivel.#focarPoder,
+			removerPoder: SubirNivel.#removerPoder,
 			selecionar: SubirNivel.#selecionar,
 			aba: SubirNivel.#trocarAba,
 			indisponiveis: SubirNivel.#alternarIndisponiveis,
@@ -191,6 +193,17 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 
 	static #escolher(event, target) {
 		this.etapas.escolher(target.dataset.uuid);
+		this.render();
+	}
+
+	/** Clique num poder da lista: só o destaque (o painel mostra a descrição e o botão de escolher). */
+	static #focarPoder(event, target) {
+		this.etapas.focarPoder(target.dataset.uuid);
+		this.render();
+	}
+
+	static #removerPoder() {
+		this.etapas.removerPoder();
 		this.render();
 	}
 

@@ -707,6 +707,136 @@ if (sup) {
 	console.log("  ✓ Futura Lenda: desmarcar o benefício ou trocar de classe limpa o poder");
 }
 
+/* ---------- Ajustes de usabilidade: perícias, filtro por tipo, Herança, busca regional, devoção ---------- */
+{
+	console.log("\nAjustes de usabilidade:");
+	const A = ConstrutorFicha.DEFAULT_OPTIONS.actions;
+	const c = CENARIOS[0]; // Humano guerreiro
+	const dados = await dadosCom(c.config);
+	const novo = async (estado) => {
+		const w = new ConstrutorFicha(ator("Usabilidade"));
+		await w._prepareContext();
+		w.estado = mergeObject(w.estado, estado);
+		w.render = () => {};
+		return w;
+	};
+
+	// 1. perícias como magias: escolhidas em cards (com remover no painel) e vagas que abrem o slideout
+	{
+		const w = await novo(c.estado(dados));
+		w.estado.periciasClasse = [];
+		let ctx = await w.ctxPericias();
+		const classe = ctx.secoes.find((x) => x.campo === "periciasClasse");
+		conferir(classe && classe.escolhidas.length === 0 && classe.vagas.length === w.regrasClasse.numero && classe.lista.startsWith("pericias:"),
+			`perícias: a seção da classe deveria ter ${w.regrasClasse.numero} vagas e a lista do slideout (${JSON.stringify(classe && { v: classe.vagas.length, l: classe.lista.slice(0, 40) })})`);
+		const k = classe.lista.slice(9).split("|")[0];
+		A.abrirSlideout.call(w, null, { dataset: { campo: "periciasClasse", lista: classe.lista, titulo: "x", limite: String(classe.limite) } });
+		A.confirmarSlideout.call(w, null, { dataset: { valor: k } });
+		ctx = await w.ctxPericias();
+		const depois = ctx.secoes.find((x) => x.campo === "periciasClasse");
+		conferir(w.estado.periciasClasse.includes(k) && depois.escolhidas.some((x) => x.chave === k) && depois.vagas.length === w.regrasClasse.numero - 1 && !depois.lista.includes(k),
+			"perícias: escolher pelo slideout põe a perícia nos cards e tira uma vaga (e ela some da lista)");
+		conferir(ctx.info?.chave === k && ctx.info.campo === "periciasClasse", "perícias: a escolhida fica no painel, com o botão de remover");
+		A.removerPericia.call(w, null, { dataset: { campo: "periciasClasse", valor: k } });
+		conferir(!w.estado.periciasClasse.includes(k), "perícias: remover pelo painel tira a perícia");
+		// grupo "escolha uma" (campo de texto): o slideout substitui e o remover limpa
+		const ou = (await w.ctxPericias()).secoes.find((x) => x.campo === "periciasOu.0");
+		if (ou) {
+			A.removerPericia.call(w, null, { dataset: { campo: "periciasOu.0", valor: w.estado.periciasOu[0] } });
+			conferir(w.estado.periciasOu[0] === "" && (await w.ctxPericias()).secoes.find((x) => x.campo === "periciasOu.0").vagas.length === 1, "perícias: remover a do grupo deixa a vaga do grupo");
+		}
+		console.log("  ✓ perícias: cards das escolhidas, vagas com slideout, remover no painel");
+	}
+
+	// 2. slideout de poderes gerais: os tipos no topo filtram a lista
+	{
+		const w = await novo(c.estado(dados));
+		A.abrirSlideout.call(w, null, { dataset: { campo: "idade.poderGeral", lista: "poderGeral", titulo: "x" } });
+		let so = await w.ctxSlideout();
+		const tipo = so.categorias?.[1];
+		conferir(so.categorias?.[0]?.nome === "Todos" && so.categorias[0].selecionado && tipo && so.grupos.length > 1, "slideout: os tipos no topo, com \"Todos\" marcado");
+		A.filtrarCategoriaSlideout.call(w, null, { dataset: { valor: tipo.valor } });
+		so = await w.ctxSlideout();
+		conferir(so.grupos.length === 1 && so.grupos[0].titulo === tipo.valor && so.grupos[0].cards.length === tipo.qtd && so.categorias.find((x) => x.valor === tipo.valor).selecionado,
+			`slideout: filtrar por ${tipo.valor} mostra só esse tipo (${tipo.qtd})`);
+		A.filtrarCategoriaSlideout.call(w, null, { dataset: { valor: "" } });
+		conferir((await w.ctxSlideout()).grupos.length > 1, "slideout: \"Todos\" volta à lista inteira");
+		console.log(`  ✓ slideout: ${so.categorias.length - 1} tipos para filtrar`);
+	}
+
+	// 3. Herdeiro: Herança pode ser escolhida duas vezes (um poder só, com a nota)
+	{
+		const w = await novo({ ...c.estado(dados), origens: { principal: { nome: "Herdeiro", beneficios: [], grupos: {}, escolhasPoder: {}, itens: { 0: "Anel de sinete" } } } });
+		const campo = "origens.principal.beneficios";
+		const iOrigem = w.passos().findIndex((p) => p.id === "origem");
+		let info = (await w.ctxOrigem("principal")).info;
+		conferir(!info.beneficios.some((b) => b.id === "poder2:Herança"), "Herança: a 2ª vez só aparece com a Herança marcada");
+		A.alternar.call(w, null, { dataset: { campo, valor: "poder:Herança", limite: "2" } });
+		info = (await w.ctxOrigem("principal")).info;
+		conferir(info.beneficios.some((b) => b.id === "poder2:Herança" && /2\.000/.test(b.detalhe)), "Herança: marcada, aparece a 2ª vez (item de até T$ 2.000)");
+		A.alternar.call(w, null, { dataset: { campo, valor: "poder2:Herança", limite: "2" } });
+		conferir(w.pendencia(w.passos()[iOrigem]) === null, `Herança duas vezes: os dois benefícios, sem pendência (${w.pendencia(w.passos()[iOrigem])})`);
+		const pl = w.plano();
+		const herancas = pl.gruposPoderes.flatMap((g) => g.poderes).filter((p) => p.name === "Herança");
+		conferir(herancas.length === 1 && /T\$ 2\.000/.test(pl.ajustesRaciais[herancas[0].uuid]?.anotacao ?? ""), "Herança duas vezes: um poder na ficha, anotado com o item de até T$ 2.000");
+		A.alternar.call(w, null, { dataset: { campo, valor: "poder:Herança", limite: "2" } });
+		conferir(!w.estado.origens.principal.beneficios.length, "Herança: desmarcar tira também a 2ª vez");
+		console.log("  ✓ Herdeiro: Herança duas vezes");
+	}
+
+	// 5–7. devoção: fundamentalismo, Centelha Mágica
+	{
+		const w = await novo({ ...c.estado(dados), devoto: true, divindade: "Wynna", poderesConcedidos: ["Centelha Mágica"] });
+		const iDev = w.passos().findIndex((p) => p.id === "devocao");
+		conferir(/Centelha Mágica: escolha 1 magia/.test(w.pendencia(w.passos()[iDev]) ?? ""), `Centelha Mágica: sem a magia, pendência (${w.pendencia(w.passos()[iDev])})`);
+		let ctx = await w.ctxDevocao();
+		const card = ctx.info.poderes.find((p) => p.nome === "Centelha Mágica");
+		conferir(card?.escolha?.ehMagias && card.escolha.lista === "magiaRacial:devocao.centelhaMagica", `Centelha Mágica: abaixo do poder, o botão de escolher a magia (${JSON.stringify(card?.escolha)?.slice(0, 120)})`);
+		const opcoes = w.opcoesSlideout(card.escolha.lista);
+		const tipos = new Set(opcoes.map((o) => dados.magias.find((m) => m.uuid === o.valor)?.system.tipo));
+		conferir(opcoes.length && tipos.has("arc") && tipos.has("div") && opcoes.every((o) => Number(dados.magias.find((m) => m.uuid === o.valor)?.system.circulo) === 1),
+			"Centelha Mágica: a lista tem magias arcanas e divinas, só de 1º círculo");
+		const divina = opcoes.find((o) => dados.magias.find((m) => m.uuid === o.valor)?.system.tipo === "div");
+		A.abrirSlideout.call(w, null, { dataset: { campo: card.escolha.campo, lista: card.escolha.lista, titulo: "x", limite: "1" } });
+		A.confirmarSlideout.call(w, null, { dataset: { valor: divina.valor } });
+		conferir(w.pendencia(w.passos()[iDev]) === null, `Centelha Mágica: com a magia, sem pendência (${w.pendencia(w.passos()[iDev])})`);
+		const pl = w.plano();
+		conferir(pl.magiasPoderesClasse.some((m) => m.doc.uuid === divina.valor && m.prefixo === "D"), "Centelha Mágica: a magia entra na ficha com o prefixo dos concedidos (D)");
+		w.definirCampo("poderesConcedidos", []);
+		conferir(!Object.keys(w.estado.devocaoEscolhas ?? {}).length, "Centelha Mágica: tirar o poder descarta a magia escolhida");
+
+		// fundamentalista: o texto aparece ao marcar (ou o aviso de que não está cadastrado)
+		w.definirCampo("divindade", "Khalmyr");
+		w.definirCampo("fundamentalista", true);
+		ctx = await w.ctxDevocao();
+		conferir(ctx.info.fundamentalista && ctx.info.podeSerFundamentalista && w.poderesConcedidosPermitidos() === 2, "fundamentalista de deus maior: permitido, com o poder extra");
+		console.log("  ✓ devoção: Centelha Mágica com a magia; fundamentalista de deus maior");
+	}
+	if (sup) {
+		const dadosSup = await dadosCom({ suplementos: true, supDivindades: true, supOrigensRegionais: true, origemDupla: true });
+		const menor = dadosSup.divindades.find((d) => d.menor);
+		if (menor) {
+			const w = await novo({ ...c.estado(dadosSup), devoto: true, divindade: "Khalmyr", fundamentalista: true, poderesConcedidos: dadosSup.divindades.find((d) => d.nome === "Khalmyr").poderes.slice(0, 2) });
+			w.definirCampo("divindade", menor.nome);
+			const ctx = await w.ctxDevocao();
+			conferir(!w.estado.fundamentalista && ctx.info && !ctx.info.podeSerFundamentalista && w.poderesConcedidosPermitidos() === 1,
+				`deus menor (${menor.nome}): sem fundamentalismo (sai o poder extra)`);
+			w.estado.fundamentalista = true;
+			conferir(w.poderesConcedidosPermitidos() === 1, "deus menor: mesmo com o estado antigo marcado, não ganha o poder extra");
+			console.log(`  ✓ deus menor (${menor.nome}): não pode ser fundamentalista`);
+		} else conferir(false, "deus menor: o suplemento não trouxe deuses menores");
+
+		// 4. origem regional: busca pelo local e pelo poder único
+		const w = await novo(c.estado(dadosSup));
+		const ctx = await w.ctxOrigem("regional");
+		const o = ctx.origens.find((x) => x.busca.split(" ").length > 1);
+		const def = dadosSup.origensRegionais.find((x) => x.nome === o.nome);
+		conferir(o && o.busca.includes(o.nome) && def.poderes.every((n) => o.busca.includes(n)) && /local/.test(ctx.placeholder),
+			`origem regional: a busca acha pelo local e pelos poderes (${o?.busca?.slice(0, 80)})`);
+		console.log("  ✓ origem regional: busca pelo local e pelo poder");
+	}
+}
+
 if (ATUALIZAR) {
 	fs.mkdirSync(path.dirname(caminhoRetrato), { recursive: true });
 	fs.writeFileSync(caminhoRetrato, JSON.stringify(atual, null, 2) + "\n");

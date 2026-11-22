@@ -223,23 +223,39 @@ export class Tela {
 		}
 		const animar = so.animar;
 		so.animar = false;
-		// poderes de mais de uma categoria (ex.: poder geral da complicação): listados por categoria
-		const categorias = new Set(cards.map((c) => c.grupo).filter(Boolean));
-		const grupos = categorias.size > 1
-			? agruparPorCategoria(cards, (c) => c.grupo).map((g) => ({ titulo: g.titulo, cards: g.itens.map((c) => ({ ...c, sub: c.sub.split(" · ").filter((x) => x !== c.grupo && x.toLowerCase() !== c.grupo.toLowerCase()).join(" · ") })) }))
+		// poderes de mais de uma categoria (ex.: poder geral da complicação): listados por categoria, com os
+		// tipos no topo para filtrar a lista (um tipo de cada vez; "Todos" volta à lista inteira)
+		const porCategoria = agruparPorCategoria(cards.filter((c) => c.grupo), (c) => c.grupo);
+		const variasCategorias = porCategoria.length > 1;
+		if (!variasCategorias || !porCategoria.some((g) => g.titulo === so.categoria)) so.categoria = "";
+		const categorias = variasCategorias ? [
+			{ valor: "", nome: "Todos", qtd: cards.length, selecionado: !so.categoria },
+			...porCategoria.map((g) => ({ valor: g.titulo, nome: g.titulo, qtd: g.itens.length, selecionado: g.titulo === so.categoria }))
+		] : null;
+		const semSub = (c) => ({ ...c, sub: c.sub.split(" · ").filter((x) => x !== c.grupo && x.toLowerCase() !== c.grupo.toLowerCase()).join(" · ") });
+		const grupos = variasCategorias
+			? porCategoria.filter((g) => !so.categoria || g.titulo === so.categoria).map((g) => ({ titulo: g.titulo, cards: g.itens.map(semSub) }))
 			: null;
 		return {
-			titulo: so.titulo, cards, grupos, info, animar, filtro: so.filtro, longa: cards.length > 8,
+			titulo: so.titulo, cards, grupos, categorias, info, animar, filtro: so.filtro, longa: cards.length > 8,
 			indisponiveis, mostrarIndisponiveis: !!so.mostrarIndisponiveis
 		};
 	}
 
 	static abrirSlideout(event, target) {
 		const { campo, lista, titulo } = target.dataset;
-		const limite = Number(target.dataset.limite ?? Infinity);
+		// sem limite (ou limite vazio): quantas quiser
+		const limite = target.dataset.limite ? Number(target.dataset.limite) : Infinity;
 		const atual = foundry.utils.getProperty(this.estado, campo) ?? "";
 		const foco = Array.isArray(atual) ? "" : atual;
 		this.slideout = { campo, lista, titulo, limite, foco, animar: true, filtro: "" };
+		this.render();
+	}
+
+	/** Chip de tipo no topo do slideout de poderes: mostra só os poderes daquele tipo. */
+	static filtrarCategoriaSlideout(event, target) {
+		if (!this.slideout) return;
+		this.slideout.categoria = target.dataset.valor ?? "";
 		this.render();
 	}
 
@@ -271,7 +287,14 @@ export class Tela {
 			const r = this.preRequisito(poder(this.dados, valor), ficha, { classe: tipoLista === "poderClasse" });
 			if (r && !r.ok) return ui.notifications.warn(`Pré-requisito não atendido: ${r.falhas.join(", ")}.`);
 		}
-		const atual = foundry.utils.getProperty(this.estado, campo);
+		let atual = foundry.utils.getProperty(this.estado, campo);
+		// lista de magias de uma escolha ainda sem nada escolhido: começa vazia
+		if (atual === undefined && this.slideout.lista.startsWith("magiaRacial:")) atual = [];
+		// perícia escolhida: o painel do passo mostra a perícia, com o botão de remover
+		if (this.slideout.lista.startsWith("pericias:")) {
+			this.focoPericia = valor;
+			this.focoPericiaCampo = campo;
+		}
 		// campo de lista (ex.: magias): adiciona o item em vez de substituir
 		if (Array.isArray(atual)) {
 			if (atual.includes(valor)) {

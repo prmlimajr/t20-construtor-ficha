@@ -975,6 +975,45 @@ for (const c of classes) {
 	console.log("  ✓ conferido (deus, magia divina, revisão, build, gravação e troca de linhagem)");
 }
 
+/* ---------- 6c. Clicar mostra, o botão escolhe (passos Poder e Magias) ---------- */
+{
+	console.log("\nClicar mostra, o botão escolhe:");
+	const { EtapasNivel } = await import("../scripts/etapas-nivel.js");
+	const fontes = { dados: { ...dados, regrasClasses, regrasPoderesClasse, variantes: {}, escolas: {} }, progressao, lerPreRequisito };
+	const docs1 = (progressaoDe(progressao, "Guerreiro").niveis?.["1"]?.habilidades ?? []).map((n) => dados.poderesPorNome.get(normalizar(typeof n === "string" ? n : n.nome))).filter(Boolean);
+	const et = new EtapasNivel(virtualDe(novoAtor("Guerreiro", docs1), "foco"), fontes);
+	et.calcular();
+	et.irPara("poder");
+	let ctx = await et.contexto();
+	const [a, b] = ctx.grupos[0].cards.filter((c) => !c.bloqueado);
+	et.focarPoder(a.uuid);
+	ctx = await et.contexto();
+	conferir(!et.escolha && ctx.info?.uuid === a.uuid && !ctx.info.escolhido && ctx.grupos[0].cards.find((c) => c.uuid === a.uuid).foco,
+		"clicar num poder só destaca: o painel mostra o poder com o botão de escolher, e nada é escolhido");
+	et.escolher(a.uuid);
+	et.focarPoder(b.uuid);
+	ctx = await et.contexto();
+	conferir(et.escolha === a.uuid && ctx.info.uuid === b.uuid && ctx.info.substitui === a.nome && !ctx.info.pedeEscolha,
+		"com um poder escolhido, destacar outro avisa que escolher substitui o atual (a anotação só no escolhido)");
+	et.removerPoder();
+	ctx = await et.contexto();
+	conferir(!et.escolha && ctx.info?.uuid === b.uuid, "remover: nada escolhido, o destaque continua no painel");
+	et.escolher(a.uuid);
+	et.trocarAba("geral");
+	ctx = await et.contexto();
+	conferir(ctx.info?.uuid === a.uuid && ctx.info.escolhido, "trocar de lista: o painel volta ao poder escolhido");
+
+	const etA = new EtapasNivel(virtualDe(novoAtor("Arcanista", ["Caminho do Arcanista: Mago"].map((n) => dados.poderesPorNome.get(normalizar(n))).filter(Boolean)), "foco magia"), fontes);
+	etA.calcular();
+	etA.irPara("magias");
+	ctx = await etA.contexto();
+	const card = ctx.circulos?.[0]?.cards?.[0];
+	etA.focarMagia(card.uuid);
+	ctx = await etA.contexto();
+	conferir(!etA.magias.length && ctx.infoMagia?.uuid === card.uuid && !ctx.infoMagia.selecionado, "clicar numa magia só destaca; o botão do painel é que escolhe");
+	console.log("  ✓ conferido");
+}
+
 /* ---------- 7. Plano de builds: árvore, validação e a janela preenchida pelo plano ---------- */
 {
 	console.log("\nPlano de builds:");

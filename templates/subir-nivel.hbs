@@ -250,8 +250,8 @@
 						{{#unless ../abaClasse}}<h4 class="cf-grupo-titulo">{{titulo}} <small>{{cards.length}}</small></h4>{{/unless}}
 						<div class="cf-cards cf-cards-coluna">
 							{{#each cards}}
-							<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if bloqueado}}bloqueado{{/if}}"
-								data-action="escolher" data-uuid="{{uuid}}" data-busca="{{nome}}" {{#if bloqueado}}disabled{{/if}}>
+							<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if foco}}foco{{/if}} {{#if bloqueado}}bloqueado{{/if}}"
+								data-action="focarPoder" data-uuid="{{uuid}}" data-busca="{{nome}}" {{#if bloqueado}}disabled{{/if}}>
 								{{#if img}}<img src="{{img}}" alt="">{{/if}}
 								<span class="cf-card-texto">
 									<span class="cf-card-nome">{{nome}}{{#if aviso}} <i class="fa-solid fa-circle-exclamation" title="Tem pré-requisito a conferir"></i>{{/if}}</span>
@@ -269,6 +269,12 @@
 					{{#if info}}
 					<h3>{{#if info.img}}<img src="{{info.img}}" alt="">{{/if}} {{info.nome}}</h3>
 					{{#if info.fonte}}<p class="cf-fonte">{{info.fonte}} (Suplementos de Arton)</p>{{/if}}
+					{{#if info.escolhido}}
+					<button type="button" class="cf-escolher" data-action="removerPoder"><i class="fa-solid fa-xmark"></i> Remover poder</button>
+					{{else}}
+					<button type="button" class="cf-primario cf-escolher" data-action="escolher" data-uuid="{{info.uuid}}"><i class="fa-solid fa-check"></i> Escolher este poder</button>
+					{{#if info.substitui}}<p class="cf-nota">Escolher este substitui <strong>{{info.substitui}}</strong>.</p>{{/if}}
+					{{/if}}
 					<dl class="cf-dados">
 						<dt>Pré-requisito</dt><dd>{{#if info.preRequisito}}{{info.preRequisito}}{{else}}nenhum{{/if}}</dd>
 						{{#if info.concede}}<dt>Também recebe</dt><dd>{{info.concede}}</dd>{{/if}}
@@ -284,7 +290,7 @@
 					{{/if}}
 					<div class="cf-descricao">{{{info.descricao}}}</div>
 					{{else}}
-					<p class="cf-vazio">Selecione um poder para ver a descrição.</p>
+					<p class="cf-vazio">Clique num poder para ver a descrição e escolhê-lo.</p>
 					{{/if}}
 				</aside>
 			</div>
@@ -324,7 +330,7 @@
 						<h4 class="cf-grupo-titulo">{{titulo}} <small>{{cards.length}}</small></h4>
 						<div class="cf-cards cf-cards-coluna">
 							{{#each cards}}
-							<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if foco}}foco{{/if}}" data-action="magia" data-uuid="{{uuid}}" data-busca="{{nome}}">
+							<button type="button" class="cf-card {{#if selecionado}}selecionado{{/if}} {{#if foco}}foco{{/if}}" data-action="focarMagia" data-uuid="{{uuid}}" data-busca="{{nome}}">
 								{{#if img}}<img src="{{img}}" alt="">{{/if}}
 								<span class="cf-card-texto">
 									<span class="cf-card-nome">{{nome}}</span>
@@ -344,7 +350,7 @@
 					<h3>{{#if infoMagia.img}}<img src="{{infoMagia.img}}" alt="">{{/if}} {{infoMagia.nome}}</h3>
 					<p class="cf-destaque">{{infoMagia.escola}} · {{infoMagia.tipo}} · {{infoMagia.circulo}}º círculo</p>
 					{{#if infoMagia.fonte}}<p class="cf-fonte">{{infoMagia.fonte}} (Suplementos de Arton)</p>{{/if}}
-					<button type="button" class="cf-escolher" data-action="magia" data-uuid="{{infoMagia.uuid}}">
+					<button type="button" class="{{#unless infoMagia.selecionado}}cf-primario{{/unless}} cf-escolher" data-action="magia" data-uuid="{{infoMagia.uuid}}">
 						{{#if infoMagia.selecionado}}<i class="fa-solid fa-xmark"></i> Remover magia{{else}}<i class="fa-solid fa-check"></i> Escolher magia{{/if}}
 					</button>
 					{{#if infoMagia.escolaDescricao}}<p class="cf-nota">{{infoMagia.escolaDescricao}}</p>{{/if}}
@@ -354,7 +360,7 @@
 					<div class="cf-descricao">{{{infoMagia.descricao}}}</div>
 					{{> "modules/t20-construtor-ficha/templates/partes/aprimoramentos.hbs" infoMagia}}
 					{{else}}
-					<p class="cf-vazio">Clique numa magia para escolhê-la e ver a descrição.</p>
+					<p class="cf-vazio">Clique numa magia para ver a descrição e escolhê-la.</p>
 					{{/if}}
 				</aside>
 			</div>

@@ -18,7 +18,7 @@ import { poderDistincaoPermitido } from "../distincoes.js";
 import { atributosDinamicosRaca } from "../suplementos.js";
 import { circuloMagia, rotuloPericia, ordenarPericias } from "./comum.js";
 import { PASSOS, PASSO_POR_ID } from "./passos/index.js";
-import { escolhaDoPoder } from "./passos/origem.js";
+import { escolhaDoPoder, poderDuasVezes } from "./passos/origem.js";
 import { INVALIDACOES, AJUSTES, casa } from "./cascata.js";
 
 /** Categorias de tamanho, da menor para a maior (system.tracos.tamanho). */
@@ -326,6 +326,18 @@ export class ModeloConstrutor {
 		return out;
 	}
 
+	/** Poderes concedidos escolhidos com escolha interna (ex.: Centelha Mágica → uma magia arcana ou divina de 1º círculo). */
+	poderesDaDevocao() {
+		if (!this.ehDevoto || !this.dados) return [];
+		const out = [];
+		for (const n of this.estado.poderesConcedidos ?? []) {
+			const p = poder(this.dados, n);
+			const regra = p ? this.dados.regrasPoderesClasse[p.name] : null;
+			if (regra?.tipo) out.push({ poder: p, regra: this.#comFonte(regra, "devocao") });
+		}
+		return out;
+	}
+
 	#comFonte(regra, fonte) {
 		return regra ? { ...regra, fonte } : null;
 	}
@@ -342,7 +354,8 @@ export class ModeloConstrutor {
 
 	/** Onde fica no estado a escolha de uma regra. */
 	campoEscolha(regra) {
-		return `${regra.fonte === "classe" ? "classePoderEscolhas" : "racaEscolhas"}.${regra.id}`;
+		const raiz = { classe: "classePoderEscolhas", devocao: "devocaoEscolhas" }[regra.fonte] ?? "racaEscolhas";
+		return `${raiz}.${regra.id}`;
 	}
 
 	/** Estado de uma escolha de poder, sempre no formato do tipo. */
@@ -418,6 +431,12 @@ export class ModeloConstrutor {
 		const ativas = {};
 		for (const { regra } of this.escolhasDeClasse()) ativas[regra.id] = this.escolhaRacial(regra);
 		e.classePoderEscolhas = ativas;
+		this.prepararEscolhasDevocao();
+	}
+
+	/** Escolhas internas dos poderes concedidos escolhidos (Centelha Mágica); as dos que saíram são descartadas. */
+	prepararEscolhasDevocao() {
+		this.estado.devocaoEscolhas = Object.fromEntries(this.poderesDaDevocao().map(({ regra }) => [regra.id, this.escolhaRacial(regra)]));
 	}
 
 	/** Perícias treinadas automaticamente por poderes de classe (ex.: Linhagem Feérica → Enganação). */
@@ -631,9 +650,14 @@ export class ModeloConstrutor {
 		return "";
 	}
 
+	/** Deuses menores não têm devotos fundamentalistas. */
+	podeSerFundamentalista(div = this.dados?.divindades.find((d) => d.nome === this.estado.divindade)) {
+		return !!div && !div.menor;
+	}
+
 	poderesConcedidosPermitidos() {
 		// devoto fundamentalista escolhe um poder concedido a mais
-		return (this.regrasClasse?.devocao?.poderes ?? 1) + (this.ehDevoto && this.estado.fundamentalista ? 1 : 0);
+		return (this.regrasClasse?.devocao?.poderes ?? 1) + (this.ehDevoto && this.estado.fundamentalista && this.podeSerFundamentalista() ? 1 : 0);
 	}
 
 	/**
@@ -812,7 +836,7 @@ export class ModeloConstrutor {
 	/** Regra pelo identificador "fonte.id" usado nas listas do slideout. */
 	regraRacial(chave) {
 		const [fonte, id] = chave.split(".");
-		const lista = fonte === "classe" ? this.escolhasDeClasse() : this.escolhasRaciais();
+		const lista = fonte === "classe" ? this.escolhasDeClasse() : fonte === "devocao" ? this.poderesDaDevocao() : this.escolhasRaciais();
 		return lista.find((x) => x.regra.id === id)?.regra ?? null;
 	}
 
@@ -890,7 +914,8 @@ export class ModeloConstrutor {
 		// Escolhas das habilidades raciais e de classe: ajustes nos efeitos, magias, poderes e itens extras
 		const daRaca = this.#processarEscolhas(this.poderesDaRaca());
 		const daClasse = this.#processarEscolhas(this.poderesDaClasse());
-		const ajustesRaciais = { ...daRaca.ajustes, ...daClasse.ajustes };
+		const daDevocao = this.#processarEscolhas(this.poderesDaDevocao());
+		const ajustesRaciais = { ...daRaca.ajustes, ...daClasse.ajustes, ...daDevocao.ajustes };
 		const magiasRaciais = daRaca.magias;
 		const poderesExtrasRaca = daRaca.poderes;
 		const escolhasTexto = daRaca.texto;
@@ -921,6 +946,10 @@ export class ModeloConstrutor {
 				if (b.startsWith("grupo:") && o.estado.grupos[b.slice(6)]) addOrigem(o.estado.grupos[b.slice(6)]);
 				// Futura Lenda e afins: o poder escolhido pelo benefício
 				if (b.startsWith("poder:") && o.estado.escolhasPoder?.[b.slice(6)]) addOrigem(o.estado.escolhasPoder[b.slice(6)]);
+				// Herança escolhida duas vezes: um poder só, com a nota
+				const duas = b.startsWith("poder2:") && o.estado.beneficios.includes(`poder:${b.slice(7)}`) ? poderDuasVezes(b.slice(7)) : null;
+				const p2 = duas ? poder(this.dados, b.slice(7)) : null;
+				if (p2) ajustesRaciais[p2.uuid] = { ...(ajustesRaciais[p2.uuid] ?? {}), anotacao: duas.nota };
 			}
 			if (o.def.especial === "amnesico") {
 				(o.def.poderes ?? []).forEach(addOrigem);
@@ -1029,7 +1058,9 @@ export class ModeloConstrutor {
 		// prefixo do grupo do poder (origem, concedidos, complicação, idade, classe)
 		const deOutrosPoderes = gruposPoderes.filter((g) => !g.raciais).flatMap((g) => g.poderes.map((p) => ({ p, prefixo: g.prefixo })))
 			.flatMap(({ p, prefixo }) => (p.magiasConcedidas ?? []).map((n) => magiaPorNome(this.dados, n)).filter(Boolean).map((doc) => ({ doc, atributo: p.atributoMagias ?? null, prefixo })));
-		const magiasDePoderesClasse = unicas([...daClasse.magias, ...deOutrosPoderes]);
+		// magia escolhida num poder concedido (Centelha Mágica): prefixo dos concedidos
+		const daDevocaoMagias = daDevocao.magias.map((m) => ({ ...m, prefixo: "D" }));
+		const magiasDePoderesClasse = unicas([...daClasse.magias, ...daDevocaoMagias, ...deOutrosPoderes]);
 
 		let conjuracao = this.conjurador?.atributo ?? null;
 		for (const esc of this.escolhasAtivas()) {
@@ -1040,7 +1071,7 @@ export class ModeloConstrutor {
 		return {
 			raca, classe, poderesRaciais, poderes, gruposPoderes, magias, itens,
 			magiasRaciais: magiasDaRaca, magiasPoderesClasse: magiasDePoderesClasse,
-			ajustesRaciais, escolhasRaciais: escolhasTexto, escolhasClasse: daClasse.texto,
+			ajustesRaciais, escolhasRaciais: escolhasTexto, escolhasClasse: [...daClasse.texto, ...daDevocao.texto],
 			pericias: ordenarPericias([...this.periciasTreinadas()]),
 			// a faixa etária (Idades Variadas) entra no valor base
 			atributos: Object.fromEntries(ATRIBUTOS.map((k) => [k, { base: (this.base(k) ?? 0) + this.idadeAtr(k), racial: this.racial(k) }])),

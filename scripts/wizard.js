@@ -71,6 +71,7 @@ function estadoInicial(actor) {
 		origens: { principal: origem(), regional: origem() },
 		devoto: null,
 		divindade: "",
+		devocaoEscolhas: {},
 		poderesConcedidos: [],
 		/** Devoto fundamentalista: um poder concedido a mais; a ficha registra "(fundamentalista)". */
 		fundamentalista: false,
@@ -105,6 +106,7 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		this.focoMagia = "";
 		this.focoEquip = "";
 		this.focoPericia = "";
+		this.focoPericiaCampo = "";
 		this.focoDivindade = "";
 		this.focoEscola = "";
 		/** Slideout aberto: { campo, lista, titulo, foco, animar, filtro } */
@@ -466,6 +468,9 @@ export class ConstrutorFicha extends HandlebarsApplicationMixin(ApplicationV2) {
 		if (campo.endsWith(".beneficios") && i >= 0 && valor.startsWith("poder:")) {
 			const sub = campo.split(".")[1];
 			delete this.estado.origens[sub].escolhasPoder?.[valor.slice(6)];
+			// desmarcar a Herança desmarca também a 2ª vez dela
+			const j = lista.indexOf(`poder2:${valor.slice(6)}`);
+			if (j >= 0) lista.splice(j, 1);
 		}
 		this.definirCampo(campo, lista);
 	}
