@@ -190,8 +190,27 @@
 					<div class="cf-descricao">{{{info.descricao}}}</div>
 				</details>
 				{{else}}<p class="cf-nota">Escolha uma das opções. A escolha não pode ser mudada depois.</p>{{/if}}
+				{{#each internas}}<div class="cf-nivel-interna">
+					<h5>{{poder}}: {{titulo}}</h5>
+					{{#if magia}}<p class="cf-nota"><i class="fa-solid fa-wand-sparkles"></i> Escolhida no passo Magias, junto com as magias da classe.</p>
+					{{else}}<div class="cf-chips">
+						{{#each opcoes}}<button type="button" class="cf-chip {{#if selecionado}}selecionado{{/if}}" data-action="selecionar" data-id="{{../id}}" data-valor="{{valor}}">{{nome}}</button>{{/each}}
+					</div>{{/if}}
+				</div>{{/each}}
 			</div>
 			{{/each}}
+
+			{{#if internas.length}}
+			<div class="cf-bloco cf-nivel-escolha">
+				{{#each internas}}<div class="cf-nivel-interna">
+					<h5>{{poder}}: {{titulo}}</h5>
+					{{#if magia}}<p class="cf-nota"><i class="fa-solid fa-wand-sparkles"></i> Escolhida no passo Magias, junto com as magias da classe.</p>
+					{{else}}<div class="cf-chips">
+						{{#each opcoes}}<button type="button" class="cf-chip {{#if selecionado}}selecionado{{/if}}" data-action="selecionar" data-id="{{../id}}" data-valor="{{valor}}">{{nome}}</button>{{/each}}
+					</div>{{/if}}
+				</div>{{/each}}
+			</div>
+			{{/if}}
 
 			{{#each anotadas}}
 			<div class="cf-bloco cf-nivel-escolha">

@@ -214,7 +214,10 @@ const dados = {
 const progressao = json("progressao.json");
 delete progressao._comentario;
 const regrasClasses = json("classes.json");
-const regrasPoderesClasse = json("poderes-classe.json").poderes ?? {};
+// como em dados.js (comOpcoesDivindades): "opcoesDivindades" vira a lista dos deuses maiores
+const opcoesDeuses = (json("divindades.json").divindades ?? []).map((d) => ({ valor: d.nome, nome: d.nome }));
+const regrasPoderesClasse = Object.fromEntries(Object.entries(json("poderes-classe.json").poderes ?? {})
+	.map(([k, r]) => [k, r?.opcoesDivindades ? { ...r, opcoes: opcoesDeuses } : r]));
 const correcoes = json("pre-requisitos.json");
 delete correcoes._comentario;
 const lerPreRequisito = criarLeitorPreRequisitos(dados, correcoes);
@@ -885,6 +888,91 @@ for (const c of classes) {
 		conferir(await aplicarEscolhas(v, { classeAlvo: "nova:Classe Inexistente" }, fontes).then((x) => !x.ok), `${titulo}: classe nova inexistente deveria ser recusada`);
 		if (ok) console.log(`  ✓ ${titulo}: ${v.nivel}º nível na ficha virtual (${ficha.classes.map((x) => `${x.nome} ${x.niveis}`).join(", ")}; ${v.items.filter((i) => i.type === "magia").length} magias); o ator real não mudou`);
 	}
+}
+
+/* ---------- 6b. Multiclasse com escolhas internas: Clérigo 1 → Arcanista (Feiticeiro, Linhagem Abençoada) ---------- */
+{
+	console.log("\nEscolhas internas na multiclasse (Linhagem Abençoada):");
+	const { EtapasNivel } = await import("../scripts/etapas-nivel.js");
+	const { paraNomes } = await import("../scripts/builds/arvore.js");
+	const fontes = { dados: { ...dados, regrasClasses, regrasPoderesClasse, variantes: {}, escolas: {} }, progressao, lerPreRequisito };
+	const docs1 = (progressaoDe(progressao, "Clérigo").niveis?.["1"]?.habilidades ?? []).map((n) => dados.poderesPorNome.get(normalizar(typeof n === "string" ? n : n.nome))).filter(Boolean);
+	const real = novoAtor("Clérigo", docs1);
+	const v = virtualDe(real, "Clérigo devoto de Arsenal");
+	const et = new EtapasNivel(v, fontes);
+	et.escolherClasse("nova:Arcanista");
+	let { nivel } = et.calcular();
+	const caminho = nivel.escolhas.find((e) => /caminho/i.test(e.titulo));
+	const feiticeiro = caminho?.opcoes.find((o) => /feiticeiro/i.test(o.nome));
+	et.selecionar(caminho.id, feiticeiro.doc.uuid);
+	({ nivel } = et.calcular());
+	const linhagem = nivel.escolhas.find((e) => e.requer?.id === caminho.id);
+	const abencoada = linhagem?.opcoes.find((o) => /aben/i.test(o.nome));
+	conferir(!!abencoada, "a Linhagem Abençoada deveria estar entre as linhagens do Feiticeiro");
+	et.selecionar(linhagem.id, abencoada.doc.uuid);
+	({ nivel } = et.calcular());
+	et.irPara("nivel");
+	let ctx = await et.contexto();
+	const blocoLinhagem = ctx.escolhas.find((e) => e.id === linhagem.id);
+	const deus = blocoLinhagem?.internas?.find((i) => !i.magia);
+	const avisoMagia = blocoLinhagem?.internas?.find((i) => i.magia);
+	conferir(deus && deus.opcoes.some((o) => o.valor === "Arsenal") && avisoMagia,
+		`passo Nível: a Linhagem Abençoada deveria pedir o deus maior (chips) e avisar da magia divina (${JSON.stringify(blocoLinhagem?.internas)?.slice(0, 200)})`);
+	conferir(!ctx.notas.some((n) => /Abençoada/.test(n)), `a nota "complete na ficha" não deveria citar mais a Linhagem Abençoada: ${ctx.notas.join(" | ")}`);
+	conferir(/Deus maior/.test(et.pendencia(nivel, "nivel") ?? ""), `sem o deus, o passo Nível deveria ter pendência (${et.pendencia(nivel, "nivel")})`);
+	et.selecionar(deus.id, "Arsenal");
+	({ nivel } = et.calcular());
+	conferir(!et.pendencia(nivel, "nivel"), `com o deus, o passo Nível não deveria ter pendência (${et.pendencia(nivel, "nivel")})`);
+
+	// passo Magias: as 3 da classe (podem ser divinas de 1º círculo) + a divina da Linhagem
+	const vagas = vagasEfetivas(nivel.magias, et.selecoes, null);
+	const daLinhagem = vagas.filter((x) => x.interna);
+	conferir(vagas.length === 4 && daLinhagem.length === 1 && daLinhagem[0].tipos.includes("div") && !daLinhagem[0].tipos.includes("arc") && vagas.every((x) => x.tipos.includes("div")),
+		`vagas: 3 da classe (arcanas ou divinas) + 1 divina da Linhagem (${JSON.stringify(vagas)})`);
+	et.irPara("magias");
+	ctx = await et.contexto();
+	conferir(ctx.vagasTexto.some((t) => /magia divina de 1º círculo \(Linhagem Abençoada/i.test(t)), `passo Magias: a vaga da Linhagem com o título (${ctx.vagasTexto.join(" | ")})`);
+	const ficha = lerFicha(v, { regrasClasses, variantes: variantesDe(progressao) });
+	const lista = magiasDisponiveis(dados, { ...nivel.magias, tipos: tiposDasVagas(nivel.magias, vagas) }, ficha);
+	const divina = lista.find((m) => m.system.tipo === "div" && circuloDe(m) === 1);
+	const arcanas = lista.filter((m) => m.system.tipo === "arc" && circuloDe(m) === 1).slice(0, 3);
+	for (const m of [...arcanas, divina]) et.alternarMagia(m.uuid);
+	conferir(!et.pendencia(nivel), `com as 4 magias, nada pendente (${et.pendencia(nivel)})`);
+	const p = et.planoDoNivel();
+	const ajuste = p.plano?.ajustes?.[abencoada.doc.uuid];
+	conferir(ajuste && /Arsenal/.test(ajuste.anotacao) && ajuste.anotacao.includes(divina.name), `plano: o ajuste da Linhagem anota o deus e a magia (${JSON.stringify(ajuste)})`);
+	et.irPara("revisao");
+	ctx = await et.contexto();
+	conferir(ctx.revisao.some((i) => i.tipo === "Escolha interna" && /Arsenal/.test(i.nome)), `revisão: mostra a escolha interna (${JSON.stringify(ctx.revisao)})`);
+	conferir(paraNomes(et, et.calcular()).selecoes[deus.id]?.texto === "Arsenal", "build: o deus vai para o plano salvo (por texto)");
+
+	const res = await aplicarEscolhas(v, et.escolhasAtuais(), fontes);
+	const item = v.items.find((i) => /Linhagem Abençoada/.test(i.name));
+	const desc = item?.system?.description?.value ?? "";
+	conferir(res.ok && item && /Arsenal/.test(desc) && desc.includes(divina.name) && v.items.some((i) => i.type === "magia" && i.name.endsWith(divina.name)),
+		`ficha: a Linhagem Abençoada com o deus e a magia anotados, e a magia divina na ficha (${JSON.stringify(res)}; ${desc.slice(0, 160)})`);
+
+	// trocar a Linhagem tira o deus e a magia divina que só cabia na vaga dela
+	const et2 = new EtapasNivel(virtualDe(real, "outro"), fontes);
+	et2.escolherClasse("nova:Arcanista");
+	et2.selecionar(caminho.id, feiticeiro.doc.uuid);
+	et2.selecionar(linhagem.id, abencoada.doc.uuid);
+	et2.selecionar(deus.id, "Arsenal");
+	for (const m of [...arcanas, divina]) et2.alternarMagia(m.uuid);
+	const draconica = linhagem.opcoes.find((o) => /drac/i.test(o.nome));
+	et2.selecionar(linhagem.id, draconica.doc.uuid);
+	conferir(et2.selecoes[deus.id] === undefined && !et2.magias.includes(divina.uuid) && et2.magias.length === 3,
+		`trocar para a Dracônica: sai o deus e a magia divina (${JSON.stringify({ deus: et2.selecoes[deus.id], magias: et2.magias.length })})`);
+	const tipoDano = et2.calcular().nivel.internas.find((i) => i.poder === draconica.nome && i.tipo === "opcao");
+	et2.selecionar(tipoDano.id, "fogo");
+	const p2 = et2.planoDoNivel();
+	conferir(p2.plano?.ajustes?.[draconica.doc.uuid]?.resistencia === "fogo", `Dracônica: redução de dano a fogo no ajuste (${JSON.stringify(p2.plano?.ajustes ?? p2)})`);
+	const v2 = et2.actor;
+	await aplicarEscolhas(v2, et2.escolhasAtuais(), fontes);
+	const drac = v2.items.find((i) => /Linhagem Dracônica/.test(i.name));
+	conferir((drac?.effects ?? []).some((e) => (e.system?.changes ?? e.changes ?? []).some((c) => c.key === "system.tracos.resistencias.fogo.bonus")),
+		"ficha: a Linhagem Dracônica com a redução de dano a fogo no efeito");
+	console.log("  ✓ conferido (deus, magia divina, revisão, build, gravação e troca de linhagem)");
 }
 
 /* ---------- 7. Plano de builds: árvore, validação e a janela preenchida pelo plano ---------- */

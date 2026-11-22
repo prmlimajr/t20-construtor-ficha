@@ -183,15 +183,56 @@ export function montarNivel({
 
 	const ganhaPoder = (prog.poder?.niveis ?? []).includes(nivelClasse);
 	const magias = magiasDoNivel(prog, ficha, nivelClasse, regrasPoderesClasse, { classe: classe.nome, inicial: nova ? regra?.conjurador?.quantidade ?? 0 : null });
+
+	// escolhas internas dos poderes que entram agora (data/poderes-classe.json), como no construtor:
+	// ex.: Linhagem Abençoada → deus maior + uma magia divina de 1º círculo; Linhagem Dracônica → tipo de dano.
+	// "opcao" é escolhida no passo Nível; "magias" vira uma vaga a mais no passo Magias.
+	const internas = [];
+	const vagasInternas = new Map(); // uuid da opção (ou "" para habilidade fixa) → vagas
+	const comInternas = [
+		...habilidades.filter((h) => h.doc && !h.jaTem).map((h) => ({ doc: h.doc, requer: null })),
+		...escolhas.flatMap((e) => e.opcoes.map((o) => ({ doc: o.doc, requer: { id: e.id, uuid: o.doc.uuid } })))
+	];
+	for (const { doc, requer } of comInternas) {
+		const base = regrasPoderesClasse[doc.name];
+		if (!base) continue;
+		for (const r of [base, ...(base.extras ?? [])]) {
+			if (r.tipo === "opcao" && r.opcoes?.length) {
+				internas.push({ id: r.id, tipo: "opcao", titulo: r.titulo, poder: doc.name, doc, regra: r, requer, opcoes: r.opcoes.map((o) => ({ valor: o.valor, nome: o.nome })) });
+			} else if (r.tipo === "magias" && magias) {
+				internas.push({ id: r.id, tipo: "magias", titulo: r.titulo, poder: doc.name, doc, regra: r, requer });
+				const vagas = Array.from({ length: r.quantidade ?? 1 }, () => ({
+					...(r.circulo ? { circulo: r.circulo } : { ate: magias.circulo }),
+					...(r.tiposMagia ? { tipos: r.tiposMagia } : {}),
+					...(r.escolas ? { escolasVaga: r.escolas } : {}),
+					motivo: doc.name, titulo: r.titulo, interna: { uuid: doc.uuid, id: r.id }
+				}));
+				const chave = requer?.uuid ?? "";
+				vagasInternas.set(chave, [...(vagasInternas.get(chave) ?? []), ...vagas]);
+			}
+		}
+	}
+
 	if (magias) {
 		// atributo-chave das magias desta classe: o da escolha que a ficha tem (Caminho), o da classe, o da ficha
 		const daEscolha = (regra?.escolhas ?? []).flatMap((e) => e.opcoes).find((o) => o.conjuracao && ficha.temPoder(o.poder))?.conjuracao;
 		magias.atributo = daEscolha ?? regra?.conjurador?.atributo ?? ficha.conjuracao ?? null;
-		// classe nova: o Caminho escolhido agora muda o atributo e pode dar magias a mais (Mago)
+		// classe nova: o Caminho escolhido agora muda o atributo e pode dar magias a mais (Mago); a Linhagem
+		// escolhida agora pode abrir outros tipos de magia (Abençoada: divinas) e trazer a magia dela
 		magias.porEscolha = {};
 		for (const e of escolhas) for (const o of e.opcoes) {
-			if (o.conjuracao || o.magiasExtra) magias.porEscolha[o.doc.uuid] = { atributo: o.conjuracao, extra: o.magiasExtra };
+			const tipos = regrasPoderesClasse[o.nome]?.tiposMagiaExtras ?? null;
+			const vagas = vagasInternas.get(o.doc.uuid) ?? [];
+			if (o.conjuracao || o.magiasExtra || tipos || vagas.length) {
+				magias.porEscolha[o.doc.uuid] = { atributo: o.conjuracao, extra: o.magiasExtra, ...(tipos ? { tipos } : {}), ...(vagas.length ? { vagas } : {}) };
+			}
 		}
+		// habilidades fixas que entram agora: tipos extras e as magias delas valem sem escolha
+		for (const h of habilidades) {
+			const tipos = h.doc && !h.jaTem ? regrasPoderesClasse[h.doc.name]?.tiposMagiaExtras : null;
+			if (tipos) magias.tipos = [...new Set([...magias.tipos, ...tipos])];
+		}
+		magias.vagasFixas = vagasInternas.get("") ?? [];
 	}
 	// Usurpar e afins: todas as magias do círculo novo entram sozinhas
 	if (magias?.todas && magias.circuloNovo) magias.automaticas = magiasDisponiveis(dados, magias, ficha).filter((m) => circuloDe(m) === magias.circuloNovo);
@@ -230,8 +271,13 @@ export function montarNivel({
 	if (nova) {
 		notas.push(`Multiclasse: o 1º nível de ${classe.nome} dá os PV de um nível seguinte e não dá as perícias treinadas nem as proficiências da classe.`);
 		if (regra?.devocao?.obrigatoria && !ficha.divindade) notas.push(`${classe.nome}s precisam ser devotos: defina a divindade e os poderes concedidos na ficha.`);
+		// as escolhas que o assistente pede (opção e magias) não entram na nota
+		const pedidas = new Set(internas.map((i) => i.regra));
 		const pedemEscolha = [...habilidades.map((h) => h.nome), ...escolhas.flatMap((e) => e.opcoes.map((o) => o.nome))]
-			.filter((n) => regrasPoderesClasse[n]?.tipo || regrasPoderesClasse[n]?.extras);
+			.filter((n) => {
+				const r = regrasPoderesClasse[n];
+				return r && [r, ...(r.extras ?? [])].some((x) => x.tipo && !pedidas.has(x));
+			});
 		if (pedemEscolha.length) notas.push(`Escolhas internas que o assistente não pede (complete na ficha): ${pedemEscolha.join(", ")}.`);
 	}
 
@@ -267,6 +313,7 @@ export function montarNivel({
 		valores,
 		escolhas,
 		anotadas,
+		internas,
 		// habilidades da tabela que não têm item em nenhum compêndio (só aviso: consultar o livro)
 		ausentes: entrada.ausentes ?? [],
 		magias,
@@ -300,6 +347,7 @@ export function pendenciaNivel(nivel, { poder = null, selecoes = {}, magias = []
 		}
 	}
 	for (const a of nivel.anotadas ?? []) if (!a.opcoes.includes(selecoes[a.id])) faltam.push(a.titulo);
+	for (const i of internasAtivas(nivel, selecoes, "opcao")) if (!i.opcoes.some((o) => o.valor === selecoes[i.id])) faltam.push(`${i.titulo} (${i.poder})`);
 	if (nivel.ganhaPoder && !poder?.disponivel) faltam.push("um poder");
 	return faltam.length ? `Escolha: ${faltam.join(", ")}.` : null;
 }
@@ -309,6 +357,8 @@ export function montarPlano(nivel, { classeId, poder = null, anotacao = "", sele
 	const concedido = poder?.disponivel && poder.concede ? [{ doc: poder.concede }] : [];
 	const m = nivel.magias;
 	return {
+		// escolhas internas dos poderes (deus da Linhagem Abençoada, magia dela…): ajustes por uuid do poder
+		ajustes: ajustesInternos(nivel, selecoes, magias, poder),
 		classe: nivel.classe,
 		classeNova: nivel.classeNova,
 		atributoMagia: m ? atributoEfetivo(m, selecoes) : null,
@@ -401,10 +451,11 @@ export function magiasDisponiveis(dados, m, ficha, escolhidas = null) {
 		.sort((a, b) => circuloDe(a) - circuloDe(b) || a.name.localeCompare(b.name, "pt-BR"));
 }
 
-const textoVaga = (v) => `${v.circulo ? `1 magia de ${v.circulo}º círculo` : `1 magia de até ${v.ate}º círculo`}${v.motivo ? ` (${v.motivo})` : ""}`;
+const textoVaga = (v) => `${v.titulo ? `1 ${v.titulo.charAt(0).toLowerCase()}${v.titulo.slice(1)}` : v.circulo ? `1 magia de ${v.circulo}º círculo` : `1 magia de até ${v.ate}º círculo`}${v.motivo ? ` (${v.motivo})` : ""}`;
 
 /** A magia cabe na vaga? (círculo exato ou até o círculo, e o tipo, se a vaga restringir) */
-const cabe = (v, mag) => (v.circulo ? v.circulo === circuloDe(mag) : circuloDe(mag) <= v.ate) && (!v.tipos || v.tipos.includes(mag.system?.tipo));
+const cabe = (v, mag) => (v.circulo ? v.circulo === circuloDe(mag) : circuloDe(mag) <= v.ate) && (!v.tipos || v.tipos.includes(mag.system?.tipo))
+	&& (!v.escolasVaga || v.escolasVaga.includes(mag.system?.escola));
 
 /**
  * Distribui as magias escolhidas nas vagas. Emparelhamento máximo (caminhos aumentantes): uma magia
@@ -424,7 +475,7 @@ export function conferirVagas(vagas, magias) {
 	let usadas = 0;
 	for (let i = 0; i < magias.length; i++) if (tentar(i, new Set())) usadas++;
 	const livres = vagas.filter((_, j) => donoDaVaga[j] < 0);
-	return { ok: !livres.length && usadas === magias.length, faltam: livres.map(textoVaga), sobram: magias.length - usadas };
+	return { ok: !livres.length && usadas === magias.length, faltam: livres.map(textoVaga), sobram: magias.length - usadas, atribuicao: donoDaVaga };
 }
 
 /* ---------- Multiclasse ---------- */
@@ -446,6 +497,55 @@ function escolhasDeClasse(regra) {
 	});
 }
 
+/**
+ * Escolhas internas valendo: as das habilidades fixas e as da opção escolhida (numa escolha que vale).
+ * @param {"opcao"|"magias"|null} [tipo]
+ */
+export function internasAtivas(nivel, selecoes = {}, tipo = null) {
+	return (nivel.internas ?? []).filter((i) => {
+		if (tipo && i.tipo !== tipo) return false;
+		if (!i.requer) return true;
+		const e = (nivel.escolhas ?? []).find((x) => x.id === i.requer.id);
+		return !!e && escolhaAtiva(e, selecoes) && selecoes[i.requer.id] === i.requer.uuid;
+	});
+}
+
+/**
+ * O que as escolhas internas mudam nos poderes (o mesmo formato dos ajustes do construtor, aplicar.js):
+ * { [uuid do poder]: { anotacao, resistencia/valor, imunidade, bonusPericias/bonus, nomesMagias } }.
+ * A magia de uma vaga interna é a que o emparelhamento das vagas pôs nela.
+ */
+export function ajustesInternos(nivel, selecoes = {}, magias = [], poder = null) {
+	const out = {};
+	const ajustar = (uuid, dados, texto) => {
+		const a = (out[uuid] ??= {});
+		Object.assign(a, dados);
+		if (texto) a.anotacao = a.anotacao ? `${a.anotacao}; ${texto}` : texto;
+	};
+	for (const i of internasAtivas(nivel, selecoes, "opcao")) {
+		const o = i.opcoes.find((x) => x.valor === selecoes[i.id]);
+		if (!o) continue;
+		const r = i.regra;
+		const dados = r.efeito === "nenhum" ? {}
+			: r.efeito === "imunidade" ? { imunidade: o.valor }
+				: r.efeito === "pericia" ? { bonusPericias: [o.valor], bonus: r.valor }
+					: { resistencia: o.valor, valor: r.valor };
+		ajustar(i.doc.uuid, dados, `${i.titulo.replace(/\s*\(.*\)\s*$/, "")}: ${o.nome}`);
+	}
+	if (nivel.magias && magias.length) {
+		const vagas = vagasEfetivas(nivel.magias, selecoes, poder);
+		const { atribuicao } = conferirVagas(vagas, magias);
+		const porPoder = new Map();
+		vagas.forEach((v, j) => {
+			if (!v.interna || atribuicao[j] < 0) return;
+			const lista = porPoder.get(v.interna.uuid) ?? porPoder.set(v.interna.uuid, []).get(v.interna.uuid);
+			lista.push(magias[atribuicao[j]].name);
+		});
+		for (const [uuid, nomes] of porPoder) ajustar(uuid, { nomesMagias: nomes }, `Magia: ${nomes.join(", ")}`);
+	}
+	return out;
+}
+
 /** A escolha está valendo? (as que dependem de outra só valem com a opção certa escolhida) */
 export function escolhaAtiva(e, selecoes = {}) {
 	return !e.requer || selecoes[e.requer.id] === e.requer.uuid;
@@ -457,14 +557,20 @@ export function escolhaAtiva(e, selecoes = {}) {
  */
 export function vagasEfetivas(m, selecoes = {}, poder = null) {
 	if (!m) return [];
-	const extra = Object.entries(m.porEscolha ?? {}).filter(([u]) => Object.values(selecoes).includes(u)).reduce((n, [, x]) => n + (x.extra ?? 0), 0);
+	const escolhidas = Object.entries(m.porEscolha ?? {}).filter(([u]) => Object.values(selecoes).includes(u)).map(([, x]) => x);
+	const extra = escolhidas.reduce((n, x) => n + (x.extra ?? 0), 0);
+	// a Linhagem escolhida agora pode abrir outros tipos (Abençoada: divinas) para as vagas da classe
+	const tiposClasse = [...new Set([...m.tipos, ...escolhidas.flatMap((x) => x.tipos ?? [])])];
+	// vagas das escolhas internas (magia da Linhagem): das habilidades fixas e da opção escolhida
+	const internas = [...(m.vagasFixas ?? []), ...escolhidas.flatMap((x) => x.vagas ?? [])].map((v) => ({ ...v, tipos: v.tipos ?? tiposClasse }));
 	// classe que já aprende todas as magias (Usurpar) não tem o que aprender com o poder
 	const doPoder = poder?.disponivel && m.circulo && !m.todas ? poder.magias : null;
 	// cada vaga diz os tipos que aceita: os da classe, ou os do poder (Aumentar Repertório: arcanas ou divinas)
-	const tiposPoder = doPoder?.tipos ? [...new Set([...m.tipos, ...doPoder.tipos])] : m.tipos;
+	const tiposPoder = doPoder?.tipos ? [...new Set([...tiposClasse, ...doPoder.tipos])] : tiposClasse;
 	const daClasse = [
-		...m.vagas.map((v) => ({ ...v, tipos: m.tipos })),
-		...Array.from({ length: m.vagas.length ? extra : 0 }, () => ({ ate: m.circulo, tipos: m.tipos }))
+		...m.vagas.map((v) => ({ ...v, tipos: tiposClasse })),
+		...Array.from({ length: m.vagas.length ? extra : 0 }, () => ({ ate: m.circulo, tipos: tiposClasse })),
+		...internas
 	];
 	// o poder pode ser escolhido sempre, mas só abre as vagas que ainda dá para preencher
 	const qtdPoder = doPoder ? (doPoder.livres == null ? doPoder.qtd : Math.min(doPoder.qtd, Math.max(0, doPoder.livres - daClasse.length))) : 0;

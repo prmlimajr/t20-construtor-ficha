@@ -3,7 +3,7 @@
  * flags.t20-construtor-ficha.niveis para o "Desfazer último nível".
  */
 import { MODULE_ID, normalizar } from "./regras.js";
-import { doCompendio } from "./aplicar.js";
+import { doCompendio, ajustarPoderRacial } from "./aplicar.js";
 import { nomeBase } from "./ficha-atual.js";
 
 /** Os poderes de classe da criação usam sort 600000+ (grupo "1"); cada nível vem depois do anterior. */
@@ -99,7 +99,8 @@ export function podeDesfazer(actor) {
  *   valores: [{nome, para, modo}],         valores da tabela em habilidades que a ficha já tem
  *   poder: doc|null, anotacao,             poder escolhido e a anotação dele
  *   magias: [doc],                         magias novas
- *   escolasMagia: [chave]|null }           escolas de magia escolhidas agora (ficha sem as escolas gravadas)
+ *   escolasMagia: [chave]|null,            escolas de magia escolhidas agora (ficha sem as escolas gravadas)
+ *   ajustes: {uuid: ajuste} }              escolhas internas dos poderes novos (deus da Linhagem Abençoada…)
  */
 export async function aplicarNivel(actor, plano) {
 	const classeExistente = plano.classeNova ? null : actor.items.get(plano.classeId);
@@ -114,6 +115,13 @@ export async function aplicarNivel(actor, plano) {
 	const adicionar = (doc, { anotacao = "", valor = null, modo = null, corrigir = null } = {}) => {
 		const data = doCompendio(doc);
 		if (corrigir) corrigirFormulas(data, corrigir);
+		// escolha interna do poder (como no construtor): efeitos ajustados e a escolha anotada na descrição
+		const ajuste = plano.ajustes?.[doc.uuid];
+		if (ajuste) {
+			const { anotacao: escolha, ...efeitos } = ajuste;
+			ajustarPoderRacial(data, efeitos);
+			if (escolha) anotacao = anotacao?.trim() ? `${escolha}; ${anotacao}` : escolha;
+		}
 		data.name = `${n} - ${doc.name}`;
 		data.sort = SORT_CLASSE + n * 1000 + itens.length * 10;
 		if (anotacao?.trim()) foundry.utils.setProperty(data, CAMPO_DESCRICAO, comAnotacao(foundry.utils.getProperty(data, CAMPO_DESCRICAO), anotacao, n));
