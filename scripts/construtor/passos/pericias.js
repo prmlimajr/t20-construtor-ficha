@@ -88,14 +88,16 @@ export class Tela {
 			const atual = e.periciasOu[i] || "";
 			secoes.push(secao({
 				titulo: "Escolha uma", campo: `periciasOu.${i}`, escolhidas: atual ? [atual] : [],
-				opcoes: ordenarPericias(expandirPericias(g)).filter((k) => k !== atual), qtd: 1,
+				// sem as já escolhidas em outra seção (da classe, por Inteligência)
+				opcoes: ordenarPericias(expandirPericias(g)).filter((k) => k !== atual && !e.periciasClasse.includes(k) && !e.periciasInt.includes(k)), qtd: 1,
 				tituloSlideout: "Escolha uma perícia"
 			}));
 		});
 		const jaClasse = this.periciasTreinadas({ ate: "classe" });
 		secoes.push(secao({
 			titulo: `Perícias da classe`, campo: "periciasClasse", escolhidas: e.periciasClasse,
-			opcoes: ordenarPericias(expandirPericias(r.opcoes)).filter((k) => !jaClasse.has(k)), qtd: r.numero,
+			// sem as já treinadas e sem as escolhidas por Inteligência (a mesma perícia não vale duas vezes)
+			opcoes: ordenarPericias(expandirPericias(r.opcoes)).filter((k) => !jaClasse.has(k) && !e.periciasInt.includes(k)), qtd: r.numero,
 			tituloSlideout: "Escolha uma perícia da classe"
 		}));
 		const jaInt = this.periciasTreinadas({ ate: "int" });
