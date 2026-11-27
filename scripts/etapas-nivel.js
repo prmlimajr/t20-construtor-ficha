@@ -9,7 +9,7 @@ import { poderSelecionavel, fonteDe } from "./dados.js";
 import { MODULE_ID } from "./regras.js";
 import { lerFicha } from "./ficha-atual.js";
 import { poderRacialPermitido } from "./poderes-raciais.js";
-import { poderDistincaoPermitido, ehPoderDeDistincao, distincaoDoPoder } from "./distincoes.js";
+import { poderDistincaoPermitido, ehPoderDeDistincao, distincaoDoPoder, ehMarca } from "./distincoes.js";
 import {
 	montarNivel, pendenciaNivel, montarPlano, variantesDe, classesParaSubir, vagasEfetivas, progressaoDe,
 	magiasDisponiveis, escolasEfetivas, conferirVagas, circuloDe, tiposDasVagas, internasAtivas, escolhaAtiva
@@ -114,6 +114,7 @@ export class EtapasNivel {
 			regrasPoderesClasse: this.dados.regrasPoderesClasse,
 			regrasClasses: this.dados.regrasClasses,
 			aumentoPorPatamar: this.aumentoPorPatamar ?? homebrewAumento(),
+			marcasDistincao: this.dados.poderes.filter((p) => p.substituto && p.distincao && ehMarca(p)),
 			// poderes de distinção: só para quem tem a marca, e para quem tem, sempre (mesmo com a chave
 			// "Poderes" do suplemento desligada: a marca foi posta na ficha pelo mestre)
 			selecionavel: (p) => (distincaoDoPoder(this.dados, p) || poderSelecionavel(this.dados, p))
@@ -152,7 +153,7 @@ export class EtapasNivel {
 	/** Pendência de um passo (ou de tudo, sem passo). */
 	pendencia(nivel, passo = null) {
 		if (passo === "classe") return null;
-		const ctx = { poder: this.poderEscolhido(nivel), selecoes: this.selecoes, magias: this.magiasEscolhidas(), escolas: this.escolas };
+		const ctx = { poder: this.poderEscolhido(nivel), selecoes: this.selecoes, magias: this.magiasEscolhidas(), escolas: this.escolas, anotacao: this.anotacao };
 		const so = {
 			nivel: { ...nivel, magias: null, ganhaPoder: false },
 			poder: { ...nivel, escolhas: [], anotadas: [], internas: [], magias: null },
@@ -304,6 +305,7 @@ export class EtapasNivel {
 			return {
 				id: e.id,
 				titulo: e.titulo,
+				...(e.opcional ? { opcional: true } : {}),
 				// "Caminho do Cavaleiro: Bastião" → "Bastião" (o título já diz qual é a escolha)
 				opcoes: e.opcoes.map((o) => ({
 					valor: o.doc.uuid, nome: o.nome.replace(new RegExp(`^${e.titulo}:\\s*`, "i"), ""), selecionado: o === marcada,
@@ -409,12 +411,18 @@ export class EtapasNivel {
 			avisos: escolhida.avisos,
 			jaTem: escolhida.jaTem,
 			concede: escolhida.concede?.name ?? null,
+			// ditames do místico: magias que entram na ficha junto com o poder (as já conhecidas ficam de fora)
+			...(escolhida.magiasConcedidas?.length ? { magiasConcedidas: escolhida.magiasConcedidas.map((m) => m.name).join(", ") } : {}),
+			...(escolhida.magiasJaConhecidas?.length ? { magiasJaConhecidas: escolhida.magiasJaConhecidas.join(", ") } : {}),
 			// poderes que ensinam magias: a escolha são as próprias magias (passo Magias), sem anotação
 			// restam menos magias para aprender do que o poder ensina: as vagas abertas são só as que dá para preencher
 			avisoMagias: escolhida.magias && escolhida.magias.livres != null && vagasEfetivas(nivel.magias, this.selecoes, escolhida).filter((v) => v.motivo === escolhida.nome).length < escolhida.magias.qtd
 				? `Restam poucas magias para aprender: este poder abre só ${vagasEfetivas(nivel.magias, this.selecoes, escolhida).filter((v) => v.motivo === escolhida.nome).length} de ${escolhida.magias.qtd} vagas.` : null,
+			// poder com escolha de lista (Afinidade Maior, Pacto Elemental): a anotação é a opção escolhida
+			...(escolhida.escolhaPoder ? { escolhaPoder: { titulo: escolhida.escolhaPoder.titulo, opcoes: escolhida.escolhaPoder.opcoes.map((o) => ({ nome: o.nome, selecionada: o.nome === this.anotacao })) } } : {}),
+			...(escolhida.notaAuto ? { notaAuto: escolhida.notaAuto } : {}),
 			// Aumento de Atributo: o atributo já está no próprio poder ("Aumento de Atributo (Força)"), sem anotação
-			pedeEscolha: !escolhida.magias && !/^Aumento de Atributo \(/.test(escolhida.nome) && (escolhida.repetivel || /\bescolha\b/i.test(escolhida.doc.system?.description?.value ?? "")),
+			pedeEscolha: !escolhida.escolhaPoder && !escolhida.magias && !/^Aumento de Atributo \(/.test(escolhida.nome) && (escolhida.repetivel || /\bescolha\b/i.test(escolhida.doc.system?.description?.value ?? "")),
 			descricao: await this.descricao(escolhida.doc)
 		};
 	}
@@ -582,6 +590,12 @@ export class EtapasNivel {
 
 	/** Escolha do nível (Caminho do Cavaleiro, terreno do Explorador…). */
 	selecionar(id, valor) {
+		// escolha opcional (admissão em distinção): clicar de novo na opção marcada desfaz
+		const { nivel: atual } = this.calcular();
+		if (atual?.escolhas?.find((e) => e.id === id)?.opcional && this.selecoes[id] === valor) {
+			delete this.selecoes[id];
+			return;
+		}
 		this.selecoes[id] = valor;
 		// trocar uma opção (ex.: Caminho, Linhagem) tira as escolhas que dependiam da anterior
 		const { nivel } = this.calcular();

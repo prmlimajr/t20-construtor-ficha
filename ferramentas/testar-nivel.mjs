@@ -192,14 +192,13 @@ const caminhoSup = path.join(aqui, ".cache/suplemento.json");
 const sup = fs.existsSync(caminhoSup) ? JSON.parse(fs.readFileSync(caminhoSup, "utf8")) : null;
 // poderes e classes definidos pelo próprio construtor (dados.js), na mesma ordem que o módulo monta:
 // sistema, construtor (não exclusivos), suplemento (sem os substituídos), construtor exclusivos
-const { poderesSubstitutos, classesDoConstrutor } = await import("../scripts/dados.js");
+const { poderesSubstitutos, classesDoConstrutor, poderesMantidosDoSuplemento } = await import("../scripts/dados.js");
 const poderesSup = (sup?.itens ?? []).filter((i) => i.type === "poder");
 const doConstrutor = poderesSubstitutos({ ligado: !!sup, poderes: poderesSup });
-const substituidos = new Set(doConstrutor.filter((p) => p.substituiSuplemento).map((p) => p.name));
 const poderes = [
 	...lerPack("poderes"),
 	...doConstrutor.filter((p) => !p.exclusivo),
-	...poderesSup.filter((p) => !substituidos.has(p.name)),
+	...poderesMantidosDoSuplemento(poderesSup, doConstrutor),
 	...doConstrutor.filter((p) => p.exclusivo)
 ];
 const classesSistema = lerPack("classes");
@@ -289,6 +288,7 @@ async function subirClasse(nomeClasse, variacao = {}) {
 	let escolasEscolhidas = null;
 	let magiasNovas = 0;
 	let magiasDePoderes = 0; // vagas dadas por poderes escolhidos (Conhecimento Mágico, Aumentar Repertório)
+	let magiasDeDitames = 0; // magias que entram sozinhas com os ditames do místico
 	const resumo = [];
 	let desfazerTestado = false;
 
@@ -348,12 +348,16 @@ async function subirClasse(nomeClasse, variacao = {}) {
 		}
 		if (VERBOSO && r.ganhaPoder && !disponiveis.length) console.log(`  ${String(n).padStart(2)}: sem poder de ${nomeClasse} disponível; escolhe o geral ${poder?.nome}`);
 		if (r.ganhaPoder) conferir(poder, `${nomeClasse} ${n}: nenhum poder disponível`);
-		const tudo = { poder, selecoes, magias, escolas: escolasEscolhidas };
+		// poder com escolha de lista (Afinidade Maior, Pacto Elemental): a 1ª opção vira a anotação
+		const anotacao = poder?.escolhaPoder ? poder.escolhaPoder.opcoes[0]?.nome ?? "" : poder?.repetivel ? "teste" : "";
+		const tudo = { poder, selecoes, magias, escolas: escolasEscolhidas, anotacao };
 		conferir(!pendenciaNivel(r, tudo), `${titulo} ${n}: pendência com tudo escolhido: ${pendenciaNivel(r, tudo)}`);
 		conferir(pendenciaNivel(r, { poder: null, selecoes: {} }) || (!r.ganhaPoder && !r.escolhas.length && !r.anotadas.length),
 			`${nomeClasse} ${n}: deveria haver pendência sem escolhas`);
 
-		const plano = montarPlano(r, { classeId: ficha.classes[0].id, poder, selecoes, magias, escolas: escolasEscolhidas, anotacao: poder?.repetivel ? "teste" : "" });
+		const plano = montarPlano(r, { classeId: ficha.classes[0].id, poder, selecoes, magias, escolas: escolasEscolhidas, anotacao });
+		// magias que os ditames do místico trazem (do poder escolhido e dos que a ficha já tem)
+		magiasDeDitames += plano.magias.length - magias.length - (r.magias?.automaticas?.length ?? 0);
 		const antes = fotografia(ator);
 		await aplicarNivel(ator, plano);
 		await aplicarNivel(sombra, plano);
@@ -427,7 +431,7 @@ async function subirClasse(nomeClasse, variacao = {}) {
 	if (variacao.magias !== undefined) {
 		const naFicha = ator.items.filter((i) => i.type === "magia");
 		const esperadas = variacao.magias + magiasDePoderes;
-		conferir(magiasNovas === esperadas && naFicha.length === esperadas, `${titulo}: ${naFicha.length} magias na ficha (${magiasNovas} escolhidas), esperado ${esperadas} (${magiasDePoderes} de poderes)`);
+		conferir(magiasNovas === esperadas && naFicha.length === esperadas + magiasDeDitames, `${titulo}: ${naFicha.length} magias na ficha (${magiasNovas} escolhidas, ${magiasDeDitames} de ditames), esperado ${esperadas} (${magiasDePoderes} de poderes)`);
 		conferir(new Set(naFicha.map((m) => m.name)).size === naFicha.length, `${titulo}: magia repetida na ficha`);
 		const maxCirculo = Math.max(0, ...naFicha.map((m) => circuloDe(m)));
 		const esperado = Math.max(...Object.values(prog.magias.circulos));
@@ -669,6 +673,168 @@ for (const c of classes) {
 		ok(cm2.magias.livres > 2 && vagasEfetivas(r2.magias, {}, { ...cm2, magias: { ...cm2.magias, livres: 1 } }).length === 1
 			&& vagasEfetivas(r2.magias, {}, { ...cm2, magias: { ...cm2.magias, livres: 0 } }).length === 0, "com só 1 (ou 0) magia para aprender, o poder abre 1 (ou 0) vaga: o nível não trava");
 	}
+}
+
+/* ---------- 4b. Místico (nova versão, origem-mistico.pdf) ---------- */
+if (sup) {
+	console.log("\nMístico (nova versão):");
+	const variantes = variantesDe(progressao);
+	const doc = (nome) => dados.poderes.find((p) => p.name === nome && p.system?.subtipo === "Místico") ?? dados.poderesPorNome.get(normalizar(nome));
+	const ok = (cond, msg) => { if (conferir(cond, msg)) console.log(`  ✓ ${msg}`); };
+	/** Místico no nível n, com o elemento anotado na Afinidade (como o construtor grava) e poderes extras. */
+	const mistico = async (n, { elemento = "Água (frio)", extras = [], notas = {}, flags = {} } = {}) => {
+		const habilidades = ["Afinidade Elemental", "Combate Elemental", "Magias (Místico)", ...extras].map(doc);
+		const a = novoAtor("Místico", habilidades.filter(Boolean), flags);
+		const anotar = async (nome, texto) => {
+			const item = a.items.find((i) => nomeBase(i.name) === nome);
+			await item.update({ "system.description.value": `<p><strong>Escolha (construtor):</strong> ${texto}</p>${item.system.description.value}` });
+		};
+		if (elemento) await anotar("Afinidade Elemental", elemento);
+		for (const [nome, texto] of Object.entries(notas)) await anotar(nome, texto);
+		a.items.find((i) => i.type === "classe").system.niveis = n;
+		a.reset();
+		return a;
+	};
+	const calcular = (a) => {
+		const ficha = lerFicha(a, { regrasClasses, variantes });
+		return { ficha, r: montarNivel({ dados, progressao, ficha, classe: ficha.classes[0], lerPreRequisito, regrasPoderesClasse, regrasClasses }) };
+	};
+	const opcaoDe = (r, nome) => r.poderesClasse.find((o) => o.nome === nome);
+
+	{
+		const { r } = calcular(await mistico(1));
+		const nomes = r.poderesClasse.map((o) => o.nome);
+		ok(["Ataque Elemental", "Golpe Ardente", "Pacto Mágico", "Manifestações Elementais", "Escavador", "Elementalismo Marcial"].every((n) => !nomes.includes(n)), "os poderes do místico antigo saem da lista");
+		ok(["Absorver Elemento", "Escavadeira", "Frenesi Elemental", "Contramágica Poderosa", "Busca Mágica", "Familiar Elemental", "Aumento de Atributo (Sabedoria)"].every((n) => nomes.includes(n)), "os poderes novos (e o Aumento de Atributo) entram na lista");
+		ok(dados.poderesPorNome.get(normalizar("Familiar Elemental"))?.system?.tipo === "concedido", "Familiar Elemental de Wynna continua valendo pelo nome");
+		ok(!opcaoDe(r, "Andar pelas Paredes").disponivel && opcaoDe(r, "Empuxo").disponivel, "Afinidade (água): Andar pelas Paredes (terra) bloqueado, Empuxo (água ou ar) liberado");
+		ok(!opcaoDe(r, "Pacto Elemental").disponivel && !opcaoDe(r, "Ditame dos Portais").disponivel, "6º nível de místico confere o nível");
+	}
+	{
+		const { r } = calcular(await mistico(1, { elemento: null }));
+		const o = opcaoDe(r, "Andar pelas Paredes");
+		ok(o.disponivel && o.avisos.some((x) => /Afinidade Elemental \(terra\)/.test(x)), "sem o elemento anotado: libera com aviso");
+	}
+	{
+		// Ditame das Chamas escolhido no 6º nível: Explosão de Chamas e Controlar Fogo; Muralha Elemental no 10º
+		const a = await mistico(5, { elemento: "Fogo (fogo)" });
+		const { r } = calcular(a);
+		const op = opcaoDe(r, "Ditame das Chamas");
+		ok(op.disponivel && op.magiasConcedidas.map((m) => m.name).join(",") === "Explosão de Chamas,Controlar Fogo", "Ditame das Chamas no 6º: Explosão de Chamas e Controlar Fogo");
+		const plano = montarPlano(r, { classeId: lerFicha(a, { regrasClasses, variantes }).classes[0].id, poder: op, selecoes: { afinidadeEvoluida: r.escolhas[0]?.opcoes[0].doc.uuid }, magias: [] });
+		ok(plano.magias.map((m) => m.name).join(",") === "Explosão de Chamas,Controlar Fogo", "as magias do ditame entram no plano");
+		const b = await mistico(9, { elemento: "Fogo (fogo)", extras: ["Ditame das Chamas"] });
+		const r10 = calcular(b).r;
+		ok(r10.magiasDePoderes.map((x) => x.doc.name).join(",") === "Muralha Elemental" && r10.notas.some((n) => /Muralha Elemental entra na ficha/.test(n)), "com o ditame na ficha, Muralha Elemental entra no 10º");
+		const r9 = calcular(await mistico(8, { elemento: "Fogo (fogo)", extras: ["Ditame das Chamas"] })).r;
+		ok(!r9.magiasDePoderes.length, "no 9º, nada do ditame");
+	}
+	{
+		const { r } = calcular(await mistico(5));
+		ok(r.escolhas[0]?.titulo === "Afinidade Evoluída" && r.internas.some((i) => i.id === "afinidadeExpandida"), "6º nível: Afinidade Evoluída, e a Expandida pede o segundo elemento");
+		const valores = Object.fromEntries(r.valores.map((v) => [v.nome, v.para]));
+		ok(valores["Combate Elemental"] === "+2d6", "6º nível: Combate Elemental +2d6");
+		// Afinidade Expandida com o ar: redução, perícia treinada (Enganação) e a escola (ilusão) gravadas
+		const expandida = r.escolhas[0].opcoes.find((o) => o.nome === "Afinidade Expandida").doc;
+		const sel = { afinidadeEvoluida: expandida.uuid, afinidadeExpandida: "eletricidade" };
+		const plano = montarPlano(r, { classeId: "x", selecoes: sel, poder: opcaoDe(r, "Corpo Elemental"), magias: [] });
+		const aj = plano.ajustes[expandida.uuid];
+		ok(aj?.resistencia === "eletricidade" && aj.treinar?.join() === "enga", "Afinidade Expandida (ar): redução de eletricidade e treinado em Enganação");
+	}
+	{
+		// escolas: as gravadas (evocação, encantamento, convocação) mais a do segundo elemento (ar: ilusão)
+		const a = await mistico(9, { extras: ["Afinidade Expandida"], notas: { "Afinidade Expandida": "Segundo elemento da Afinidade: Ar (eletricidade; Combate Elemental: ofuscado)" }, flags: { escolasMagia: ["evo", "enc", "con"] } });
+		const { ficha, r } = calcular(a);
+		ok([...ficha.afinidade.elementos].sort().join() === "agua,ar", "a ficha lê os dois elementos anotados");
+		ok(["evo", "enc", "con", "ilu"].every((k) => r.magias.escolasFicha.includes(k)) && !pendenciaNivel(r, { poder: opcaoDe(r, "Corpo Elemental"), magias: [] })?.includes("escolas"), "a escola do segundo elemento (ilusão) vale, sem pedir escolas de novo");
+		ok(opcaoDe(r, "Perícia Mística").ajusteAuto?.bonusPericias?.join() === "dipl,enga", "Perícia Mística: bônus fixo em Diplomacia e Enganação (perícias dos elementos)");
+		ok(opcaoDe(r, "Visão Noturna")?.disponivel === false, "Visão Noturna exige trevas");
+		// Pacto Elemental: guias da água e do ar, com o tipo de parceiro; o guia entra na ficha
+		const pacto = opcaoDe(r, "Pacto Elemental");
+		const nomes = pacto.escolhaPoder.opcoes.map((o) => o.nome);
+		ok(nomes.length === 6 && nomes.includes("Água: vigilante") && nomes.includes("Ar: médico"), `Pacto Elemental: os parceiros dos dois elementos (${nomes.join(", ")})`);
+		ok(/Guia elemental/.test(pendenciaNivel(r, { poder: pacto, magias: [] }) ?? ""), "sem escolher o guia, o nível fica pendente");
+		const plano = montarPlano(r, { classeId: "x", poder: pacto, anotacao: "Ar: médico", magias: [] });
+		ok(plano.habilidades.some((h) => h.doc.name === "Guia Elemental (Ar)") && !/Guia elemental/.test(pendenciaNivel(r, { poder: pacto, magias: [], anotacao: "Ar: médico" }) ?? ""), "escolhido o guia do ar: Guia Elemental (Ar) entra na ficha");
+	}
+	{
+		// Afinidade Maior no 12º: só os elementos que faltam; o escolhido dá redução, perícia e escola
+		const a = await mistico(11, { extras: ["Afinidade Expandida"], notas: { "Afinidade Expandida": "Segundo elemento da Afinidade: Ar (eletricidade; Combate Elemental: ofuscado)" } });
+		const { r } = calcular(a);
+		const maior = opcaoDe(r, "Afinidade Maior");
+		const nomes = maior.escolhaPoder.opcoes.map((o) => o.nome);
+		ok(maior.disponivel && nomes.length === 4 && !nomes.some((n) => /^(Água|Ar) /.test(n)), `Afinidade Maior: só os elementos que faltam (${nomes.join(", ")})`);
+		const terra = nomes.find((n) => n.startsWith("Terra"));
+		const plano = montarPlano(r, { classeId: a.items.find((i) => i.type === "classe").id, poder: maior, anotacao: terra, magias: [] });
+		ok(plano.ajustes[maior.doc.uuid]?.resistencia === "acido" && plano.ajustes[maior.doc.uuid].treinar.join() === "inve", "Afinidade Maior (terra): redução de ácido e treinado em Investigação");
+		await aplicarNivel(a, plano);
+		const item = a.items.find((i) => nomeBase(i.name) === "Afinidade Maior");
+		const mudancas = item.effects.flatMap((e) => e.system?.changes ?? []);
+		ok(mudancas.some((c) => c.key === "system.pericias.inve.treinado" && c.value === true) && mudancas.some((c) => c.key === "system.tracos.resistencias.acido.bonus"), "na ficha: efeito de treinamento e de redução no Afinidade Maior");
+		const { ficha } = calcular(a);
+		ok([...ficha.afinidade.elementos].sort().join() === "agua,ar,terra", "depois, a ficha lê os três elementos (o terceiro da anotação do nível)");
+	}
+	{
+		// Comunhão Suprema no 20º: imunidade ao tipo de dano de cada elemento
+		const { r } = calcular(await mistico(19, { elemento: "Trevas (trevas; Combate Elemental: não pode curar PV)" }));
+		const comunhao = r.habilidades.find((h) => h.nome === "Comunhão Suprema");
+		ok(comunhao?.ajuste?.imunidades?.join() === "trevas", "Comunhão Suprema: imunidade a trevas");
+		ok(opcaoDe(r, "Visão Noturna").ajusteAuto?.sentido === "penumbra", "Visão Noturna sem visão na penumbra: dá penumbra");
+	}
+	{
+		// multiclasse: Guerreiro 2 → Místico 1 recebe Criar Elementos
+		const a = novoAtor("Guerreiro", []);
+		a.items.find((i) => i.type === "classe").system.niveis = 2;
+		a.reset();
+		const ficha = lerFicha(a, { regrasClasses, variantes });
+		const r = montarNivel({ dados, progressao, ficha, classe: { nome: "Místico", niveis: 0, nova: true, doc: dados.classes.find((c) => c.name === "Místico") }, lerPreRequisito, regrasPoderesClasse, regrasClasses });
+		ok(r.magiasDePoderes.some((x) => x.doc.name === "Criar Elementos"), "multiclasse Místico: Criar Elementos entra sozinha");
+	}
+}
+
+/* ---------- 4c. Distinções novas (distincoes.pdf): admissão pela marca e poderes ---------- */
+{
+	console.log("\nDistinções novas:");
+	const { comDistincoesDoConstrutor } = await import("../scripts/dados.js");
+	const { poderDistincaoPermitido, ehPoderDeDistincao, ehMarca } = await import("../scripts/distincoes.js");
+	const dadosD = { ...dados, distincoes: comDistincoesDoConstrutor(null, doConstrutor) };
+	const variantes = variantesDe(progressao);
+	const ok = (cond, msg) => { if (conferir(cond, msg)) console.log(`  ✓ ${msg}`); };
+	const marcas = dados.poderes.filter((p) => p.substituto && p.distincao && ehMarca(p));
+	ok(marcas.map((m) => m.name).sort().join() === "Abraço da Chama (Marca),Comunhão Elétrica (Marca),Instinto Assassino (Marca)", "as três marcas novas");
+	ok(["Gêmeo do Trovão", "Retalhador Panzajiri", "Senhor das Chamas"].every((d) => dados.poderes.filter((p) => p.distincao === d && !ehMarca(p)).length === 5), "cinco poderes em cada distinção");
+	const calcular = (a) => {
+		const ficha = lerFicha(a, { regrasClasses, variantes });
+		return { ficha, r: montarNivel({
+			dados: dadosD, progressao, ficha, classe: ficha.classes[0], lerPreRequisito, regrasPoderesClasse, regrasClasses, marcasDistincao: marcas,
+			selecionavel: (p) => poderDistincaoPermitido(dadosD, p, (n) => ficha.temPoder(n)),
+			ehGeral: (p) => p.system?.tipo === "geral" || ehPoderDeDistincao(dadosD, p)
+		}) };
+	};
+	const a = novoAtor("Guerreiro", []);
+	a.items.find((i) => i.type === "classe").system.niveis = 1;
+	a.reset();
+	let { r } = calcular(a);
+	const adm = r.escolhas.find((e) => e.id === "admissaoDistincao");
+	ok(adm?.opcional && adm.opcoes.length === 3, "subida de nível: admissão em distinção opcional, com as três marcas");
+	ok(!r.poderesGerais.some((o) => o.doc.distincao), "sem a marca, os poderes da distinção não aparecem");
+	const poder = r.poderesClasse.find((o) => o.disponivel);
+	ok(!/Admissão/.test(pendenciaNivel(r, { poder, magias: [] }) ?? ""), "a admissão não é pendência");
+	const marca = adm.opcoes.find((o) => o.doc.name === "Comunhão Elétrica (Marca)").doc;
+	const plano = montarPlano(r, { classeId: a.items.find((i) => i.type === "classe").id, poder, selecoes: { admissaoDistincao: marca.uuid }, magias: [] });
+	ok(plano.escolhidas.some((d) => d.name === "Comunhão Elétrica (Marca)"), "escolhida a admissão, a marca entra no plano (sem gastar o poder)");
+	await aplicarNivel(a, plano);
+	const item = a.items.find((i) => nomeBase(i.name) === "Comunhão Elétrica (Marca)");
+	const mudancas = item.effects.flatMap((e) => e.system?.changes ?? []);
+	ok(item.system.rolltags?.join() === "GemeoDoTrovao" && mudancas.some((c) => c.key === "system.tracos.resistencias.eletricidade.bonus" && /@GemeoDoTrovao/.test(c.value)) && mudancas.some((c) => c.key === "system.tracos.resistencias.acido.vulnerabilidade"),
+		"na ficha: a marca com a rolltag, a redução de eletricidade que cresce por poder e a vulnerabilidade a ácido");
+	({ r } = calcular(a));
+	ok(!r.escolhas.some((e) => e.opcoes?.some((o) => o.doc.name === "Comunhão Elétrica (Marca)")), "com a marca, ela sai da admissão");
+	const daDistincao = r.poderesGerais.filter((o) => o.doc.distincao === "Gêmeo do Trovão");
+	ok(daDistincao.length === 5 && !r.poderesGerais.some((o) => o.doc.distincao === "Senhor das Chamas"), "com a marca: os cinco poderes do Gêmeo do Trovão (e só os dele)");
+	const dinamo = daDistincao.find((o) => o.nome === "Dínamo Vivo");
+	ok(!dinamo.disponivel && /Reflexos/.test(dinamo.motivo), `Dínamo Vivo exige treinado em Reflexos e Vontade (${dinamo.motivo})`);
+	ok(!daDistincao.find((o) => o.nome === "Super Choque").disponivel, "Super Choque exige Escudo Cintilante e Salto Trovejante");
 }
 
 /* ---------- 5. A janela de subir de nível, nível a nível ---------- */

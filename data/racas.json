@@ -490,6 +490,17 @@
         "Disfarce Ilusório",
         "Visão Mística"
       ]
+    },
+    "Linhagem Kipane": {
+      "id": "linhagemKipane",
+      "tipo": "beneficio",
+      "titulo": "Ancestral da Linhagem Kipane",
+      "quantidade": 1,
+      "poder": {
+        "lista": "poderes:Linhagem Kipane - Água|Linhagem Kipane - Ar|Linhagem Kipane - Fogo|Linhagem Kipane - Luz|Linhagem Kipane - Terra|Linhagem Kipane - Trevas",
+        "nome": "ancestral",
+        "maximo": 1
+      }
     }
   }
 }

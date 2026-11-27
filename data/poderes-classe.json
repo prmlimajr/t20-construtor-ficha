@@ -1,5 +1,5 @@
 {
-  "_comentario": "Escolhas das habilidades de classe de 1º nível (T20 Jogo do Ano, cap. 2). Mesmo formato de racas.json. Tipos extras: 'especialista' (perícias treinadas, escolhidas no passo Perícias), 'item' (um item até 'precoMax', no passo Equipamento), 'prototipo' (item superior ou itens alquímicos, no passo Equipamento). 'periciasFixas' = perícias treinadas pelo poder; 'magiasExtra' = magias iniciais a mais. 'extras': escolhas adicionais do mesmo poder; 'opcoesDivindades': as opções são os deuses maiores; efeito 'nenhum': só registra a escolha; 'tiposMagia': filtra as magias da escolha por tipo (arc/div/uni); 'tiposMagiaExtras': tipos de magia que a classe passa a poder aprender. 'prototipo' aceita 'semAlquimicos' (só o item superior) e 'apenasArmas' (só armas), ex.: Presente dos Deuses do cruzado.",
+  "_comentario": "Escolhas das habilidades de classe de 1º nível (T20 Jogo do Ano, cap. 2). Mesmo formato de racas.json. Tipos extras: 'especialista' (perícias treinadas, escolhidas no passo Perícias), 'item' (um item até 'precoMax', no passo Equipamento), 'prototipo' (item superior ou itens alquímicos, no passo Equipamento). 'periciasFixas' = perícias treinadas pelo poder; 'magiasExtra' = magias iniciais a mais. 'extras': escolhas adicionais do mesmo poder; 'opcoesDivindades': as opções são os deuses maiores; efeito 'nenhum': só registra a escolha; 'tiposMagia': filtra as magias da escolha por tipo (arc/div/uni); 'tiposMagiaExtras': tipos de magia que a classe passa a poder aprender. 'prototipo' aceita 'semAlquimicos' (só o item superior) e 'apenasArmas' (só armas), ex.: Presente dos Deuses do cruzado. Místico: 'periciaDeClasse' {valor da opção: perícia} acrescenta a perícia do elemento escolhido à lista de perícias da classe; 'treinaPericiaDoElemento' treina a perícia do elemento (tipo de dano) escolhido.",
   "poderes": {
     "Linhagem Dracônica Básica": {
       "id": "linhagemDraconica",
@@ -117,6 +117,90 @@
         "div",
         "uni"
       ]
+    },
+    "Afinidade Elemental": {
+      "id": "afinidadeElemental",
+      "tipo": "opcao",
+      "efeito": "resistencia",
+      "valor": "5 * min(4, max(1, floor((@nvl.mistico + 2) / 4)))",
+      "titulo": "Elemento da Afinidade (redução 5 por círculo)",
+      "opcoes": [
+        {
+          "valor": "frio",
+          "nome": "Água (frio; Combate Elemental: lento)"
+        },
+        {
+          "valor": "eletricidade",
+          "nome": "Ar (eletricidade; Combate Elemental: ofuscado)"
+        },
+        {
+          "valor": "fogo",
+          "nome": "Fogo (fogo; Combate Elemental: em chamas)"
+        },
+        {
+          "valor": "luz",
+          "nome": "Luz (luz; Combate Elemental: ofuscado)"
+        },
+        {
+          "valor": "acido",
+          "nome": "Terra (ácido; Combate Elemental: vulnerável)"
+        },
+        {
+          "valor": "trevas",
+          "nome": "Trevas (trevas; Combate Elemental: não pode curar PV)"
+        }
+      ],
+      "requerSuplemento": true,
+      "periciaDeClasse": {
+        "frio": "dipl",
+        "eletricidade": "enga",
+        "fogo": "acro",
+        "luz": "cura",
+        "acido": "inve",
+        "trevas": "inti"
+      }
+    },
+    "Afinidade Expandida": {
+      "id": "afinidadeExpandida",
+      "tipo": "opcao",
+      "efeito": "resistencia",
+      "valor": "5 * min(4, max(1, floor((@nvl.mistico + 2) / 4)))",
+      "titulo": "Segundo elemento da Afinidade (redução 5 por círculo)",
+      "opcoes": [
+        {
+          "valor": "frio",
+          "nome": "Água (frio; Combate Elemental: lento)"
+        },
+        {
+          "valor": "eletricidade",
+          "nome": "Ar (eletricidade; Combate Elemental: ofuscado)"
+        },
+        {
+          "valor": "fogo",
+          "nome": "Fogo (fogo; Combate Elemental: em chamas)"
+        },
+        {
+          "valor": "luz",
+          "nome": "Luz (luz; Combate Elemental: ofuscado)"
+        },
+        {
+          "valor": "acido",
+          "nome": "Terra (ácido; Combate Elemental: vulnerável)"
+        },
+        {
+          "valor": "trevas",
+          "nome": "Trevas (trevas; Combate Elemental: não pode curar PV)"
+        }
+      ],
+      "requerSuplemento": true,
+      "treinaPericiaDoElemento": true
+    },
+    "Magias (Místico)": {
+      "magiasFixas": [
+        "Criar Elementos"
+      ],
+      "atributo": "sab",
+      "requerSuplemento": true
     }
   }
 }

@@ -860,6 +860,112 @@ if (sup) {
 	}
 }
 
+/* ---------- Qareen ubaneri (Dragão Brasil 233): atributos próprios e Linhagem Kipane no lugar de Desejos ---------- */
+{
+	console.log("\nQareen ubaneri:");
+	const A = ConstrutorFicha.DEFAULT_OPTIONS.actions;
+	const dados = await dadosCom({});
+	const raca = dados.racas.find((r) => r.name === "Qareen Ubaneri");
+	conferir(raca?.varianteDe === "Qareen" && raca.fonteLivro === "Dragão Brasil 233", "a raça variante Qareen Ubaneri está na lista, como variante de qareen");
+	const w = new ConstrutorFicha(ator("Ubaneri"));
+	await w._prepareContext();
+	w.render = () => {};
+	w.definirCampo("raca", raca.uuid);
+	const iRaca = w.passos().findIndex((p) => p.id === "raca");
+	const ctx = await w.ctxRaca();
+	const nomes = w.poderesDaRaca().map((x) => x.poder.name);
+	conferir(nomes.includes("Linhagem Kipane") && !nomes.includes("Desejos") && nomes.includes("Resistência Elemental") && nomes.includes("Tatuagem Mística"),
+		`habilidades: as de qareen, com Linhagem Kipane no lugar de Desejos (${nomes.join(", ")})`);
+	conferir(raca.system.atributos.sab === 1 && raca.system.atributos.car === 0 && raca.system.atributos.int === 0, "atributos: Sabedoria +1 (sem o Carisma +2 e a Inteligência +1 do qareen)");
+	// +1 em dois atributos à escolha, sem a Sabedoria (a tela só oferece os da lista)
+	const dinamicos = ctx.info.dinamicos?.map((x) => x.chave) ?? [];
+	conferir(ctx.info.qtdDinamicos === 2 && dinamicos.length === 5 && !dinamicos.includes("sab"), `atributos: +1 em dois atributos à escolha, sem Sabedoria (${ctx.info.qtdDinamicos}: ${dinamicos.join(", ")})`);
+	w.definirCampo("racaAtributos", ["for", "des"]);
+	conferir(w.racial("for") === 1 && w.racial("des") === 1 && w.racial("sab") === 1, "com Força e Destreza escolhidas: For +1, Des +1, Sab +1");
+	conferir(/ancestral|Linhagem Kipane/i.test(w.pendencia(w.passos()[iRaca]) ?? ""), `sem o ancestral, o passo Raça fica pendente (${w.pendencia(w.passos()[iRaca])})`);
+	// o ancestral: um dos seis poderes, pelo slideout da escolha
+	const regra = w.escolhasRaciais().find((x) => x.poder.name === "Linhagem Kipane")?.regra;
+	const esc = w.ctxEscolhaRacial(poder(dados, "Linhagem Kipane"), regra);
+	const opcoes = w.opcoesSlideout(esc.listaPoder).map((o) => o.valor);
+	conferir(opcoes.length === 6 && ["Água", "Ar", "Fogo", "Luz", "Terra", "Trevas"].every((a) => opcoes.includes(`Linhagem Kipane - ${a}`)), `os seis ancestrais na lista (${opcoes.join(", ")})`);
+	A.abrirSlideout.call(w, null, { dataset: { campo: esc.campoPoderes, lista: esc.listaPoder, titulo: "x", limite: "1" } });
+	A.confirmarSlideout.call(w, null, { dataset: { valor: "Linhagem Kipane - Terra" } });
+	conferir(!/ancestral|Kipane/i.test(w.pendencia(w.passos()[iRaca]) ?? ""), `com o ancestral, a pendência não fala mais dele (${w.pendencia(w.passos()[iRaca])})`);
+	const raciais = w.plano().gruposPoderes.find((g) => g.raciais)?.poderes.map((p) => p.name) ?? [];
+	conferir(raciais.includes("Linhagem Kipane") && raciais.includes("Linhagem Kipane - Terra"), `na ficha: Linhagem Kipane e o ancestral (${raciais.join(", ")})`);
+	const terra = poder(dados, "Linhagem Kipane - Terra");
+	conferir(terra.effects.some((e) => e.system.changes.some((c) => c.key === "system.pericias.atle.bonus" && c.value === 2)) && /manobras de combate/.test(terra.system.description.value),
+		"Linhagem Kipane - Terra: +2 em Atletismo no efeito, manobras no texto");
+	console.log("  ✓ conferido (atributos, Linhagem Kipane no lugar de Desejos, os seis ancestrais, o escolhido na ficha)");
+}
+
+/* ---------- Místico, nova versão (origem-mistico.pdf), e origens regionais de Ubani ---------- */
+if (sup) {
+	console.log("\nMístico (nova versão) e origens de Ubani:");
+	const dados = await dadosCom({ suplementos: true, supClasses: true, supPoderes: true, supMagias: true, supOrigensRegionais: true, origemDupla: true });
+	const classe = dados.classes.find((c) => c.name === "Místico");
+	conferir(classe?.substituto && /Misticismo \(Int\) e Vontade \(Sab\), mais 4/.test(classe.system.description.value), "a classe Místico é a nova versão (descrição do construtor)");
+	const r = dados.regrasClasses["Místico"];
+	conferir(r && r.fixas.join() === "mist,vont" && r.numero === 4 && r.opcoes.length === 9 && r.proficiencias.join() === "marcial", `perícias e proficiências do místico novo (${r?.fixas} | ${r?.numero} de ${r?.opcoes?.join(",")} | ${r?.proficiencias})`);
+	conferir(r?.conjurador?.atributo === "sab" && r.conjurador.escolas === 3 && r.conjurador.quantidade === 2, "magias: arcanas, Sabedoria, 3 escolas, 2 magias + Criar Elementos");
+
+	const w = new ConstrutorFicha(ator("Kanu"));
+	await w._prepareContext();
+	w.render = () => {};
+	w.estado = mergeObject(w.estado, {
+		nome: "Kanu",
+		raca: porNome(dados.racas, "Humano", "raça").uuid,
+		racaAtributos: ["sab", "con", "des"],
+		racaEscolhas: { versatil: { pericias: ["atle", "inti"], poderes: [] } },
+		atrModo: "pontos",
+		atrPontos: { for: 1, des: 1, con: 2, int: 0, sab: 3, car: 0 },
+		classe: classe.uuid,
+		classePoderEscolhas: { afinidadeElemental: "fogo" },
+		magiasEscolas: ["evo", "trm", "con"],
+		origens: {
+			principal: { nome: "Acólito", beneficios: ["pericia:cura"], grupos: {}, itens: {} },
+			regional: { nome: "Ubani", beneficios: ["poder:Celebrante da Vida"], grupos: {}, itens: {} }
+		},
+		devoto: false,
+		equip: { arma: arma(dados, "simples"), armaMarcial: arma(dados, "marcial"), armadura: "" },
+		dinheiro: 10
+	});
+	w.estado.magias = magiasDe(w, 2);
+	const habilidades = w.poderesDaClasse().map((x) => x.poder.name);
+	conferir(["Afinidade Elemental", "Combate Elemental", "Magias (Místico)"].every((n) => habilidades.includes(n)), `1º nível: Afinidade Elemental, Combate Elemental e Magias (${habilidades.join(", ")})`);
+	conferir(w.periciasTreinadas().has("dipl") && w.periciasTreinadas().has("reli"), "Celebrante da Vida treina Diplomacia e Religião");
+	const plano = w.plano();
+	conferir(plano.magiasPoderesClasse.some((x) => x.doc.name === "Criar Elementos" && x.atributo === "sab"), "Criar Elementos entra na ficha (Sabedoria)");
+	const itens = (plano.itens ?? []).map((i) => i.nome);
+	conferir(itens.includes("Traje da corte") && itens.includes("Símbolo sagrado"), `itens do Celebrante da Vida (${itens.join(", ")})`);
+	const criados = [];
+	const atorFicha = {
+		...ator("Kanu"), system: { detalhes: {}, attributes: {} },
+		update: async () => {}, setFlag: async () => {}, unsetFlag: async () => {},
+		createEmbeddedDocuments: async (tipo, lista) => { criados.push(...lista); return lista.map((d) => ({ ...d, update: async () => {} })); }
+	};
+	await aplicarNaFicha(atorFicha, plano, dados);
+	const afinidade = criados.find((i) => /Afinidade Elemental$/.test(i.name));
+	const mudancas = (afinidade?.effects ?? []).flatMap((e) => e.system?.changes ?? []);
+	conferir(mudancas.some((c) => c.key === "system.tracos.resistencias.fogo.bonus" && /5 \* min\(4, max\(1, floor\(\(@nvl\.mistico \+ 2\) \/ 4\)\)\)/.test(c.value)),
+		`Afinidade Elemental (fogo): redução de fogo 5 por círculo no efeito (${JSON.stringify(mudancas)})`);
+	conferir(/Escolha \(construtor\):<\/strong> Fogo \(fogo; Combate Elemental: em chamas\)/.test(afinidade?.system?.description?.value ?? ""), "o elemento (com a condição do Combate Elemental) fica anotado na Afinidade");
+	conferir(w.regrasClasse.opcoes.includes("acro") && !dados.regrasClasses["Místico"].opcoes.includes("acro"), "Afinidade (fogo): Acrobacia entra na lista de perícias da classe");
+	conferir(/Os Seis Elementos/.test(poder(dados, "Afinidade Elemental").system.description.value) && /Expressão natural/.test(poder(dados, "Afinidade Elemental").system.description.value), "a Afinidade traz a tabela dos seis elementos e as expressões naturais");
+	const guia = poder(dados, "Guia Elemental (Terra)");
+	conferir(guia && /Arremesso de Rocha/.test(guia.system.description.value) && guia.system.ativacao?.custo === 2, "os guias elementais existem, com as ordens e o custo de invocar");
+	const andar = poder(dados, "Andar pelas Paredes");
+	conferir(andar.effects.some((e) => e.system.changes.some((c) => c.key === "system.attributes.movement.climb.base" && c.value === "@attributes.movement.walk.base")), "Andar pelas Paredes: escalada igual ao deslocamento");
+	const combate = criados.find((i) => /Combate Elemental$/.test(i.name));
+	conferir(combate?.effects?.some((e) => e.system.onuse && e.system.abilityUse.aumenta && e.system.changes[0].value === "1d6"), "Combate Elemental: +1d6 por PM (efeito ao usar que aumenta)");
+	const ubani = dados.origensRegionais.find((o) => o.nome === "Ubani");
+	conferir(["Ajudante Nato (Ubani)", "Bori Enredado", "Celebrante da Vida", "Verdugo da Morte"].every((n) => ubani?.poderes.includes(n)), `as quatro origens novas na região Ubani (${ubani?.poderes.join(", ")})`);
+	const bori = poder(dados, "Bori Enredado");
+	conferir(bori.effects.some((e) => e.system.changes.some((c) => c.key === "system.attributes.pm.bonus.total" && c.value === 3)) && bori.effects.some((e) => e.system.onuse && e.system.changes.some((c) => c.key === "cd")), "Bori Enredado: +3 PM, +2 Misticismo e +1 na CD das magias");
+	conferir(poder(dados, "Ajudante Nato")?.system?.subtipo === "Qareen", "o Ajudante Nato do qareen (Heróis de Arton) continua valendo pelo nome");
+	console.log("  ✓ conferido (classe nova, Afinidade com o elemento, Criar Elementos, origens de Ubani)");
+}
+
 if (ATUALIZAR) {
 	fs.mkdirSync(path.dirname(caminhoRetrato), { recursive: true });
 	fs.writeFileSync(caminhoRetrato, JSON.stringify(atual, null, 2) + "\n");

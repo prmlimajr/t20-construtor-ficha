@@ -3,6 +3,7 @@
  * Funções puras (sem Foundry), testáveis em Node com os compêndios lidos do disco.
  */
 import { normalizar } from "./regras.js";
+import { ELEMENTOS, escolhaDoPoder, ajusteAutomatico, escolasDaAfinidade, elementoPorDano } from "./afinidade.js";
 import { extrairPreRequisito, interpretarPreRequisito, avaliarPreRequisito, podeRepetir, limiteRepeticoes } from "./pre-requisitos.js";
 
 export const NIVEL_MAXIMO = 20;
@@ -110,7 +111,9 @@ export function montarNivel({
 	dados, progressao, ficha, classe, lerPreRequisito, selecionavel = () => true, regrasPoderesClasse = {}, regrasClasses = {},
 	ehGeral = (p) => p.system?.tipo === "geral", grupoGeral = (p) => p.system?.subtipo || "Outros",
 	// homebrew: o Aumento de Atributo sai dos poderes de classe e vem duas vezes ao entrar num novo patamar
-	aumentoPorPatamar = false
+	aumentoPorPatamar = false,
+	// marcas das distinções definidas pelo construtor (não estão em compêndio: entram pela admissão, aqui)
+	marcasDistincao = []
 }) {
 	const prog = progressaoDe(progressao, classe.nome);
 	if (!prog) return { erro: "semProgressao" };
@@ -123,6 +126,7 @@ export function montarNivel({
 
 	const entrada = prog.niveis?.[nivelClasse] ?? {};
 	const avisos = [];
+	const notas = [];
 	// o item da própria classe tem preferência: variantes têm habilidades com o mesmo nome das da
 	// classe básica (ex.: Briga do Atleta × Briga do Lutador), com texto e efeitos próprios
 	const daClasse = new Map(dados.poderes
@@ -182,6 +186,15 @@ export function montarNivel({
 		if (!e.requer) continue;
 		const pai = escolhas.find((x) => x.id === e.requer.id);
 		e.requer = { id: e.requer.id, uuid: pai?.opcoes.find((o) => normalizar(o.nome) === normalizar(e.requer.opcao))?.doc.uuid ?? null };
+	}
+
+	// admissão numa distinção do construtor (opcional): a marca entra na ficha e libera os poderes da distinção
+	const admissao = marcasDistincao.filter((m) => !ficha.temPoder(m.name));
+	if (admissao.length) {
+		escolhas.push({
+			id: "admissaoDistincao", titulo: "Admissão em distinção", opcional: true, requer: null,
+			opcoes: admissao.map((m) => ({ nome: `${m.distincao}: ${m.name}`, doc: m, conjuracao: null, magiasExtra: 0 }))
+		});
 	}
 
 	// habilidade com uma escolha anotada que se acumula (ex.: terreno do Explorador a cada 4 níveis)
@@ -256,6 +269,48 @@ export function montarNivel({
 	const projetada = fichaProjetada(ficha, [classe.nome, prog.base], habilidades.map((h) => h.nome));
 	const classeBasica = prog.base ?? classe.nome;
 
+	// Ditames do místico (e Propulsão): magias que o poder ensina por nível da classe dele ("No 6º nível,
+	// aprende…"). As que a ficha já conhece ficam de fora (o livro deixa trocar por outra do mesmo círculo).
+	const magiaDoCompendio = (nome) => dados.magias.find((m) => normalizar(m.name) === normalizar(nome)) ?? null;
+	const ensinadas = (doc, cond) => {
+		const out = { docs: [], conhecidas: [] };
+		for (const x of (doc.magiasPorNivel ?? []).filter(cond)) {
+			const m = magiaDoCompendio(x.nome);
+			if (!m) avisos.push(`Magia "${x.nome}" (${doc.name}) não encontrada nos compêndios.`);
+			else if (ficha.magias.has(normalizar(m.name))) out.conhecidas.push(m.name);
+			else out.docs.push(m);
+		}
+		return out;
+	};
+	const notaConhecidas = (poder, nomes) => `${poder}: ${nomes.join(", ")} já está na ficha; o livro permite trocar por outra magia arcana de mesmo círculo de uma de suas escolas (faça a troca na ficha).`;
+	const magiasDePoderes = [];
+	for (const p of dados.poderes) {
+		if (!p.magiasPorNivel?.length || normalizar(p.system?.subtipo) !== normalizar(classe.nome) || !ficha.temPoder(p.name)) continue;
+		const e = ensinadas(p, (x) => x.nivel === nivelClasse);
+		for (const doc of e.docs) magiasDePoderes.push({ poder: p.name, doc });
+		if (e.conhecidas.length) notas.push(notaConhecidas(p.name, e.conhecidas));
+	}
+	// classe nova (multiclasse): magias que as habilidades de 1º nível dão sem escolha (Criar Elementos do místico)
+	if (nova) {
+		for (const h of habilidades.filter((x) => x.doc && !x.jaTem)) {
+			for (const nomeMagia of regrasPoderesClasse[h.doc.name]?.magiasFixas ?? []) {
+				const m = magiaDoCompendio(nomeMagia);
+				if (m && !ficha.magias.has(normalizar(m.name))) magiasDePoderes.push({ poder: h.doc.name, doc: m });
+			}
+		}
+	}
+	// habilidades que se ajustam ao que a ficha tem (Comunhão Suprema: imunidade aos tipos de dano dos elementos)
+	for (const h of habilidades.filter((x) => x.doc && !x.jaTem)) {
+		const auto = ajusteAutomatico(h.doc.name, ficha);
+		if (auto?.ajuste) h.ajuste = auto.ajuste;
+		if (auto?.nota) notas.push(auto.nota);
+	}
+	if (magiasDePoderes.length) {
+		const porPoder = new Map();
+		for (const x of magiasDePoderes) (porPoder.get(x.poder) ?? porPoder.set(x.poder, []).get(x.poder)).push(x);
+		for (const [poder, lista] of porPoder) notas.push(`${poder}: ${lista.map((x) => x.doc.name).join(", ")} entra${lista.length > 1 ? "m" : ""} na ficha neste nível.`);
+	}
+
 	const opcao = (doc) => {
 		const req = lerPreRequisito(doc);
 		const r = req ? avaliarPreRequisito(req, projetada) : { ok: true, falhas: [], avisos: [] };
@@ -267,15 +322,23 @@ export function montarNivel({
 		let motivo = null;
 		// Aumento de Atributo: "apenas uma vez por patamar para um mesmo atributo"
 		const noPatamar = ehAumentoDeAtributo(doc.name) && (ficha.niveisPoder?.(doc.name) ?? []).some((n) => n && patamarDe(n) === patamarDe(nivelPersonagem));
+		// poderes que pedem uma escolha de lista (Afinidade Maior: o elemento; Pacto Elemental: o guia)
+		const escolha = escolhaDoPoder(doc.name, projetada);
+		const auto = ajusteAutomatico(doc.name, ficha);
 		if (noPatamar) motivo = "Você já aumentou este atributo neste patamar.";
 		else if (jaTem && !repetivel) motivo = "Você já tem este poder.";
 		else if (limite && vezes >= limite) motivo = `Você já escolheu este poder ${vezes} vezes (o máximo é ${limite}).`;
 		else if (!r.ok) motivo = `Pré-requisito não atendido: ${r.falhas.join(", ")}.`;
+		else if (escolha && !escolha.opcoes.length) motivo = "Não há opção disponível (a ficha já tem todos os elementos).";
 		return {
 			doc,
 			nome: doc.name,
 			// Conhecimento Mágico e afins: magias que o poder ensina ao ser escolhido (vagas a mais no nível)
 			magias: magiasDoPoder(doc),
+			// ditames: as magias que o poder ensina até o nível de classe que está sendo alcançado
+			...(doc.magiasPorNivel?.length ? ((e) => ({ magiasConcedidas: e.docs, magiasJaConhecidas: e.conhecidas }))(ensinadas(doc, (x) => x.nivel <= nivelClasse)) : {}),
+			...(escolha ? { escolhaPoder: { titulo: escolha.titulo, opcoes: escolha.opcoes.map((o) => ({ nome: o.nome, ajuste: o.ajuste ?? null, concede: o.concede ? buscar(o.concede, { avisar: false }) : null })) } } : {}),
+			...(auto ? { ajusteAuto: auto.ajuste, notaAuto: auto.nota } : {}),
 			preRequisito: req?.texto ?? null,
 			avisos: r.avisos,
 			disponivel: !motivo,
@@ -287,7 +350,6 @@ export function montarNivel({
 	};
 	const ordenar = (a, b) => a.nome.localeCompare(b.nome, "pt-BR");
 	// multiclasse: o que a classe nova não dá e o que o assistente não pede
-	const notas = [];
 	if (nova) {
 		notas.push(`Multiclasse: o 1º nível de ${classe.nome} dá os PV de um nível seguinte e não dá as perícias treinadas nem as proficiências da classe.`);
 		if (regra?.devocao?.obrigatoria && !ficha.divindade) notas.push(`${classe.nome}s precisam ser devotos: defina a divindade e os poderes concedidos na ficha.`);
@@ -342,6 +404,8 @@ export function montarNivel({
 		magias,
 		ganhaPoder,
 		poderesClasse,
+		// magias que os poderes da ficha ensinam neste nível (ditames): entram sozinhas
+		magiasDePoderes,
 		poderesGerais,
 		// bônus de perícia = metade do nível: sobe nos níveis pares
 		bonusPericia: nivelPersonagem % 2 === 0 ? nivelPersonagem / 2 : null,
@@ -354,10 +418,10 @@ export function montarNivel({
  * @param {object} nivel   resultado de montarNivel
  * @param {object} s       { poder: opção escolhida (de poderesClasse/poderesGerais) | null, selecoes: {id: valor} }
  */
-export function pendenciaNivel(nivel, { poder = null, selecoes = {}, magias = [], escolas = null } = {}) {
+export function pendenciaNivel(nivel, { poder = null, selecoes = {}, magias = [], escolas = null, anotacao = "" } = {}) {
 	const faltam = [];
 	const m = nivel.magias;
-	for (const e of (nivel.escolhas ?? []).filter((x) => escolhaAtiva(x, selecoes))) if (!e.opcoes.some((o) => o.doc.uuid === selecoes[e.id])) faltam.push(e.titulo);
+	for (const e of (nivel.escolhas ?? []).filter((x) => escolhaAtiva(x, selecoes) && !x.opcional)) if (!e.opcoes.some((o) => o.doc.uuid === selecoes[e.id])) faltam.push(e.titulo);
 	// escolhas que não podem repetir a opção (os dois Aumentos de Atributo do patamar: atributos diferentes)
 	const porGrupo = new Map();
 	for (const e of (nivel.escolhas ?? []).filter((x) => x.distinto && selecoes[x.id])) (porGrupo.get(e.distinto) ?? porGrupo.set(e.distinto, []).get(e.distinto)).push(selecoes[e.id]);
@@ -365,7 +429,8 @@ export function pendenciaNivel(nivel, { poder = null, selecoes = {}, magias = []
 	if (m) {
 		const esc = escolasEfetivas(m, escolas);
 		const vagas = vagasEfetivas(m, selecoes, poder);
-		if (m.escolas && esc.length !== m.escolas) faltam.push(`${m.escolas} escolas de magia`);
+		// (a ficha pode ter escolas a mais: as dos elementos novos da Afinidade do místico)
+		if (m.escolas && esc.length < m.escolas) faltam.push(`${m.escolas} escolas de magia`);
 		// sem vaga nenhuma, magia escolhida também é pendência (ex.: sobrou do Conhecimento Mágico trocado)
 		else if (vagas.length || magias.length) {
 			const r = conferirVagas(vagas, magias);
@@ -376,20 +441,41 @@ export function pendenciaNivel(nivel, { poder = null, selecoes = {}, magias = []
 	for (const a of nivel.anotadas ?? []) if (!a.opcoes.includes(selecoes[a.id])) faltam.push(a.titulo);
 	for (const i of internasAtivas(nivel, selecoes, "opcao")) if (!i.opcoes.some((o) => o.valor === selecoes[i.id])) faltam.push(`${i.titulo} (${i.poder})`);
 	if (nivel.ganhaPoder && !poder?.disponivel) faltam.push("um poder");
+	else if (poder?.disponivel && poder.escolhaPoder && !opcaoDoPoder(poder, anotacao)) faltam.push(`${poder.escolhaPoder.titulo} (${poder.nome})`);
 	return faltam.length ? `Escolha: ${faltam.join(", ")}.` : null;
 }
 
+/** Opção da lista do poder escolhido que corresponde à anotação (ou null). */
+export const opcaoDoPoder = (poder, anotacao) => poder?.escolhaPoder?.opcoes.find((o) => o.nome === String(anotacao ?? "").trim()) ?? null;
+
+/** Magias sem nomes repetidos (a mesma magia escolhida numa vaga e ensinada por um ditame entra uma vez). */
+const semRepetir = (lista) => lista.filter((m, i) => lista.findIndex((x) => normalizar(x.name) === normalizar(m.name)) === i);
+
 /** Plano de gravação (aplicar-nivel.js) a partir do nível calculado e das escolhas feitas. */
 export function montarPlano(nivel, { classeId, poder = null, anotacao = "", selecoes = {}, magias = [], escolas = null } = {}) {
-	const concedido = poder?.disponivel && poder.concede ? [{ doc: poder.concede }] : [];
+	// opção escolhida da lista do poder (Afinidade Maior, Pacto Elemental): ajuste e o poder que entra junto
+	const opcaoEscolhida = poder?.disponivel ? opcaoDoPoder(poder, anotacao) : null;
+	const concedido = [
+		...(poder?.disponivel && poder.concede ? [{ doc: poder.concede }] : []),
+		...(opcaoEscolhida?.concede ? [{ doc: opcaoEscolhida.concede }] : [])
+	];
 	const m = nivel.magias;
+	// escolhas internas dos poderes (deus da Linhagem Abençoada, magia dela…): ajustes por uuid do poder;
+	// mais os ajustes automáticos (habilidades e poder que se ajustam à ficha) e o da opção da lista
+	const ajustes = ajustesInternos(nivel, selecoes, magias, poder);
+	const juntar = (uuid, a) => { if (a) ajustes[uuid] = { ...(ajustes[uuid] ?? {}), ...a }; };
+	for (const h of nivel.habilidades ?? []) if (h.ajuste && h.doc && !h.jaTem) juntar(h.doc.uuid, h.ajuste);
+	if (poder?.disponivel) {
+		juntar(poder.doc.uuid, poder.ajusteAuto);
+		juntar(poder.doc.uuid, opcaoEscolhida?.ajuste);
+	}
 	return {
-		// escolhas internas dos poderes (deus da Linhagem Abençoada, magia dela…): ajustes por uuid do poder
-		ajustes: ajustesInternos(nivel, selecoes, magias, poder),
+		ajustes,
 		classe: nivel.classe,
 		classeNova: nivel.classeNova,
 		atributoMagia: m ? atributoEfetivo(m, selecoes) : null,
-		magias: [...magias, ...(m?.automaticas ?? [])],
+		// as escolhidas, as automáticas (Usurpar) e as dos ditames (do poder escolhido e dos que a ficha já tem)
+		magias: semRepetir([...magias, ...(m?.automaticas ?? []), ...(nivel.magiasDePoderes ?? []).map((x) => x.doc), ...(poder?.disponivel ? poder.magiasConcedidas ?? [] : [])]),
 		// escolas escolhidas agora (personagem sem as escolas gravadas na ficha)
 		escolasMagia: m?.escolas && !m.escolasFicha?.length && escolas?.length === m.escolas ? [...escolas] : null,
 		classeId,
@@ -453,12 +539,22 @@ export function magiasDoNivel(prog, ficha, nivelClasse, regrasPoderesClasse = {}
 		circulo,
 		circuloNovo,
 		escolas: r.escolas,
-		escolasFicha: classe ? ficha.escolasDe(classe) : ficha.escolasMagia ?? [],
+		escolasFicha: comEscolasDaAfinidade(prog, ficha, classe ? ficha.escolasDe(classe) : ficha.escolasMagia ?? []),
 		dicaEscolas: prog.magias?.dicaEscolas ?? null,
 		aprende: r.aprende,
 		todas: r.todas,
 		vagas
 	};
+}
+
+/**
+ * Escolas gravadas na ficha, com as dos elementos da Afinidade do místico ("escolasAfinidade" na progressão):
+ * a Afinidade Expandida e a Maior dão acesso à escola do novo elemento. Sem escolas gravadas, nada muda
+ * (as escolas ainda vão ser escolhidas na janela).
+ */
+function comEscolasDaAfinidade(prog, ficha, gravadas) {
+	if (!prog.magias?.escolasAfinidade || !gravadas.length) return gravadas;
+	return [...new Set([...gravadas, ...escolasDaAfinidade(ficha)])];
 }
 
 /** Escolas que valem: as gravadas na ficha ou, se não houver, as escolhidas agora na janela. */
@@ -557,6 +653,8 @@ export function ajustesInternos(nivel, selecoes = {}, magias = [], poder = null)
 			: r.efeito === "imunidade" ? { imunidade: o.valor }
 				: r.efeito === "pericia" ? { bonusPericias: [o.valor], bonus: r.valor }
 					: { resistencia: o.valor, valor: r.valor };
+		// Afinidade Expandida: treinado na perícia do segundo elemento
+		if (r.treinaPericiaDoElemento && ELEMENTOS[elementoPorDano(o.valor)]) dados.treinar = [ELEMENTOS[elementoPorDano(o.valor)].pericia];
 		ajustar(i.doc.uuid, dados, `${i.titulo.replace(/\s*\(.*\)\s*$/, "")}: ${o.nome}`);
 	}
 	if (nivel.magias && magias.length) {

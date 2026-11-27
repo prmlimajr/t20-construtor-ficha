@@ -189,7 +189,9 @@
 					<summary>{{#if info.img}}<img src="{{info.img}}" alt="">{{/if}}<span>{{info.nome}}</span></summary>
 					<div class="cf-descricao">{{{info.descricao}}}</div>
 				</details>
+				{{else if opcional}}<p class="cf-nota">Opcional: se o personagem foi admitido numa distinção, escolha a marca dela. A marca não gasta o poder do nível e libera os poderes da distinção nos próximos níveis. Clique de novo para desmarcar.</p>
 				{{else}}<p class="cf-nota">Escolha uma das opções. A escolha não pode ser mudada depois.</p>{{/if}}
+				{{#if opcional}}{{#if info}}<p class="cf-nota">Opcional: clique de novo na marca para desmarcar.</p>{{/if}}{{/if}}
 				{{#each internas}}<div class="cf-nivel-interna">
 					<h5>{{poder}}: {{titulo}}</h5>
 					{{#if magia}}<p class="cf-nota"><i class="fa-solid fa-wand-sparkles"></i> Escolhida no passo Magias, junto com as magias da classe.</p>
@@ -278,10 +280,22 @@
 					<dl class="cf-dados">
 						<dt>Pré-requisito</dt><dd>{{#if info.preRequisito}}{{info.preRequisito}}{{else}}nenhum{{/if}}</dd>
 						{{#if info.concede}}<dt>Também recebe</dt><dd>{{info.concede}}</dd>{{/if}}
+						{{#if info.magiasConcedidas}}<dt>Magias que entram na ficha</dt><dd>{{info.magiasConcedidas}}</dd>{{/if}}
 					</dl>
 					{{#each info.avisos}}<p class="cf-aviso"><i class="fa-solid fa-circle-exclamation"></i> Confira com o mestre: “{{this}}” (não foi possível verificar na ficha).</p>{{/each}}
 					{{#if info.jaTem}}<p class="cf-nota">Você já tem este poder; ele pode ser escolhido outras vezes.</p>{{/if}}
+					{{#if info.magiasJaConhecidas}}<p class="cf-nota">Já conhecidas: {{info.magiasJaConhecidas}}. O livro permite trocar cada uma por outra magia arcana de mesmo círculo de uma de suas escolas (faça a troca na ficha).</p>{{/if}}
 					{{#if info.avisoMagias}}<p class="cf-aviso"><i class="fa-solid fa-circle-info"></i> {{info.avisoMagias}}</p>{{/if}}
+					{{#if info.notaAuto}}<p class="cf-nota">{{info.notaAuto}}</p>{{/if}}
+					{{#if info.escolhaPoder}}
+					<label class="cf-nivel-anotacao">
+						<span>{{info.escolhaPoder.titulo}}</span>
+						<select name="anotacao">
+							<option value="">—</option>
+							{{#each info.escolhaPoder.opcoes}}<option value="{{nome}}" {{#if selecionada}}selected{{/if}}>{{nome}}</option>{{/each}}
+						</select>
+					</label>
+					{{/if}}
 					{{#if info.pedeEscolha}}
 					<label class="cf-nivel-anotacao">
 						<span>Escolha feita (anotada na descrição do poder)</span>

@@ -3,6 +3,7 @@
  * avaliação de pré-requisitos. Não depende do Foundry: recebe o ator (ou um objeto com o mesmo formato).
  */
 import { ATRIBUTOS, MODULE_ID, normalizar } from "./regras.js";
+import { ELEMENTOS } from "./afinidade.js";
 
 /** Nome do poder ou magia sem o prefixo do construtor ("R - ", "1 - ", "12 - "…). */
 export function nomeBase(nome) {
@@ -15,6 +16,9 @@ function chaves(nome) {
 	const semParenteses = k.replace(/\s*\([^)]*\)\s*$/, "").trim();
 	return semParenteses && semParenteses !== k ? [k, semParenteses] : [k];
 }
+
+/** Poderes do místico que dão um elemento à Afinidade Elemental. */
+const PODERES_AFINIDADE = new Set(["afinidade elemental", "afinidade expandida", "afinidade maior"]);
 
 const PROF_DO_SISTEMA = { pes: "pesada", esc: "escudo", marcial: "marcial", exotica: "exotica", fogo: "fogo" };
 
@@ -70,6 +74,18 @@ export function lerFicha(actor, { regrasClasses = {}, variantes = {} } = {}) {
 	};
 	const prefixos = new Set(poderes.map((p) => normalizar(nomeBase(p.name))).filter((n) => n.includes(":")).map((n) => n.split(":")[0].trim()));
 
+	// Afinidade Elemental do místico: os elementos ficam anotados nos poderes pelo construtor
+	// ("Escolha (construtor): Água (frio)") ou pelo jogador ao subir de nível ("Escolha (12º nível): terra",
+	// no Afinidade Maior); poder de afinidade sem elemento anotado deixa a lista incompleta
+	const afinidade = { elementos: new Set(), incompleta: false };
+	for (const p of poderes) {
+		if (!PODERES_AFINIDADE.has(normalizar(nomeBase(p.name)))) continue;
+		const notas = [...String(p.system?.description?.value ?? "").matchAll(/Escolha \((?:construtor|\d+º nível)\):(?:\s*<\/strong>)?([^<]*)/g)].map((x) => x[1]).join(" ");
+		const achados = [...normalizar(notas).matchAll(/\b(agua|ar|fogo|luz|terra|trevas)\b/g)].map((x) => x[1]);
+		if (achados.length) achados.forEach((el) => afinidade.elementos.add(el));
+		else afinidade.incompleta = true;
+	}
+
 	const magiasItens = itens.filter((i) => i.type === "magia");
 	const magias = new Set(magiasItens.map((m) => normalizar(nomeBase(m.name))));
 	const circuloMax = magiasItens.reduce((max, m) => Math.max(max, Number(m.system?.circulo) || 0), 0);
@@ -86,9 +102,14 @@ export function lerFicha(actor, { regrasClasses = {}, variantes = {} } = {}) {
 		circuloMax,
 		temMagias,
 		poderesPorSubtipo,
+		/** Elementos da Afinidade Elemental (místico): { elementos: Set("agua", "fogo"…), incompleta }. */
+		afinidade,
 		/** Escolas de magia escolhidas (Bardo, Druida), gravadas pelo construtor; [] se não houver. */
 		/** Escolas de magia de todas as classes (para pré-requisitos "X como uma de suas escolas"). */
-		escolasMagia: [...new Set([...(flags.escolasMagia ?? []), ...Object.values(flags.escolasMagiaPorClasse ?? {}).flat()])],
+		// (com as escolas dos elementos da Afinidade do místico, que valem além das gravadas)
+		escolasMagia: [...new Set([...(flags.escolasMagia ?? []), ...Object.values(flags.escolasMagiaPorClasse ?? {}).flat(), ...[...afinidade.elementos].map((k) => ELEMENTOS[k].escola)])],
+		/** Sentidos da ficha (penumbra, escuro, cegas, faro). */
+		sentidos: new Set([...(sys.attributes?.sentidos?.value ?? [])]),
 		/** Escolas de magia de uma classe: as gravadas para ela, ou as da criação se for a classe inicial. */
 		escolasDe: (nome) => [...(flags.escolasMagiaPorClasse?.[nome] ?? (normalizar(inicial?.nome) === normalizar(nome) ? flags.escolasMagia ?? [] : []))],
 		/** Idades Variadas: níveis extras da faixa etária, gravados na criação (0 se não houver). */

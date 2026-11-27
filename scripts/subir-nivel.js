@@ -164,8 +164,13 @@ export class SubirNivel extends HandlebarsApplicationMixin(ApplicationV2) {
 			filtro.addEventListener("input", aplicar);
 			aplicar();
 		}
-		this.element.querySelector("[name=anotacao]")?.addEventListener("input", (ev) => {
+		this.element.querySelector("input[name=anotacao]")?.addEventListener("input", (ev) => {
 			this.etapas.anotacao = ev.target.value;
+		});
+		// lista de opções do poder (Afinidade Maior, Pacto Elemental): redesenha para atualizar a pendência
+		this.element.querySelector("select[name=anotacao]")?.addEventListener("change", (ev) => {
+			this.etapas.anotacao = ev.target.value;
+			this.render();
 		});
 	}
 

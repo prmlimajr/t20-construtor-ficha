@@ -53,6 +53,16 @@ export function ajustarPoderRacial(data, ajuste) {
 	if (ajuste.imunidade) {
 		data.effects.push(novoEfeito(data, [mudanca(`system.tracos.resistencias.${ajuste.imunidade}.imunidade`, true, "override")]));
 	}
+	// várias imunidades (Comunhão Suprema do místico: os tipos de dano dos seus elementos)
+	if (ajuste.imunidades?.length) {
+		data.effects.push(novoEfeito(data, ajuste.imunidades.map((t) => mudanca(`system.tracos.resistencias.${t}.imunidade`, true, "override"))));
+	}
+	// perícias treinadas pelo poder (Afinidade Expandida e Maior: a do elemento), como o sistema faz nas origens
+	if (ajuste.treinar?.length) {
+		data.effects.push(novoEfeito(data, ajuste.treinar.map((k) => ({ ...mudanca(`system.pericias.${k}.treinado`, true, "override"), priority: 20 }))));
+	}
+	// sentido (Visão Noturna do místico: penumbra, ou escuro para quem já tem penumbra)
+	if (ajuste.sentido) data.effects.push(novoEfeito(data, [mudanca("system.attributes.sentidos.value", ajuste.sentido)]));
 	if (ajuste.resistencia) {
 		const chave = `system.tracos.resistencias.${ajuste.resistencia}.bonus`;
 		const ef = data.effects.find((e) => e.system?.changes?.some((c) => c.key.includes("resistencias.???")));

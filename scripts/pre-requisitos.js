@@ -8,7 +8,7 @@ import { normalizar, chavePericia } from "./regras.js";
 
 const SIGLAS = { for: "for", des: "des", con: "con", int: "int", sab: "sab", car: "car" };
 const NUMEROS = { um: 1, uma: 1, outro: 1, outra: 1, dois: 2, duas: 2, tres: 3, quatro: 4, cinco: 5, seis: 6 };
-const ESCOLAS = { abjuracao: "abj", adivinhacao: "adv", convocacao: "con", encantamento: "enc", evocacao: "evo", ilusao: "ilu", necromancia: "nec", transmutacao: "trm" };
+const ESCOLAS = { abjuracao: "abj", adivinhacao: "adv", convocacao: "con", encantamento: "enc", evocacao: "evo", ilusao: "ilu", necromancia: "nec", transmutacao: "tra" };
 const PROFICIENCIAS = {
 	"armaduras pesadas": "pesada",
 	escudos: "escudo",
@@ -136,6 +136,12 @@ function condicao(clausula, ctx) {
 		return min ? { tipo: "contaPoderes", subtipo: "tormenta", min, texto: c } : null;
 	}
 
+	// "Afinidade Elemental (terra)", "Afinidade Elemental (água ou ar)": o místico tem um desses elementos
+	if ((m = /^afinidade elemental \((.+)\)$/.exec(n))) {
+		const elementos = m[1].split(/\s+ou\s+|\s*,\s*/).map((x) => x.trim()).filter(Boolean);
+		return { tipo: "afinidade", elementos, texto: c };
+	}
+
 	// nome de poder ou de magia (com ou sem complemento: "Especialização em Arma com a arma escolhida")
 	const nomeDe = (t) => {
 		const poder = ctx.ehPoder?.(t);
@@ -178,6 +184,9 @@ export function interpretarPreRequisito(texto, ctx = {}) {
 	return { texto: String(texto ?? ""), condicoes, naoReconhecidos };
 }
 
+/** Condição que a ficha não permite conferir: não bloqueia, vira aviso. */
+const INCERTO = "incerto";
+
 /** Avalia uma condição contra a ficha (ver ficha-atual.js). */
 function atende(cond, ficha) {
 	switch (cond.tipo) {
@@ -202,6 +211,12 @@ function atende(cond, ficha) {
 		case "contaPoderes": return (ficha.poderesPorSubtipo.get(cond.subtipo) ?? 0) >= cond.min;
 		case "poder": return ficha.temPoder(cond.nome);
 		case "magia": return ficha.magias.has(normalizar(cond.nome));
+		case "afinidade": {
+			if (!ficha.temPoder("Afinidade Elemental")) return false;
+			if (cond.elementos.some((el) => ficha.afinidade?.elementos.has(el))) return true;
+			// algum elemento não está anotado na ficha (escolhido à mão): não dá para conferir
+			return ficha.afinidade?.incompleta ? INCERTO : false;
+		}
 		case "ou": return cond.opcoes.some((o) => atende(o, ficha));
 		case "todas": return cond.condicoes.every((o) => atende(o, ficha));
 		default: return false;
@@ -216,7 +231,9 @@ export function avaliarPreRequisito(req, ficha) {
 	const falhas = [];
 	const avisos = [];
 	for (const cond of req?.condicoes ?? []) {
-		if (!atende(cond, ficha)) falhas.push(cond.texto);
+		const r = atende(cond, ficha);
+		if (!r) falhas.push(cond.texto);
+		else if (r === INCERTO) avisos.push(cond.texto);
 		else if (cond.ressalva) avisos.push(cond.ressalva);
 	}
 	avisos.push(...(req?.naoReconhecidos ?? []));

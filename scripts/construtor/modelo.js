@@ -56,6 +56,14 @@ export class ModeloConstrutor {
 		let out = r?.periciasManuais ? { ...r, fixas: [...(this.estado.periciasFixasManuais ?? [])] } : r;
 		// Idades Variadas: adolescente com origem de benefício único treina uma perícia de classe a menos
 		if (out && this.menosPericiaPorIdade) out = { ...out, numero: Math.max(0, out.numero - 1) };
+		// escolha de uma habilidade que acrescenta uma perícia à lista da classe (elemento da Afinidade do místico)
+		const extras = [];
+		for (const n of out?.habilidades ?? []) {
+			const regra = this.dados.regrasPoderesClasse?.[n];
+			const v = regra?.periciaDeClasse ? this.estado.classePoderEscolhas?.[regra.id] : null;
+			if (v && regra.periciaDeClasse[v] && !out.opcoes.includes(regra.periciaDeClasse[v])) extras.push(regra.periciaDeClasse[v]);
+		}
+		if (extras.length) out = { ...out, opcoes: [...out.opcoes, ...extras] };
 		return out;
 	}
 
@@ -578,7 +586,11 @@ export class ModeloConstrutor {
 		e.periciasInt.forEach((k) => set.add(k));
 		if (ate === "origem") return set;
 		for (const o of this.origensAtivas()) {
-			for (const b of o.estado.beneficios) if (b.startsWith("pericia:")) set.add(b.slice(8));
+			for (const b of o.estado.beneficios) {
+				if (b.startsWith("pericia:")) set.add(b.slice(8));
+				// benefício que treina perícias (origens regionais de Ubani: Celebrante da Vida, Verdugo da Morte)
+				else if (b.startsWith("poder:")) (poder(this.dados, b.slice(6))?.periciasOrigem ?? []).forEach((k) => set.add(k));
+			}
 			if (o.def.especial === "mundana") (o.def.periciasMundanas ?? []).forEach((k) => set.add(k));
 			if (o.estado.amnPericia) set.add(o.estado.amnPericia);
 		}

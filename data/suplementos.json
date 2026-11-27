@@ -26,6 +26,24 @@
         "Rastreador"
       ],
       "aviso": "Classe variante de Caçador. PV como o caçador básico; 3 PM por nível; perícias do texto da variante; proficiências como o caçador básico."
+    },
+    "Místico": {
+      "periciasTexto": "Misticismo (Int) e Vontade (Sab), mais 4 a sua escolha entre Atletismo (For), Conhecimento (Int), Fortitude (Con), Iniciativa (Des), Luta (For), Ofício (Int), Percepção (Sab), Pontaria (Des) e Reflexos (Des).",
+      "proficiencias": [
+        "marcial"
+      ],
+      "habilidades": [
+        "Afinidade Elemental",
+        "Combate Elemental",
+        "Magias (Místico)"
+      ],
+      "conjurador": {
+        "tipo": "arc",
+        "quantidade": 2,
+        "escolas": 3,
+        "atributo": "sab"
+      },
+      "aviso": "Nova versão do místico (substitui a do suplemento): 16 PV + Con e 4 PV por nível, 4 PM por nível, armas marciais, magias arcanas com Sabedoria. Escolas: evocação, a do seu elemento e uma terceira à sua escolha. A perícia do elemento entra na sua lista de perícias de classe: confira com o mestre se escolher uma perícia fora da lista acima."
     }
   },
   "origensMundanas": {
@@ -213,7 +231,6 @@
     "Ventanista": "Ladinagem (Des) e Reflexos (Des), mais 8 a sua escolha entre Acrobacia (Des), Atletismo (For), Atuação (Car), Cavalgar (Des), Conhecimento (Int), Diplomacia (Car), Enganação (Car), Furtividade (Des), Iniciativa (Des), Intimidação (Car), Intuição (Sab), Investigação (Int), Jogatina (Car), Nobreza (Int), Ofício (Int), Percepção (Sab) e Pilotagem (Des).",
     "Magimarcialista": "Atuação (Car) e Luta (For), mais 6 a sua escolha entre Acrobacia (Des), Atletismo (For), Cavalgar (Des), Conhecimento (Int), Diplomacia (Car), Enganação (Car), Fortitude (Con), Guerra (Int), Iniciativa (Des), Jogatina (Car), Misticismo (Int) e Reflexos (Des).",
     "Inovador": "Luta (For) ou Pontaria (Des) e Acrobacia (Des), mais 2 a sua escolha entre Adestramento (Car), Atletismo (For), Conhecimento (Int), Fortitude (Con), Guerra (Int), Iniciativa (Des), Intimidação (Car), Investigação (Int), Luta (For), Ofício (Int), Pontaria (Des) e Reflexos (Des).",
-    "Místico": "Luta (For) ou Pontaria (Des), Reflexos (Des), mais 2 a sua escolha entre Acrobacia (Des), Adestramento (Car), Atletismo (For), Fortitude (Con), Furtividade (Des), Guerra (Int), Iniciativa (Des), Intimidação (Car), Luta (For), Ofício (Int), Percepção (Sab), Pontaria (Des) e Sobrevivência (Sab).",
     "Samurai": "Luta (For) e Vontade (Sab), mais 2 a sua escolha entre Acrobacia (Des), Adestramento (Car), Atletismo (For), Cavalgar (Des), Conhecimento (Int), Diplomacia (Car), Fortitude (Con), Guerra (Int), Iniciativa (Des), Intimidação (Car), Intuição (Sab), Nobreza (Int), Ofício (Int), Percepção (Sab) e Pontaria (Des).",
     "Alquimista": "Ofício (alquimista) (Int) e Vontade (Sab), mais 4 a sua escolha entre Conhecimento (Int), Cura (Sab), Diplomacia (Car), Fortitude (Con), Iniciativa (Des), Investigação (Int), Luta (For), Misticismo (Int), Ofício (Int), Pilotagem (Des), Percepção (Sab) e Pontaria (Des).",
     "Atleta": "Atletismo (For) e Luta (For), mais 4 a sua escolha entre Acrobacia (Des), Adestramento (Car), Cavalgar (Des), Cura (Sab), Fortitude (Con), Iniciativa (Des), Intimidação (Car), Ofício (Int), Percepção (Sab), Pilotagem (Des), Pontaria (Des) e Reflexos (Des).",
